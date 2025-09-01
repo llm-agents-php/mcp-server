@@ -36,8 +36,7 @@ class Registry implements EventEmitterInterface
 
     public function __construct(
         protected LoggerInterface $logger,
-    ) {
-    }
+    ) {}
 
     public function registerTool(Tool $tool, callable|array|string $handler, bool $isManual = false): void
     {
@@ -52,7 +51,7 @@ class Registry implements EventEmitterInterface
             return;
         }
 
-        $this->tools[$toolName] = RegisteredTool::make($tool, $handler, $isManual);
+        $this->tools[$toolName] = new RegisteredTool($tool, $handler, $isManual);
     }
 
     public function registerResource(Resource $resource, callable|array|string $handler, bool $isManual = false): void
@@ -68,7 +67,7 @@ class Registry implements EventEmitterInterface
             return;
         }
 
-        $this->resources[$uri] = RegisteredResource::make($resource, $handler, $isManual);
+        $this->resources[$uri] = new RegisteredResource($resource, $handler, $isManual);
     }
 
     public function registerResourceTemplate(
@@ -88,7 +87,7 @@ class Registry implements EventEmitterInterface
             return;
         }
 
-        $this->resourceTemplates[$uriTemplate] = RegisteredResourceTemplate::make(
+        $this->resourceTemplates[$uriTemplate] = new RegisteredResourceTemplate(
             $template,
             $handler,
             $isManual,
@@ -113,7 +112,7 @@ class Registry implements EventEmitterInterface
             return;
         }
 
-        $this->prompts[$promptName] = RegisteredPrompt::make($prompt, $handler, $isManual, $completionProviders);
+        $this->prompts[$promptName] = new RegisteredPrompt($prompt, $handler, $isManual, $completionProviders);
     }
 
     public function enableNotifications(): void
@@ -181,24 +180,24 @@ class Registry implements EventEmitterInterface
     /** @return array<string, Tool> */
     public function getTools(): array
     {
-        return array_map(fn ($tool) => $tool->schema, $this->tools);
+        return array_map(fn($tool) => $tool->schema, $this->tools);
     }
 
     /** @return array<string, Resource> */
     public function getResources(): array
     {
-        return array_map(fn ($resource) => $resource->schema, $this->resources);
+        return array_map(fn($resource) => $resource->schema, $this->resources);
     }
 
     /** @return array<string, Prompt> */
     public function getPrompts(): array
     {
-        return array_map(fn ($prompt) => $prompt->schema, $this->prompts);
+        return array_map(fn($prompt) => $prompt->schema, $this->prompts);
     }
 
     /** @return array<string, ResourceTemplate> */
     public function getResourceTemplates(): array
     {
-        return array_map(fn ($template) => $template->schema, $this->resourceTemplates);
+        return array_map(fn($template) => $template->schema, $this->resourceTemplates);
     }
 }

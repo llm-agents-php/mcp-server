@@ -7,6 +7,7 @@ namespace PhpMcp\Server\Elements;
 use PhpMcp\Schema\Content\Content;
 use PhpMcp\Schema\Content\TextContent;
 use PhpMcp\Server\Context;
+use PhpMcp\Server\Contracts\HandlerInterface;
 use Psr\Container\ContainerInterface;
 use PhpMcp\Schema\Tool;
 use Throwable;
@@ -15,15 +16,10 @@ class RegisteredTool extends RegisteredElement
 {
     public function __construct(
         public readonly Tool $schema,
-        callable|array|string $handler,
+        HandlerInterface|callable|array|string $handler,
         bool $isManual = false,
     ) {
         parent::__construct($handler, $isManual);
-    }
-
-    public static function make(Tool $schema, callable|array|string $handler, bool $isManual = false): self
-    {
-        return new self($schema, $handler, $isManual);
     }
 
     /**
@@ -33,7 +29,7 @@ class RegisteredTool extends RegisteredElement
      */
     public function call(ContainerInterface $container, array $arguments, Context $context): array
     {
-        $result = $this->handle($container, $arguments, $context);
+        $result = $this->handler->handle($container, $arguments, $context);
 
         return $this->formatResult($result);
     }
@@ -51,7 +47,7 @@ class RegisteredTool extends RegisteredElement
      * - null is represented as TextContent('(null)').
      * - Other objects are JSON-encoded and wrapped in TextContent.
      *
-     * @param  mixed  $toolExecutionResult  The raw value returned by the tool's PHP method.
+     * @param mixed $toolExecutionResult The raw value returned by the tool's PHP method.
      * @return Content[] The content items for CallToolResult.
      * @throws JsonException if JSON encoding fails for non-Content array/object results.
      */
@@ -108,7 +104,7 @@ class RegisteredTool extends RegisteredElement
 
         $jsonResult = json_encode(
             $toolExecutionResult,
-            JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR | JSON_INVALID_UTF8_SUBSTITUTE
+            JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR | JSON_INVALID_UTF8_SUBSTITUTE,
         );
 
         return [TextContent::make($jsonResult)];
@@ -125,7 +121,7 @@ class RegisteredTool extends RegisteredElement
     public static function fromArray(array $data): self|false
     {
         try {
-            if (! isset($data['schema']) || ! isset($data['handler'])) {
+            if (!isset($data['schema']) || !isset($data['handler'])) {
                 return false;
             }
 

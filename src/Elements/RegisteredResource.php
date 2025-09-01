@@ -10,6 +10,7 @@ use PhpMcp\Schema\Content\ResourceContents;
 use PhpMcp\Schema\Content\TextResourceContents;
 use PhpMcp\Schema\Resource;
 use PhpMcp\Server\Context;
+use PhpMcp\Server\Contracts\HandlerInterface;
 use Psr\Container\ContainerInterface;
 use Throwable;
 
@@ -17,15 +18,10 @@ class RegisteredResource extends RegisteredElement
 {
     public function __construct(
         public readonly Resource $schema,
-        callable|array|string $handler,
+        HandlerInterface|callable|array|string $handler,
         bool $isManual = false,
     ) {
         parent::__construct($handler, $isManual);
-    }
-
-    public static function make(Resource $schema, callable|array|string $handler, bool $isManual = false): self
-    {
-        return new self($schema, $handler, $isManual);
     }
 
     /**
@@ -35,7 +31,7 @@ class RegisteredResource extends RegisteredElement
      */
     public function read(ContainerInterface $container, string $uri, Context $context): array
     {
-        $result = $this->handle($container, ['uri' => $uri], $context);
+        $result = $this->handler->handle($container, ['uri' => $uri], $context);
 
         return $this->formatResult($result, $uri, $this->schema->mimeType);
     }

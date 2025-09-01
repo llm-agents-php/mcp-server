@@ -11,6 +11,7 @@ use PhpMcp\Schema\Content\TextResourceContents;
 use PhpMcp\Schema\ResourceTemplate;
 use PhpMcp\Schema\Result\CompletionCompleteResult;
 use PhpMcp\Server\Context;
+use PhpMcp\Server\Contracts\HandlerInterface;
 use PhpMcp\Server\Contracts\SessionInterface;
 use Psr\Container\ContainerInterface;
 use Throwable;
@@ -23,18 +24,13 @@ class RegisteredResourceTemplate extends RegisteredElement
 
     public function __construct(
         public readonly ResourceTemplate $schema,
-        callable|array|string $handler,
+        HandlerInterface|callable|array|string $handler,
         bool $isManual = false,
-        public readonly array $completionProviders = []
+        public readonly array $completionProviders = [],
     ) {
         parent::__construct($handler, $isManual);
 
         $this->compileTemplate();
-    }
-
-    public static function make(ResourceTemplate $schema, callable|array|string $handler, bool $isManual = false, array $completionProviders = []): self
-    {
-        return new self($schema, $handler, $isManual, $completionProviders);
     }
 
     /**
@@ -46,20 +42,24 @@ class RegisteredResourceTemplate extends RegisteredElement
     {
         $arguments = array_merge($this->uriVariables, ['uri' => $uri]);
 
-        $result = $this->handle($container, $arguments, $context);
+        $result = $this->handler->handle($container, $arguments, $context);
 
         return $this->formatResult($result, $uri, $this->schema->mimeType);
     }
 
-    public function complete(ContainerInterface $container, string $argument, string $value, SessionInterface $session): CompletionCompleteResult
-    {
+    public function complete(
+        ContainerInterface $container,
+        string $argument,
+        string $value,
+        SessionInterface $session,
+    ): CompletionCompleteResult {
         $providerClassOrInstance = $this->completionProviders[$argument] ?? null;
         if ($providerClassOrInstance === null) {
             return new CompletionCompleteResult([]);
         }
 
         if (is_string($providerClassOrInstance)) {
-            if (! class_exists($providerClassOrInstance)) {
+            if (!class_exists($providerClassOrInstance)) {
                 throw new \RuntimeException("Completion provider class '{$providerClassOrInstance}' does not exist.");
             }
 
@@ -77,7 +77,6 @@ class RegisteredResourceTemplate extends RegisteredElement
 
         return new CompletionCompleteResult($pagedCompletions, $total, $hasMore);
     }
-
 
     public function getVariableNames(): array
     {
@@ -107,7 +106,12 @@ class RegisteredResourceTemplate extends RegisteredElement
         $this->variableNames = [];
         $regexParts = [];
 
-        $segments = preg_split('/(\{\w+\})/', $this->schema->uriTemplate, -1, PREG_SPLIT_DELIM_CAPTURE | PREG_SPLIT_NO_EMPTY);
+        $segments = preg_split(
+            '/(\{\w+\})/',
+            $this->schema->uriTemplate,
+            -1,
+            PREG_SPLIT_DELIM_CAPTURE | PREG_SPLIT_NO_EMPTY,
+        );
 
         foreach ($segments as $segment) {
             if (preg_match('/^\{(\w+)\}$/', $segment, $matches)) {
@@ -125,9 +129,9 @@ class RegisteredResourceTemplate extends RegisteredElement
     /**
      * Formats the raw result of a resource read operation into MCP ResourceContent items.
      *
-     * @param  mixed  $readResult  The raw result from the resource handler method.
-     * @param  string  $uri  The URI of the resource that was read.
-     * @param  ?string  $defaultMimeType  The default MIME type from the ResourceDefinition.
+     * @param mixed $readResult The raw result from the resource handler method.
+     * @param string $uri The URI of the resource that was read.
+     * @param  ?string $defaultMimeType The default MIME type from the ResourceDefinition.
      * @return array<TextResourceContents|BlobResourceContents> Array of ResourceContents objects.
      *
      * @throws \RuntimeException If the result cannot be formatted.
@@ -181,7 +185,7 @@ class RegisteredResourceTemplate extends RegisteredElement
             }
 
             if ($allAreEmbeddedResource && $hasEmbeddedResource) {
-                return array_map(fn ($item) => $item->resource, $readResult);
+                return array_map(fn($item) => $item->resource, $readResult);
             }
 
             if ($hasResourceContents || $hasEmbeddedResource) {
@@ -209,7 +213,7 @@ class RegisteredResourceTemplate extends RegisteredElement
             $result = BlobResourceContents::fromStream(
                 $uri,
                 $readResult,
-                $mimeType ?? 'application/octet-stream'
+                $mimeType ?? 'application/octet-stream',
             );
 
             @fclose($readResult);
@@ -239,7 +243,7 @@ class RegisteredResourceTemplate extends RegisteredElement
 
         if (is_array($readResult)) {
             if ($mimeType && (str_contains(strtolower($mimeType), 'json') ||
-                $mimeType === 'application/json')) {
+                    $mimeType === 'application/json')) {
                 try {
                     $jsonString = json_encode($readResult, JSON_THROW_ON_ERROR | JSON_PRETTY_PRINT);
 
@@ -259,7 +263,11 @@ class RegisteredResourceTemplate extends RegisteredElement
             }
         }
 
-        throw new \RuntimeException("Cannot format resource read result for URI '{$uri}'. Handler method returned unhandled type: " . gettype($readResult));
+        throw new \RuntimeException(
+            "Cannot format resource read result for URI '{$uri}'. Handler method returned unhandled type: " . gettype(
+                $readResult,
+            ),
+        );
     }
 
     /** Guesses MIME type from string content (very basic) */
@@ -306,7 +314,7 @@ class RegisteredResourceTemplate extends RegisteredElement
     public static function fromArray(array $data): self|false
     {
         try {
-            if (! isset($data['schema']) || ! isset($data['handler'])) {
+            if (!isset($data['schema']) || !isset($data['handler'])) {
                 return false;
             }
 

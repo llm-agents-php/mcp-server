@@ -17,6 +17,7 @@ use PhpMcp\Schema\Enum\Role;
 use PhpMcp\Schema\Result\CompletionCompleteResult;
 use PhpMcp\Server\Context;
 use PhpMcp\Server\Contracts\CompletionProviderInterface;
+use PhpMcp\Server\Contracts\HandlerInterface;
 use PhpMcp\Server\Contracts\SessionInterface;
 use Psr\Container\ContainerInterface;
 use Throwable;
@@ -25,7 +26,7 @@ class RegisteredPrompt extends RegisteredElement
 {
     public function __construct(
         public readonly Prompt $schema,
-        callable|array|string $handler,
+        HandlerInterface|callable|array|string $handler,
         bool $isManual = false,
         public readonly array $completionProviders = [],
     ) {
@@ -34,7 +35,7 @@ class RegisteredPrompt extends RegisteredElement
 
     public static function make(
         Prompt $schema,
-        callable|array|string $handler,
+        HandlerInterface|callable|array|string $handler,
         bool $isManual = false,
         array $completionProviders = [],
     ): self {
@@ -50,7 +51,7 @@ class RegisteredPrompt extends RegisteredElement
      */
     public function get(ContainerInterface $container, array $arguments, Context $context): array
     {
-        $result = $this->handle($container, $arguments, $context);
+        $result = $this->handler->handle($container, $arguments, $context);
 
         return $this->formatResult($result);
     }
@@ -325,7 +326,7 @@ class RegisteredPrompt extends RegisteredElement
     public function toArray(): array
     {
         $completionProviders = array_map(
-            static fn (CompletionProviderInterface $provider): string => serialize($provider),
+            static fn(CompletionProviderInterface $provider): string => serialize($provider),
             $this->completionProviders,
         );
 
@@ -344,7 +345,7 @@ class RegisteredPrompt extends RegisteredElement
             }
 
             $completionProviders = array_map(
-                static fn (string $provider): CompletionProviderInterface => unserialize($provider),
+                static fn(string $provider): CompletionProviderInterface => unserialize($provider),
                 $data['completionProviders'] ?? [],
             );
 
