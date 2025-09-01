@@ -7,7 +7,7 @@ namespace PhpMcp\Server\Defaults;
 use DateTimeImmutable;
 use Psr\Clock\ClockInterface;
 
-class SystemClock implements ClockInterface
+final class SystemClock implements ClockInterface
 {
     public function now(): \DateTimeImmutable
     {

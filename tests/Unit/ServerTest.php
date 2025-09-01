@@ -82,7 +82,6 @@ it('provides a static make method returning ServerBuilder', function () {
 it('skips discovery if already run and not forced', function () {
     $reflector = new \ReflectionClass($this->server);
     $prop = $reflector->getProperty('discoveryRan');
-    $prop->setAccessible(true);
     $prop->setValue($this->server, true);
 
     $this->registry->shouldNotReceive('clear');
@@ -96,7 +95,6 @@ it('skips discovery if already run and not forced', function () {
 it('forces discovery even if already run, calling injected discoverer', function () {
     $reflector = new \ReflectionClass($this->server);
     $prop = $reflector->getProperty('discoveryRan');
-    $prop->setAccessible(true);
     $prop->setValue($this->server, true);
 
     $basePath = realpath(sys_get_temp_dir());
@@ -138,7 +136,6 @@ it('calls registry clear and discoverer, then saves to cache by default', functi
 
     $reflector = new \ReflectionClass($this->server);
     $prop = $reflector->getProperty('discoveryRan');
-    $prop->setAccessible(true);
     expect($prop->getValue($this->server))->toBeTrue();
 });
 
@@ -174,13 +171,12 @@ it('resets discoveryRan flag on Discoverer failure', function () {
 
     try {
         $this->server->discover($basePath, discoverer: $this->discoverer);
-    } catch (DiscoveryException $e) {
+    } catch (DiscoveryException) {
         // Expected
     }
 
     $reflector = new \ReflectionClass($this->server);
     $prop = $reflector->getProperty('discoveryRan');
-    $prop->setAccessible(true);
     expect($prop->getValue($this->server))->toBeFalse();
 });
 
@@ -263,7 +259,6 @@ it('endListen unbinds protocol and closes transport if listening', function () {
     $transport = Mockery::mock(ServerTransportInterface::class);
     $reflector = new \ReflectionClass($this->server);
     $prop = $reflector->getProperty('isListening');
-    $prop->setAccessible(true);
     $prop->setValue($this->server, true);
 
     $this->protocol->shouldReceive('unbindTransport')->once();

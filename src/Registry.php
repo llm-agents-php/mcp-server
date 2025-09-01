@@ -14,7 +14,6 @@ use PhpMcp\Server\Elements\RegisteredPrompt;
 use PhpMcp\Server\Elements\RegisteredResource;
 use PhpMcp\Server\Elements\RegisteredResourceTemplate;
 use PhpMcp\Server\Elements\RegisteredTool;
-use PhpMcp\Server\Exception\DefinitionException;
 use Psr\Log\LoggerInterface;
 use Psr\SimpleCache\CacheInterface;
 use Psr\SimpleCache\InvalidArgumentException as CacheInvalidArgumentException;
@@ -24,7 +23,7 @@ class Registry implements EventEmitterInterface
 {
     use EventEmitterTrait;
 
-    private const DISCOVERED_ELEMENTS_CACHE_KEY = 'mcp_server_discovered_elements';
+    private const string DISCOVERED_ELEMENTS_CACHE_KEY = 'mcp_server_discovered_elements';
 
     /** @var array<string, RegisteredTool> */
     private array $tools = [];
@@ -91,16 +90,22 @@ class Registry implements EventEmitterInterface
             $cached = $this->cache->get(self::DISCOVERED_ELEMENTS_CACHE_KEY);
 
             if (!is_array($cached)) {
-                $this->logger->warning('Invalid or missing data found in registry cache, ignoring.', ['key' => self::DISCOVERED_ELEMENTS_CACHE_KEY, 'type' => gettype($cached)]);
+                $this->logger->warning(
+                    'Invalid or missing data found in registry cache, ignoring.',
+                    ['key' => self::DISCOVERED_ELEMENTS_CACHE_KEY, 'type' => gettype($cached)],
+                );
                 return;
             }
 
             $loadCount = 0;
 
             foreach ($cached['tools'] ?? [] as $toolData) {
-                $cachedTool = RegisteredTool::fromArray(json_decode($toolData, true));
+                $cachedTool = RegisteredTool::fromArray(json_decode((string) $toolData, true));
                 if ($cachedTool === false) {
-                    $this->logger->warning('Invalid or missing data found in registry cache, ignoring.', ['key' => self::DISCOVERED_ELEMENTS_CACHE_KEY, 'type' => gettype($cached)]);
+                    $this->logger->warning(
+                        'Invalid or missing data found in registry cache, ignoring.',
+                        ['key' => self::DISCOVERED_ELEMENTS_CACHE_KEY, 'type' => gettype($cached)],
+                    );
                     continue;
                 }
 
@@ -117,9 +122,12 @@ class Registry implements EventEmitterInterface
             }
 
             foreach ($cached['resources'] ?? [] as $resourceData) {
-                $cachedResource = RegisteredResource::fromArray(json_decode($resourceData, true));
+                $cachedResource = RegisteredResource::fromArray(json_decode((string) $resourceData, true));
                 if ($cachedResource === false) {
-                    $this->logger->warning('Invalid or missing data found in registry cache, ignoring.', ['key' => self::DISCOVERED_ELEMENTS_CACHE_KEY, 'type' => gettype($cached)]);
+                    $this->logger->warning(
+                        'Invalid or missing data found in registry cache, ignoring.',
+                        ['key' => self::DISCOVERED_ELEMENTS_CACHE_KEY, 'type' => gettype($cached)],
+                    );
                     continue;
                 }
 
@@ -136,9 +144,12 @@ class Registry implements EventEmitterInterface
             }
 
             foreach ($cached['prompts'] ?? [] as $promptData) {
-                $cachedPrompt = RegisteredPrompt::fromArray(json_decode($promptData, true));
+                $cachedPrompt = RegisteredPrompt::fromArray(json_decode((string) $promptData, true));
                 if ($cachedPrompt === false) {
-                    $this->logger->warning('Invalid or missing data found in registry cache, ignoring.', ['key' => self::DISCOVERED_ELEMENTS_CACHE_KEY, 'type' => gettype($cached)]);
+                    $this->logger->warning(
+                        'Invalid or missing data found in registry cache, ignoring.',
+                        ['key' => self::DISCOVERED_ELEMENTS_CACHE_KEY, 'type' => gettype($cached)],
+                    );
                     continue;
                 }
 
@@ -155,9 +166,12 @@ class Registry implements EventEmitterInterface
             }
 
             foreach ($cached['resourceTemplates'] ?? [] as $templateData) {
-                $cachedTemplate = RegisteredResourceTemplate::fromArray(json_decode($templateData, true));
+                $cachedTemplate = RegisteredResourceTemplate::fromArray(json_decode((string) $templateData, true));
                 if ($cachedTemplate === false) {
-                    $this->logger->warning('Invalid or missing data found in registry cache, ignoring.', ['key' => self::DISCOVERED_ELEMENTS_CACHE_KEY, 'type' => gettype($cached)]);
+                    $this->logger->warning(
+                        'Invalid or missing data found in registry cache, ignoring.',
+                        ['key' => self::DISCOVERED_ELEMENTS_CACHE_KEY, 'type' => gettype($cached)],
+                    );
                     continue;
                 }
 
@@ -175,9 +189,15 @@ class Registry implements EventEmitterInterface
 
             $this->logger->debug("Loaded {$loadCount} elements from cache.");
         } catch (CacheInvalidArgumentException $e) {
-            $this->logger->error('Invalid registry cache key used.', ['key' => self::DISCOVERED_ELEMENTS_CACHE_KEY, 'exception' => $e]);
+            $this->logger->error(
+                'Invalid registry cache key used.',
+                ['key' => self::DISCOVERED_ELEMENTS_CACHE_KEY, 'exception' => $e],
+            );
         } catch (Throwable $e) {
-            $this->logger->error('Unexpected error loading from cache.', ['key' => self::DISCOVERED_ELEMENTS_CACHE_KEY, 'exception' => $e]);
+            $this->logger->error(
+                'Unexpected error loading from cache.',
+                ['key' => self::DISCOVERED_ELEMENTS_CACHE_KEY, 'exception' => $e],
+            );
         }
     }
 
@@ -186,8 +206,10 @@ class Registry implements EventEmitterInterface
         $toolName = $tool->name;
         $existing = $this->tools[$toolName] ?? null;
 
-        if ($existing && ! $isManual && $existing->isManual) {
-            $this->logger->debug("Ignoring discovered tool '{$toolName}' as it conflicts with a manually registered one.");
+        if ($existing && !$isManual && $existing->isManual) {
+            $this->logger->debug(
+                "Ignoring discovered tool '{$toolName}' as it conflicts with a manually registered one.",
+            );
 
             return;
         }
@@ -202,8 +224,10 @@ class Registry implements EventEmitterInterface
         $uri = $resource->uri;
         $existing = $this->resources[$uri] ?? null;
 
-        if ($existing && ! $isManual && $existing->isManual) {
-            $this->logger->debug("Ignoring discovered resource '{$uri}' as it conflicts with a manually registered one.");
+        if ($existing && !$isManual && $existing->isManual) {
+            $this->logger->debug(
+                "Ignoring discovered resource '{$uri}' as it conflicts with a manually registered one.",
+            );
 
             return;
         }
@@ -222,13 +246,20 @@ class Registry implements EventEmitterInterface
         $uriTemplate = $template->uriTemplate;
         $existing = $this->resourceTemplates[$uriTemplate] ?? null;
 
-        if ($existing && ! $isManual && $existing->isManual) {
-            $this->logger->debug("Ignoring discovered template '{$uriTemplate}' as it conflicts with a manually registered one.");
+        if ($existing && !$isManual && $existing->isManual) {
+            $this->logger->debug(
+                "Ignoring discovered template '{$uriTemplate}' as it conflicts with a manually registered one.",
+            );
 
             return;
         }
 
-        $this->resourceTemplates[$uriTemplate] = RegisteredResourceTemplate::make($template, $handler, $isManual, $completionProviders);
+        $this->resourceTemplates[$uriTemplate] = RegisteredResourceTemplate::make(
+            $template,
+            $handler,
+            $isManual,
+            $completionProviders,
+        );
 
         $this->checkAndEmitChange('resource_templates', $this->resourceTemplates);
     }
@@ -242,8 +273,10 @@ class Registry implements EventEmitterInterface
         $promptName = $prompt->name;
         $existing = $this->prompts[$promptName] ?? null;
 
-        if ($existing && ! $isManual && $existing->isManual) {
-            $this->logger->debug("Ignoring discovered prompt '{$promptName}' as it conflicts with a manually registered one.");
+        if ($existing && !$isManual && $existing->isManual) {
+            $this->logger->debug(
+                "Ignoring discovered prompt '{$promptName}' as it conflicts with a manually registered one.",
+            );
 
             return;
         }
@@ -268,7 +301,7 @@ class Registry implements EventEmitterInterface
      */
     private function checkAndEmitChange(string $listType, array $collection): void
     {
-        if (! $this->notificationsEnabled) {
+        if (!$this->notificationsEnabled) {
             return;
         }
 
@@ -294,7 +327,7 @@ class Registry implements EventEmitterInterface
         ];
 
         foreach ($this->tools as $name => $tool) {
-            if (! $tool->isManual) {
+            if (!$tool->isManual) {
                 if ($tool->handler instanceof \Closure) {
                     $this->logger->warning("Skipping closure tool from cache: {$name}");
                     continue;
@@ -304,7 +337,7 @@ class Registry implements EventEmitterInterface
         }
 
         foreach ($this->resources as $uri => $resource) {
-            if (! $resource->isManual) {
+            if (!$resource->isManual) {
                 if ($resource->handler instanceof \Closure) {
                     $this->logger->warning("Skipping closure resource from cache: {$uri}");
                     continue;
@@ -314,7 +347,7 @@ class Registry implements EventEmitterInterface
         }
 
         foreach ($this->prompts as $name => $prompt) {
-            if (! $prompt->isManual) {
+            if (!$prompt->isManual) {
                 if ($prompt->handler instanceof \Closure) {
                     $this->logger->warning("Skipping closure prompt from cache: {$name}");
                     continue;
@@ -324,7 +357,7 @@ class Registry implements EventEmitterInterface
         }
 
         foreach ($this->resourceTemplates as $uriTemplate => $template) {
-            if (! $template->isManual) {
+            if (!$template->isManual) {
                 if ($template->handler instanceof \Closure) {
                     $this->logger->warning("Skipping closure template from cache: {$uriTemplate}");
                     continue;
@@ -337,18 +370,30 @@ class Registry implements EventEmitterInterface
             $success = $this->cache->set(self::DISCOVERED_ELEMENTS_CACHE_KEY, $discoveredData);
 
             if ($success) {
-                $this->logger->debug('Registry elements saved to cache.', ['key' => self::DISCOVERED_ELEMENTS_CACHE_KEY]);
+                $this->logger->debug(
+                    'Registry elements saved to cache.',
+                    ['key' => self::DISCOVERED_ELEMENTS_CACHE_KEY],
+                );
             } else {
-                $this->logger->warning('Registry cache set operation returned false.', ['key' => self::DISCOVERED_ELEMENTS_CACHE_KEY]);
+                $this->logger->warning(
+                    'Registry cache set operation returned false.',
+                    ['key' => self::DISCOVERED_ELEMENTS_CACHE_KEY],
+                );
             }
 
             return $success;
         } catch (CacheInvalidArgumentException $e) {
-            $this->logger->error('Invalid cache key or value during save.', ['key' => self::DISCOVERED_ELEMENTS_CACHE_KEY, 'exception' => $e]);
+            $this->logger->error(
+                'Invalid cache key or value during save.',
+                ['key' => self::DISCOVERED_ELEMENTS_CACHE_KEY, 'exception' => $e],
+            );
 
             return false;
         } catch (Throwable $e) {
-            $this->logger->error('Unexpected error saving to cache.', ['key' => self::DISCOVERED_ELEMENTS_CACHE_KEY, 'exception' => $e]);
+            $this->logger->error(
+                'Unexpected error saving to cache.',
+                ['key' => self::DISCOVERED_ELEMENTS_CACHE_KEY, 'exception' => $e],
+            );
 
             return false;
         }
@@ -357,15 +402,15 @@ class Registry implements EventEmitterInterface
     /** Checks if any elements (manual or discovered) are currently registered. */
     public function hasElements(): bool
     {
-        return ! empty($this->tools)
-            || ! empty($this->resources)
-            || ! empty($this->prompts)
-            || ! empty($this->resourceTemplates);
+        return !empty($this->tools)
+            || !empty($this->resources)
+            || !empty($this->prompts)
+            || !empty($this->resourceTemplates);
     }
 
     /**
      * Clear discovered elements from registry
-     * 
+     *
      * @param bool $includeCache Whether to clear the cache as well (default: true)
      */
     public function clear(bool $includeCache = true): void
@@ -382,25 +427,25 @@ class Registry implements EventEmitterInterface
         $clearCount = 0;
 
         foreach ($this->tools as $name => $tool) {
-            if (! $tool->isManual) {
+            if (!$tool->isManual) {
                 unset($this->tools[$name]);
                 $clearCount++;
             }
         }
         foreach ($this->resources as $uri => $resource) {
-            if (! $resource->isManual) {
+            if (!$resource->isManual) {
                 unset($this->resources[$uri]);
                 $clearCount++;
             }
         }
         foreach ($this->prompts as $name => $prompt) {
-            if (! $prompt->isManual) {
+            if (!$prompt->isManual) {
                 unset($this->prompts[$name]);
                 $clearCount++;
             }
         }
         foreach ($this->resourceTemplates as $uriTemplate => $template) {
-            if (! $template->isManual) {
+            if (!$template->isManual) {
                 unset($this->resourceTemplates[$uriTemplate]);
                 $clearCount++;
             }
@@ -418,14 +463,16 @@ class Registry implements EventEmitterInterface
     }
 
     /** @return RegisteredResource|RegisteredResourceTemplate|null */
-    public function getResource(string $uri, bool $includeTemplates = true): RegisteredResource|RegisteredResourceTemplate|null
-    {
+    public function getResource(
+        string $uri,
+        bool $includeTemplates = true,
+    ): RegisteredResource|RegisteredResourceTemplate|null {
         $registration = $this->resources[$uri] ?? null;
         if ($registration) {
             return $registration;
         }
 
-        if (! $includeTemplates) {
+        if (!$includeTemplates) {
             return null;
         }
 
@@ -455,24 +502,24 @@ class Registry implements EventEmitterInterface
     /** @return array<string, Tool> */
     public function getTools(): array
     {
-        return array_map(fn($tool) => $tool->schema, $this->tools);
+        return array_map(fn ($tool) => $tool->schema, $this->tools);
     }
 
     /** @return array<string, Resource> */
     public function getResources(): array
     {
-        return array_map(fn($resource) => $resource->schema, $this->resources);
+        return array_map(fn ($resource) => $resource->schema, $this->resources);
     }
 
     /** @return array<string, Prompt> */
     public function getPrompts(): array
     {
-        return array_map(fn($prompt) => $prompt->schema, $this->prompts);
+        return array_map(fn ($prompt) => $prompt->schema, $this->prompts);
     }
 
     /** @return array<string, ResourceTemplate> */
     public function getResourceTemplates(): array
     {
-        return array_map(fn($template) => $template->schema, $this->resourceTemplates);
+        return array_map(fn ($template) => $template->schema, $this->resourceTemplates);
     }
 }

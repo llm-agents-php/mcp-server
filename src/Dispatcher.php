@@ -38,8 +38,6 @@ use PhpMcp\Schema\Result\ListToolsResult;
 use PhpMcp\Schema\Result\ReadResourceResult;
 use PhpMcp\Server\Exception\ValidationException;
 use PhpMcp\Server\Session\SubscriptionManager;
-use PhpMcp\Server\Utils\SchemaValidator;
-use PhpMcp\Server\Utils\ToolExecutor;
 use Psr\Container\ContainerInterface;
 use Psr\Log\LoggerInterface;
 use Throwable;
@@ -53,14 +51,10 @@ class Dispatcher
         protected Configuration $configuration,
         protected Registry $registry,
         protected SubscriptionManager $subscriptionManager,
-        protected ?ToolExecutorInterface $toolExecutor = null,
+        protected ToolExecutorInterface $toolExecutor,
     ) {
         $this->container = $this->configuration->container;
         $this->logger = $this->configuration->logger;
-        $this->toolExecutor ??= new ToolExecutor(
-            container: $this->container,
-            schemaValidator: new SchemaValidator($this->logger),
-        );
     }
 
     public function handleRequest(Request $request, Context $context): Result

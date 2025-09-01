@@ -261,7 +261,7 @@ it('throws ReflectionException if handler method does not exist', function () {
     $element->handle($this->container, [], $this->context);
 })->throws(\ReflectionException::class, "VariousTypesHandler::nonExistentMethod() does not exist");
 
-it('passes Context object', function() {
+it('passes Context object', function () {
     $sessionMock = Mockery::mock(SessionInterface::class);
     $sessionMock->expects('get')->with('testKey')->andReturn('testValue');
     $requestMock = Mockery::mock(ServerRequestInterface::class);
@@ -289,16 +289,14 @@ describe('Handler Types', function () {
     });
 
     it('handles closure handler', function () {
-        $closure = function (string $a, string $b) {
-            return $a . $b;
-        };
+        $closure = (fn (string $a, string $b) => $a . $b);
         $element = new RegisteredElement($closure);
         $result = $element->handle($this->container, ['a' => 'foo', 'b' => 'bar'], $this->context);
         expect($result)->toBe('foobar');
     });
 
     it('handles static method handler', function () {
-        $handler = [MyStaticMethodTestHandler::class, 'myStaticMethod'];
+        $handler = MyStaticMethodTestHandler::myStaticMethod(...);
         $element = new RegisteredElement($handler);
         $result = $element->handle($this->container, ['a' => 5, 'b' => 10], $this->context);
         expect($result)->toBe(15);

@@ -15,18 +15,18 @@ use Throwable;
  * Uses file locking for basic concurrency control during writes.
  * Not recommended for high-concurrency environments.
  */
-class FileCache implements CacheInterface
+final readonly class FileCache implements CacheInterface
 {
     /**
-     * @param  string  $cacheFile  Absolute path to the cache file.
+     * @param string $cacheFile Absolute path to the cache file.
      *                             The directory will be created if it doesn't exist.
-     * @param  int  $filePermission  Optional file mode (octal) for the cache file (default: 0664).
-     * @param  int  $dirPermission  Optional directory mode (octal) for the cache directory (default: 0775).
+     * @param int $filePermission Optional file mode (octal) for the cache file (default: 0664).
+     * @param int $dirPermission Optional directory mode (octal) for the cache directory (default: 0775).
      */
     public function __construct(
-        private readonly string $cacheFile,
-        private readonly int $filePermission = 0664,
-        private readonly int $dirPermission = 0775
+        private string $cacheFile,
+        private int $filePermission = 0664,
+        private int $dirPermission = 0775,
     ) {
         $this->ensureDirectoryExists(dirname($this->cacheFile));
     }
@@ -40,7 +40,7 @@ class FileCache implements CacheInterface
         $data = $this->readCacheFile();
         $key = $this->sanitizeKey($key);
 
-        if (! isset($data[$key])) {
+        if (!isset($data[$key])) {
             return $default;
         }
 
@@ -97,7 +97,7 @@ class FileCache implements CacheInterface
 
         foreach ($keys as $key) {
             $sanitizedKey = $this->sanitizeKey($key);
-            if (! isset($data[$sanitizedKey])) {
+            if (!isset($data[$sanitizedKey])) {
                 $results[$key] = $default;
 
                 continue;
@@ -168,7 +168,7 @@ class FileCache implements CacheInterface
         $data = $this->readCacheFile();
         $key = $this->sanitizeKey($key);
 
-        if (! isset($data[$key])) {
+        if (!isset($data[$key])) {
             return false;
         }
 
@@ -187,7 +187,7 @@ class FileCache implements CacheInterface
 
     private function readCacheFile(): array
     {
-        if (! file_exists($this->cacheFile) || filesize($this->cacheFile) === 0) {
+        if (!file_exists($this->cacheFile) || filesize($this->cacheFile) === 0) {
             return [];
         }
 
@@ -197,7 +197,7 @@ class FileCache implements CacheInterface
         }
 
         try {
-            if (! flock($handle, LOCK_SH)) {
+            if (!flock($handle, LOCK_SH)) {
                 return [];
             }
             $content = stream_get_contents($handle);
@@ -234,10 +234,10 @@ class FileCache implements CacheInterface
         }
 
         try {
-            if (! flock($handle, LOCK_EX)) {
+            if (!flock($handle, LOCK_EX)) {
                 return false;
             }
-            if (! ftruncate($handle, 0)) {
+            if (!ftruncate($handle, 0)) {
                 return false;
             }
             if (fwrite($handle, $jsonData) === false) {
@@ -248,7 +248,7 @@ class FileCache implements CacheInterface
             @chmod($this->cacheFile, $this->filePermission);
 
             return true;
-        } catch (Throwable $e) {
+        } catch (Throwable) {
             flock($handle, LOCK_UN); // Ensure lock release on error
 
             return false;
@@ -261,9 +261,11 @@ class FileCache implements CacheInterface
 
     private function ensureDirectoryExists(string $directory): void
     {
-        if (! is_dir($directory)) {
-            if (! @mkdir($directory, $this->dirPermission, true)) {
-                throw new InvalidArgumentException("Cache directory does not exist and could not be created: {$directory}");
+        if (!is_dir($directory)) {
+            if (!@mkdir($directory, $this->dirPermission, true)) {
+                throw new InvalidArgumentException(
+                    "Cache directory does not exist and could not be created: {$directory}",
+                );
             }
             @chmod($directory, $this->dirPermission);
         }
@@ -281,7 +283,7 @@ class FileCache implements CacheInterface
         if ($ttl instanceof DateInterval) {
             try {
                 return (new DateTimeImmutable())->add($ttl)->getTimestamp();
-            } catch (Throwable $e) {
+            } catch (Throwable) {
                 return null;
             }
         }
@@ -309,7 +311,7 @@ class FileCache implements CacheInterface
     private function validateKeys(array $keys): void
     {
         foreach ($keys as $key) {
-            if (! is_string($key)) {
+            if (!is_string($key)) {
                 throw new InvalidArgumentException('Cache key must be a string, got ' . gettype($key));
             }
             $this->sanitizeKey($key);

@@ -58,7 +58,6 @@ function getRegistryProperty(Registry $reg, string $propName)
 {
     $reflector = new \ReflectionClass($reg);
     $prop = $reflector->getProperty($propName);
-    $prop->setAccessible(true);
     return $prop->getValue($reg);
 }
 
@@ -363,7 +362,7 @@ it('handles cache general exceptions during load gracefully', function () {
 });
 
 it('handles cache InvalidArgumentException during load gracefully', function () {
-    $this->cache->shouldReceive('get')->with(DISCOVERED_CACHE_KEY_REG)->once()->andThrow(new class() extends \Exception implements CacheInvalidArgumentException {});
+    $this->cache->shouldReceive('get')->with(DISCOVERED_CACHE_KEY_REG)->once()->andThrow(new class () extends \Exception implements CacheInvalidArgumentException {});
 
     $registry = new Registry($this->logger, $this->cache);
     expect($registry->hasElements())->toBeFalse();
@@ -427,7 +426,6 @@ it('does not emit list_changed event if notifications are disabled', function ()
 
 it('computes different hashes for different collections', function () {
     $method = new \ReflectionMethod(Registry::class, 'computeHash');
-    $method->setAccessible(true);
 
     $hash1 = $method->invoke($this->registry, ['a' => 1, 'b' => 2]);
     $hash2 = $method->invoke($this->registry, ['b' => 2, 'a' => 1]);
@@ -462,9 +460,7 @@ it('recomputes and emits list_changed only when content actually changes', funct
 
 it('registers tool with closure handler correctly', function () {
     $toolSchema = createTestToolSchema('closure-tool');
-    $closure = function (string $input): string {
-        return "processed: $input";
-    };
+    $closure = (fn (string $input): string => "processed: $input");
 
     $this->registry->registerTool($toolSchema, $closure, true);
 
@@ -477,9 +473,7 @@ it('registers tool with closure handler correctly', function () {
 
 it('registers resource with closure handler correctly', function () {
     $resourceSchema = createTestResourceSchema('closure://res');
-    $closure = function (string $uri): array {
-        return [new \PhpMcp\Schema\Content\TextContent("Resource: $uri")];
-    };
+    $closure = (fn (string $uri): array => [new \PhpMcp\Schema\Content\TextContent("Resource: $uri")]);
 
     $this->registry->registerResource($resourceSchema, $closure, true);
 
@@ -492,14 +486,12 @@ it('registers resource with closure handler correctly', function () {
 
 it('registers prompt with closure handler correctly', function () {
     $promptSchema = createTestPromptSchema('closure-prompt');
-    $closure = function (string $topic): array {
-        return [
-            \PhpMcp\Schema\Content\PromptMessage::make(
-                \PhpMcp\Schema\Enum\Role::User,
-                new \PhpMcp\Schema\Content\TextContent("Tell me about $topic")
-            )
-        ];
-    };
+    $closure = (fn (string $topic): array => [
+        \PhpMcp\Schema\Content\PromptMessage::make(
+            \PhpMcp\Schema\Enum\Role::User,
+            new \PhpMcp\Schema\Content\TextContent("Tell me about $topic")
+        )
+    ]);
 
     $this->registry->registerPrompt($promptSchema, $closure, [], true);
 
@@ -512,9 +504,7 @@ it('registers prompt with closure handler correctly', function () {
 
 it('registers resource template with closure handler correctly', function () {
     $templateSchema = createTestTemplateSchema('closure://item/{id}');
-    $closure = function (string $uri, string $id): array {
-        return [new \PhpMcp\Schema\Content\TextContent("Item $id from $uri")];
-    };
+    $closure = (fn (string $uri, string $id): array => [new \PhpMcp\Schema\Content\TextContent("Item $id from $uri")]);
 
     $this->registry->registerResourceTemplate($templateSchema, $closure, [], true);
 
@@ -526,9 +516,7 @@ it('registers resource template with closure handler correctly', function () {
 });
 
 it('does not save closure handlers to cache', function () {
-    $closure = function (): string {
-        return 'test';
-    };
+    $closure = (fn (): string => 'test');
     $arrayHandler = ['TestClass', 'testMethod'];
 
     $closureTool = createTestToolSchema('closure-tool');
@@ -554,7 +542,7 @@ it('does not save closure handlers to cache', function () {
 
 it('handles static method handlers correctly', function () {
     $toolSchema = createTestToolSchema('static-tool');
-    $staticHandler = [TestStaticHandler::class, 'handle'];
+    $staticHandler = TestStaticHandler::handle(...);
 
     $this->registry->registerTool($toolSchema, $staticHandler, true);
 

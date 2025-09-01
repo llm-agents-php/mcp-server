@@ -1,0 +1,37 @@
+$schema: 'https://raw.githubusercontent.com/context-hub/generator/refs/heads/main/json-schema.json'
+
+documents:
+  - description: 'Project structure overview'
+    outputPath: project-structure.md
+    sources:
+      - type: tree
+        sourcePaths:
+          - src
+        showCharCount: true
+
+  - description: Git changes
+    outputPath: docs/recent-changes.md
+    sources:
+      - type: git_diff
+        description: Recent Git Changes
+        commit: unstaged
+        filePattern: "*.php"
+        notPath:
+          - tests
+          - vendor
+
+  - description: Source codes
+    outputPath: source-codes.md
+    sources:
+      - type: file
+        description: Recent Git Changes
+        sourcePaths:
+          - src
+        notPath:
+          - Attributes
+          - Transports
+          - Session
+          - Defaults
+          - Utils/DocBlockParser.php
+          - Utils/SchemaGenerator.php
+

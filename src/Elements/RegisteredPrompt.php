@@ -27,21 +27,25 @@ class RegisteredPrompt extends RegisteredElement
         public readonly Prompt $schema,
         callable|array|string $handler,
         bool $isManual = false,
-        public readonly array $completionProviders = []
+        public readonly array $completionProviders = [],
     ) {
         parent::__construct($handler, $isManual);
     }
 
-    public static function make(Prompt $schema, callable|array|string $handler, bool $isManual = false, array $completionProviders = []): self
-    {
+    public static function make(
+        Prompt $schema,
+        callable|array|string $handler,
+        bool $isManual = false,
+        array $completionProviders = [],
+    ): self {
         return new self($schema, $handler, $isManual, $completionProviders);
     }
 
     /**
      * Gets the prompt messages.
      *
-     * @param  ContainerInterface  $container
-     * @param  array  $arguments
+     * @param ContainerInterface $container
+     * @param array $arguments
      * @return PromptMessage[]
      */
     public function get(ContainerInterface $container, array $arguments, Context $context): array
@@ -51,15 +55,19 @@ class RegisteredPrompt extends RegisteredElement
         return $this->formatResult($result);
     }
 
-    public function complete(ContainerInterface $container, string $argument, string $value, SessionInterface $session): CompletionCompleteResult
-    {
+    public function complete(
+        ContainerInterface $container,
+        string $argument,
+        string $value,
+        SessionInterface $session,
+    ): CompletionCompleteResult {
         $providerClassOrInstance = $this->completionProviders[$argument] ?? null;
         if ($providerClassOrInstance === null) {
             return new CompletionCompleteResult([]);
         }
 
         if (is_string($providerClassOrInstance)) {
-            if (! class_exists($providerClassOrInstance)) {
+            if (!class_exists($providerClassOrInstance)) {
                 throw new \RuntimeException("Completion provider class '{$providerClassOrInstance}' does not exist.");
             }
 
@@ -81,7 +89,7 @@ class RegisteredPrompt extends RegisteredElement
     /**
      * Formats the raw result of a prompt generator into an array of MCP PromptMessages.
      *
-     * @param  mixed  $promptGenerationResult  Expected: array of message structures.
+     * @param mixed $promptGenerationResult Expected: array of message structures.
      * @return PromptMessage[] Array of PromptMessage objects.
      *
      * @throws \RuntimeException If the result cannot be formatted.
@@ -93,7 +101,7 @@ class RegisteredPrompt extends RegisteredElement
             return [$promptGenerationResult];
         }
 
-        if (! is_array($promptGenerationResult)) {
+        if (!is_array($promptGenerationResult)) {
             throw new \RuntimeException('Prompt generator method must return an array of messages.');
         }
 
@@ -101,67 +109,66 @@ class RegisteredPrompt extends RegisteredElement
             return [];
         }
 
-        if (is_array($promptGenerationResult)) {
-            $allArePromptMessages = true;
-            $hasPromptMessages = false;
+        $allArePromptMessages = true;
+        $hasPromptMessages = false;
 
-            foreach ($promptGenerationResult as $item) {
+        foreach ($promptGenerationResult as $item) {
+            if ($item instanceof PromptMessage) {
+                $hasPromptMessages = true;
+            } else {
+                $allArePromptMessages = false;
+            }
+        }
+
+        if ($allArePromptMessages && $hasPromptMessages) {
+            return $promptGenerationResult;
+        }
+
+        if ($hasPromptMessages) {
+            $result = [];
+            foreach ($promptGenerationResult as $index => $item) {
                 if ($item instanceof PromptMessage) {
-                    $hasPromptMessages = true;
+                    $result[] = $item;
                 } else {
-                    $allArePromptMessages = false;
+                    $result = array_merge($result, $this->formatResult($item));
                 }
             }
+            return $result;
+        }
 
-            if ($allArePromptMessages && $hasPromptMessages) {
-                return $promptGenerationResult;
-            }
-
-            if ($hasPromptMessages) {
+        if (!array_is_list($promptGenerationResult)) {
+            if (isset($promptGenerationResult['user']) || isset($promptGenerationResult['assistant'])) {
                 $result = [];
-                foreach ($promptGenerationResult as $index => $item) {
-                    if ($item instanceof PromptMessage) {
-                        $result[] = $item;
-                    } else {
-                        $result = array_merge($result, $this->formatResult($item));
-                    }
+                if (isset($promptGenerationResult['user'])) {
+                    $userContent = $this->formatContent($promptGenerationResult['user']);
+                    $result[] = PromptMessage::make(Role::User, $userContent);
+                }
+                if (isset($promptGenerationResult['assistant'])) {
+                    $assistantContent = $this->formatContent($promptGenerationResult['assistant']);
+                    $result[] = PromptMessage::make(Role::Assistant, $assistantContent);
                 }
                 return $result;
             }
 
-            if (! array_is_list($promptGenerationResult)) {
-                if (isset($promptGenerationResult['user']) || isset($promptGenerationResult['assistant'])) {
-                    $result = [];
-                    if (isset($promptGenerationResult['user'])) {
-                        $userContent = $this->formatContent($promptGenerationResult['user']);
-                        $result[] = PromptMessage::make(Role::User, $userContent);
-                    }
-                    if (isset($promptGenerationResult['assistant'])) {
-                        $assistantContent = $this->formatContent($promptGenerationResult['assistant']);
-                        $result[] = PromptMessage::make(Role::Assistant, $assistantContent);
-                    }
-                    return $result;
-                }
-
-                if (isset($promptGenerationResult['role']) && isset($promptGenerationResult['content'])) {
-                    return [$this->formatMessage($promptGenerationResult)];
-                }
-
-                throw new \RuntimeException('Associative array must contain either role/content keys or user/assistant keys.');
+            if (isset($promptGenerationResult['role']) && isset($promptGenerationResult['content'])) {
+                return [$this->formatMessage($promptGenerationResult)];
             }
 
-            $formattedMessages = [];
-            foreach ($promptGenerationResult as $index => $message) {
-                if ($message instanceof PromptMessage) {
-                    $formattedMessages[] = $message;
-                } else {
-                    $formattedMessages[] = $this->formatMessage($message, $index);
-                }
-            }
-            return $formattedMessages;
+            throw new \RuntimeException(
+                'Associative array must contain either role/content keys or user/assistant keys.',
+            );
         }
 
-        throw new \RuntimeException('Invalid prompt generation result format.');
+        $formattedMessages = [];
+        foreach ($promptGenerationResult as $index => $message) {
+            if ($message instanceof PromptMessage) {
+                $formattedMessages[] = $message;
+            } else {
+                $formattedMessages[] = $this->formatMessage($message, $index);
+            }
+        }
+
+        return $formattedMessages;
     }
 
     /**
@@ -171,13 +178,17 @@ class RegisteredPrompt extends RegisteredElement
     {
         $indexStr = $index !== null ? " at index {$index}" : '';
 
-        if (! is_array($message) || ! array_key_exists('role', $message) || ! array_key_exists('content', $message)) {
-            throw new \RuntimeException("Invalid message format{$indexStr}. Expected an array with 'role' and 'content' keys.");
+        if (!is_array($message) || !array_key_exists('role', $message) || !array_key_exists('content', $message)) {
+            throw new \RuntimeException(
+                "Invalid message format{$indexStr}. Expected an array with 'role' and 'content' keys.",
+            );
         }
 
         $role = $message['role'] instanceof Role ? $message['role'] : Role::tryFrom($message['role']);
         if ($role === null) {
-            throw new \RuntimeException("Invalid role '{$message['role']}' in prompt message{$indexStr}. Only 'user' or 'assistant' are supported.");
+            throw new \RuntimeException(
+                "Invalid role '{$message['role']}' in prompt message{$indexStr}. Only 'user' or 'assistant' are supported.",
+            );
         }
 
         $content = $this->formatContent($message['content'], $index);
@@ -188,8 +199,10 @@ class RegisteredPrompt extends RegisteredElement
     /**
      * Formats content into a proper Content object.
      */
-    private function formatContent(mixed $content, ?int $index = null): TextContent|ImageContent|AudioContent|EmbeddedResource
-    {
+    private function formatContent(
+        mixed $content,
+        ?int $index = null,
+    ): TextContent|ImageContent|AudioContent|EmbeddedResource {
         $indexStr = $index !== null ? " at index {$index}" : '';
 
         if ($content instanceof Content) {
@@ -199,7 +212,9 @@ class RegisteredPrompt extends RegisteredElement
             ) {
                 return $content;
             }
-            throw new \RuntimeException("Invalid Content type{$indexStr}. PromptMessage only supports TextContent, ImageContent, AudioContent, or EmbeddedResource.");
+            throw new \RuntimeException(
+                "Invalid Content type{$indexStr}. PromptMessage only supports TextContent, ImageContent, AudioContent, or EmbeddedResource.",
+            );
         }
 
         if (is_string($content)) {
@@ -211,19 +226,26 @@ class RegisteredPrompt extends RegisteredElement
         }
 
         if (is_scalar($content) || $content === null) {
-            $stringContent = $content === null ? '(null)' : (is_bool($content) ? ($content ? 'true' : 'false') : (string)$content);
+            $stringContent = $content === null ? '(null)' : (is_bool(
+                $content,
+            ) ? ($content ? 'true' : 'false') : (string) $content);
             return TextContent::make($stringContent);
         }
 
-        $jsonContent = json_encode($content, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR);
+        $jsonContent = json_encode(
+            $content,
+            JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR,
+        );
         return TextContent::make($jsonContent);
     }
 
     /**
      * Formats typed content arrays into Content objects.
      */
-    private function formatTypedContent(array $content, ?int $index = null): TextContent|ImageContent|AudioContent|EmbeddedResource
-    {
+    private function formatTypedContent(
+        array $content,
+        ?int $index = null,
+    ): TextContent|ImageContent|AudioContent|EmbeddedResource {
         $indexStr = $index !== null ? " at index {$index}" : '';
         $type = $content['type'];
 
@@ -238,7 +260,7 @@ class RegisteredPrompt extends RegisteredElement
 
     private function formatTextContent(array $content, string $indexStr): TextContent
     {
-        if (! isset($content['text']) || ! is_string($content['text'])) {
+        if (!isset($content['text']) || !is_string($content['text'])) {
             throw new \RuntimeException("Invalid 'text' content{$indexStr}: Missing or invalid 'text' string.");
         }
         return TextContent::make($content['text']);
@@ -246,10 +268,12 @@ class RegisteredPrompt extends RegisteredElement
 
     private function formatImageContent(array $content, string $indexStr): ImageContent
     {
-        if (! isset($content['data']) || ! is_string($content['data'])) {
-            throw new \RuntimeException("Invalid 'image' content{$indexStr}: Missing or invalid 'data' string (base64).");
+        if (!isset($content['data']) || !is_string($content['data'])) {
+            throw new \RuntimeException(
+                "Invalid 'image' content{$indexStr}: Missing or invalid 'data' string (base64).",
+            );
         }
-        if (! isset($content['mimeType']) || ! is_string($content['mimeType'])) {
+        if (!isset($content['mimeType']) || !is_string($content['mimeType'])) {
             throw new \RuntimeException("Invalid 'image' content{$indexStr}: Missing or invalid 'mimeType' string.");
         }
         return ImageContent::make($content['data'], $content['mimeType']);
@@ -257,10 +281,12 @@ class RegisteredPrompt extends RegisteredElement
 
     private function formatAudioContent(array $content, string $indexStr): AudioContent
     {
-        if (! isset($content['data']) || ! is_string($content['data'])) {
-            throw new \RuntimeException("Invalid 'audio' content{$indexStr}: Missing or invalid 'data' string (base64).");
+        if (!isset($content['data']) || !is_string($content['data'])) {
+            throw new \RuntimeException(
+                "Invalid 'audio' content{$indexStr}: Missing or invalid 'data' string (base64).",
+            );
         }
-        if (! isset($content['mimeType']) || ! is_string($content['mimeType'])) {
+        if (!isset($content['mimeType']) || !is_string($content['mimeType'])) {
             throw new \RuntimeException("Invalid 'audio' content{$indexStr}: Missing or invalid 'mimeType' string.");
         }
         return AudioContent::make($content['data'], $content['mimeType']);
@@ -268,22 +294,26 @@ class RegisteredPrompt extends RegisteredElement
 
     private function formatResourceContent(array $content, string $indexStr): EmbeddedResource
     {
-        if (! isset($content['resource']) || ! is_array($content['resource'])) {
+        if (!isset($content['resource']) || !is_array($content['resource'])) {
             throw new \RuntimeException("Invalid 'resource' content{$indexStr}: Missing or invalid 'resource' object.");
         }
 
         $resource = $content['resource'];
-        if (! isset($resource['uri']) || ! is_string($resource['uri'])) {
+        if (!isset($resource['uri']) || !is_string($resource['uri'])) {
             throw new \RuntimeException("Invalid resource{$indexStr}: Missing or invalid 'uri'.");
         }
 
         if (isset($resource['text']) && is_string($resource['text'])) {
-            $resourceObj = TextResourceContents::make($resource['uri'], $resource['mimeType'] ?? 'text/plain', $resource['text']);
+            $resourceObj = TextResourceContents::make(
+                $resource['uri'],
+                $resource['mimeType'] ?? 'text/plain',
+                $resource['text'],
+            );
         } elseif (isset($resource['blob']) && is_string($resource['blob'])) {
             $resourceObj = BlobResourceContents::make(
                 $resource['uri'],
                 $resource['mimeType'] ?? 'application/octet-stream',
-                $resource['blob']
+                $resource['blob'],
             );
         } else {
             throw new \RuntimeException("Invalid resource{$indexStr}: Must contain 'text' or 'blob'.");
@@ -294,10 +324,10 @@ class RegisteredPrompt extends RegisteredElement
 
     public function toArray(): array
     {
-        $completionProviders = [];
-        foreach ($this->completionProviders as $argument => $provider) {
-            $completionProviders[$argument] = serialize($provider);
-        }
+        $completionProviders = array_map(
+            static fn (CompletionProviderInterface $provider): string => serialize($provider),
+            $this->completionProviders,
+        );
 
         return [
             'schema' => $this->schema->toArray(),
@@ -309,14 +339,14 @@ class RegisteredPrompt extends RegisteredElement
     public static function fromArray(array $data): self|false
     {
         try {
-            if (! isset($data['schema']) || ! isset($data['handler'])) {
+            if (!isset($data['schema']) || !isset($data['handler'])) {
                 return false;
             }
 
-            $completionProviders = [];
-            foreach ($data['completionProviders'] ?? [] as $argument => $provider) {
-                $completionProviders[$argument] = unserialize($provider);
-            }
+            $completionProviders = array_map(
+                static fn (string $provider): CompletionProviderInterface => unserialize($provider),
+                $data['completionProviders'] ?? [],
+            );
 
             return new self(
                 Prompt::fromArray($data['schema']),
@@ -324,7 +354,7 @@ class RegisteredPrompt extends RegisteredElement
                 $data['isManual'] ?? false,
                 $completionProviders,
             );
-        } catch (Throwable $e) {
+        } catch (Throwable) {
             return false;
         }
     }

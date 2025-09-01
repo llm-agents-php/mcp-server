@@ -24,7 +24,7 @@ class SessionManager implements EventEmitterInterface
         protected LoggerInterface $logger,
         protected ?LoopInterface $loop = null,
         protected int $ttl = 3600,
-        protected int|float $gcInterval = 300
+        protected int|float $gcInterval = 300,
     ) {
         $this->loop ??= Loop::get();
     }
@@ -38,7 +38,7 @@ class SessionManager implements EventEmitterInterface
             return;
         }
 
-        $this->gcTimer = $this->loop->addPeriodicTimer($this->gcInterval, [$this, 'gc']);
+        $this->gcTimer = $this->loop->addPeriodicTimer($this->gcInterval, $this->gc(...));
     }
 
     public function gc(): array
@@ -149,7 +149,7 @@ class SessionManager implements EventEmitterInterface
 
     public function hasQueuedMessages(string $sessionId): bool
     {
-        $session = $this->getSession($sessionId, true);
+        $session = $this->getSession($sessionId);
         if ($session === null) {
             return false;
         }

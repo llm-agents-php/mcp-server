@@ -144,7 +144,8 @@ class VariousTypesHandler
     {
     }
 
-    public function contextArg(Context $context): array {
+    public function contextArg(Context $context): array
+    {
         return [
             'session' => $context->session->get('testKey'),
             'request' => $context->request->getHeaderLine('testHeader'),

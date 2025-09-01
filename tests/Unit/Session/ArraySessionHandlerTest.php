@@ -29,7 +29,6 @@ it('constructs with a default TTL and SystemClock if no clock provided', functio
     expect($handler->ttl)->toBe(DEFAULT_TTL_ARRAY);
     $reflection = new \ReflectionClass($handler);
     $clockProp = $reflection->getProperty('clock');
-    $clockProp->setAccessible(true);
     expect($clockProp->getValue($handler))->toBeInstanceOf(SystemClock::class);
 });
 
@@ -40,7 +39,6 @@ it('constructs with a custom TTL and injected clock', function () {
     expect($handler->ttl)->toBe($customTtl);
     $reflection = new \ReflectionClass($handler);
     $clockProp = $reflection->getProperty('clock');
-    $clockProp->setAccessible(true);
     expect($clockProp->getValue($handler))->toBe($clock);
 });
 
@@ -79,7 +77,6 @@ it('returns false and removes data when reading an expired session due to handle
 
     $reflection = new \ReflectionClass($handler);
     $storeProp = $reflection->getProperty('store');
-    $storeProp->setAccessible(true);
     $internalStore = $storeProp->getValue($handler);
     expect($internalStore)->not->toHaveKey(SESSION_ID_ARRAY_1);
 });
@@ -129,7 +126,6 @@ it('destroys an existing session and it cannot be read', function () {
 
     $reflection = new \ReflectionClass($this->handler);
     $storeProp = $reflection->getProperty('store');
-    $storeProp->setAccessible(true);
     expect($storeProp->getValue($this->handler))->not->toHaveKey(SESSION_ID_ARRAY_1);
 });
 

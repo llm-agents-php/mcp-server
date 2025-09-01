@@ -9,58 +9,57 @@ use PhpMcp\Server\Defaults\SystemClock;
 use Psr\SimpleCache\CacheInterface;
 use Psr\Clock\ClockInterface;
 
-class CacheSessionHandler implements SessionHandlerInterface
+final class CacheSessionHandler implements SessionHandlerInterface
 {
-    private const SESSION_INDEX_KEY = 'mcp_session_index';
-    private array $sessionIndex = [];
-    private ClockInterface $clock;
+    private const string SESSION_INDEX_KEY = 'mcp_session_index';
+
+    private array $sessionIndex;
 
     public function __construct(
         public readonly CacheInterface $cache,
         public readonly int $ttl = 3600,
-        ?ClockInterface $clock = null
+        private readonly ClockInterface $clock = new SystemClock(),
     ) {
         $this->sessionIndex = $this->cache->get(self::SESSION_INDEX_KEY, []);
-        $this->clock = $clock ?? new SystemClock();
     }
 
-    public function read(string $sessionId): string|false
+    public function read(string $id): string|false
     {
-        $session = $this->cache->get($sessionId, false);
+        $session = $this->cache->get($id, false);
         if ($session === false) {
-            if (isset($this->sessionIndex[$sessionId])) {
-                unset($this->sessionIndex[$sessionId]);
+            if (isset($this->sessionIndex[$id])) {
+                unset($this->sessionIndex[$id]);
                 $this->cache->set(self::SESSION_INDEX_KEY, $this->sessionIndex);
             }
             return false;
         }
 
-        if (!isset($this->sessionIndex[$sessionId])) {
-            $this->sessionIndex[$sessionId] = $this->clock->now()->getTimestamp();
+        if (!isset($this->sessionIndex[$id])) {
+            $this->sessionIndex[$id] = $this->clock->now()->getTimestamp();
             $this->cache->set(self::SESSION_INDEX_KEY, $this->sessionIndex);
             return $session;
         }
 
-        if ($this->clock->now()->getTimestamp() - $this->sessionIndex[$sessionId] > $this->ttl) {
-            $this->cache->delete($sessionId);
+        if ($this->clock->now()->getTimestamp() - $this->sessionIndex[$id] > $this->ttl) {
+            $this->cache->delete($id);
             return false;
         }
 
         return $session;
     }
 
-    public function write(string $sessionId, string $data): bool
+    public function write(string $id, string $data): bool
     {
-        $this->sessionIndex[$sessionId] = $this->clock->now()->getTimestamp();
+        $this->sessionIndex[$id] = $this->clock->now()->getTimestamp();
         $this->cache->set(self::SESSION_INDEX_KEY, $this->sessionIndex);
-        return $this->cache->set($sessionId, $data);
+        return $this->cache->set($id, $data);
     }
 
-    public function destroy(string $sessionId): bool
+    public function destroy(string $id): bool
     {
-        unset($this->sessionIndex[$sessionId]);
+        unset($this->sessionIndex[$id]);
         $this->cache->set(self::SESSION_INDEX_KEY, $this->sessionIndex);
-        return $this->cache->delete($sessionId);
+        return $this->cache->delete($id);
     }
 
     public function gc(int $maxLifetime): array

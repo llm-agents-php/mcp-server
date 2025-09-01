@@ -77,18 +77,18 @@ beforeEach(function () {
     $configuration = new Configuration(
         serverInfo: Implementation::make('DispatcherTestServer', '1.0'),
         capabilities: ServerCapabilities::make(),
-        paginationLimit: DISPATCHER_PAGINATION_LIMIT,
         logger: new NullLogger(),
         loop: Loop::get(),
         cache: null,
-        container: $this->container
+        container: $this->container,
+        paginationLimit: DISPATCHER_PAGINATION_LIMIT,
     );
 
     $this->dispatcher = new Dispatcher(
         $configuration,
         $this->registry,
         $this->subscriptionManager,
-        $this->schemaValidator
+        $this->schemaValidator,
     );
 });
 
@@ -101,9 +101,12 @@ it('routes to handleInitialize for initialize request', function () {
             'protocolVersion' => Protocol::LATEST_PROTOCOL_VERSION,
             'clientInfo' => ['name' => 'client', 'version' => '1.0'],
             'capabilities' => [],
-        ]
+        ],
     );
-    $this->session->shouldReceive('set')->with('client_info', Mockery::on(fn($value) => $value['name'] === 'client' && $value['version'] === '1.0'))->once();
+    $this->session->shouldReceive('set')->with(
+        'client_info',
+        Mockery::on(fn ($value) => $value['name'] === 'client' && $value['version'] === '1.0'),
+    )->once();
     $this->session->shouldReceive('set')->with('protocol_version', Protocol::LATEST_PROTOCOL_VERSION)->once();
 
     $result = $this->dispatcher->handleRequest($request, $this->context);
@@ -138,7 +141,13 @@ it('does nothing for unknown notification method', function () {
 
 it('can handle initialize request', function () {
     $clientInfo = Implementation::make('TestClient', '0.9.9');
-    $request = InitializeRequest::make(1, Protocol::LATEST_PROTOCOL_VERSION, ClientCapabilities::make(), $clientInfo, []);
+    $request = InitializeRequest::make(
+        1,
+        Protocol::LATEST_PROTOCOL_VERSION,
+        ClientCapabilities::make(),
+        $clientInfo,
+        [],
+    );
     $this->session->shouldReceive('set')->with('client_info', $clientInfo->toArray())->once();
     $this->session->shouldReceive('set')->with('protocol_version', Protocol::LATEST_PROTOCOL_VERSION)->once();
 
@@ -200,12 +209,20 @@ it('can handle tool list request and return paginated tools', function () {
 it('can handle tool call request and return result', function () {
     $toolName = 'my-calculator';
     $args = ['a' => 10, 'b' => 5];
-    $toolSchema = ToolSchema::make($toolName, ['type' => 'object', 'properties' => ['a' => ['type' => 'integer'], 'b' => ['type' => 'integer']]]);
+    $toolSchema = ToolSchema::make(
+        $toolName,
+        ['type' => 'object', 'properties' => ['a' => ['type' => 'integer'], 'b' => ['type' => 'integer']]],
+    );
     $registeredToolMock = Mockery::mock(RegisteredTool::class, [$toolSchema, 'MyToolHandler', 'handleTool', false]);
 
     $this->registry->shouldReceive('getTool')->with($toolName)->andReturn($registeredToolMock);
-    $this->schemaValidator->shouldReceive('validateAgainstJsonSchema')->with($args, $toolSchema->inputSchema)->andReturn([]); // No validation errors
-    $registeredToolMock->shouldReceive('call')->with($this->container, $args, $this->context)->andReturn([TextContent::make("Result: 15")]);
+    $this->schemaValidator->shouldReceive('validateAgainstJsonSchema')->with(
+        $args,
+        $toolSchema->inputSchema,
+    )->andReturn([]); // No validation errors
+    $registeredToolMock->shouldReceive('call')->with($this->container, $args, $this->context)->andReturn(
+        [TextContent::make("Result: 15")],
+    );
 
     $request = CallToolRequest::make(1, $toolName, $args);
     $result = $this->dispatcher->handleToolCall($request, $this->context);
@@ -229,7 +246,10 @@ it('can handle tool call request and throw exception if argument validation fail
 
     $this->registry->shouldReceive('getTool')->with($toolName)->andReturn($registeredToolMock);
     $validationErrors = [['pointer' => '/param', 'keyword' => 'type', 'message' => 'Expected integer']];
-    $this->schemaValidator->shouldReceive('validateAgainstJsonSchema')->with($args, $toolSchema->inputSchema)->andReturn($validationErrors);
+    $this->schemaValidator->shouldReceive('validateAgainstJsonSchema')->with(
+        $args,
+        $toolSchema->inputSchema,
+    )->andReturn($validationErrors);
 
     $request = CallToolRequest::make(1, $toolName, $args);
     try {
@@ -279,21 +299,21 @@ it('can handle resources list request and return paginated resources', function 
         ResourceSchema::make('res://2', 'Resource2'),
         ResourceSchema::make('res://3', 'Resource3'),
         ResourceSchema::make('res://4', 'Resource4'),
-        ResourceSchema::make('res://5', 'Resource5')
+        ResourceSchema::make('res://5', 'Resource5'),
     ];
     $this->registry->shouldReceive('getResources')->andReturn($resourceSchemas);
 
     $requestP1 = ListResourcesRequest::make(1);
     $resultP1 = $this->dispatcher->handleResourcesList($requestP1);
     expect($resultP1->resources)->toHaveCount(DISPATCHER_PAGINATION_LIMIT);
-    expect(array_map(fn($r) => $r->name, $resultP1->resources))->toEqual(['Resource1', 'Resource2', 'Resource3']);
+    expect(array_map(fn ($r) => $r->name, $resultP1->resources))->toEqual(['Resource1', 'Resource2', 'Resource3']);
     expect($resultP1->nextCursor)->toBe(base64_encode('offset=3'));
 
     // Page 2
     $requestP2 = ListResourcesRequest::make(2, $resultP1->nextCursor);
     $resultP2 = $this->dispatcher->handleResourcesList($requestP2);
     expect($resultP2->resources)->toHaveCount(2);
-    expect(array_map(fn($r) => $r->name, $resultP2->resources))->toEqual(['Resource4', 'Resource5']);
+    expect(array_map(fn ($r) => $r->name, $resultP2->resources))->toEqual(['Resource4', 'Resource5']);
     expect($resultP2->nextCursor)->toBeNull();
 });
 
@@ -318,25 +338,32 @@ it('can handle resource template list request and return paginated templates', f
     $requestP1 = ListResourceTemplatesRequest::make(1);
     $resultP1 = $this->dispatcher->handleResourceTemplateList($requestP1);
     expect($resultP1->resourceTemplates)->toHaveCount(DISPATCHER_PAGINATION_LIMIT);
-    expect(array_map(fn($rt) => $rt->name, $resultP1->resourceTemplates))->toEqual(['Template1', 'Template2', 'Template3']);
+    expect(array_map(fn ($rt) => $rt->name, $resultP1->resourceTemplates))->toEqual(
+        ['Template1', 'Template2', 'Template3'],
+    );
     expect($resultP1->nextCursor)->toBe(base64_encode('offset=3'));
 
     // Page 2
     $requestP2 = ListResourceTemplatesRequest::make(2, $resultP1->nextCursor);
     $resultP2 = $this->dispatcher->handleResourceTemplateList($requestP2);
     expect($resultP2->resourceTemplates)->toHaveCount(1);
-    expect(array_map(fn($rt) => $rt->name, $resultP2->resourceTemplates))->toEqual(['Template4']);
+    expect(array_map(fn ($rt) => $rt->name, $resultP2->resourceTemplates))->toEqual(['Template4']);
     expect($resultP2->nextCursor)->toBeNull();
 });
 
 it('can handle resource read request and return resource contents', function () {
     $uri = 'file://data.txt';
     $resourceSchema = ResourceSchema::make($uri, 'file_resource');
-    $registeredResourceMock = Mockery::mock(RegisteredResource::class, [$resourceSchema, ['MyResourceHandler', 'read'], false]);
+    $registeredResourceMock = Mockery::mock(
+        RegisteredResource::class,
+        [$resourceSchema, ['MyResourceHandler', 'read'], false],
+    );
     $resourceContents = [TextContent::make('File content')];
 
     $this->registry->shouldReceive('getResource')->with($uri)->andReturn($registeredResourceMock);
-    $registeredResourceMock->shouldReceive('read')->with($this->container, $uri, $this->context)->andReturn($resourceContents);
+    $registeredResourceMock->shouldReceive('read')->with($this->container, $uri, $this->context)->andReturn(
+        $resourceContents,
+    );
 
     $request = ReadResourceRequest::make(1, $uri);
     $result = $this->dispatcher->handleResourceRead($request, $this->context);
@@ -375,14 +402,14 @@ it('can handle prompts list request and return paginated prompts', function () {
     $requestP1 = ListPromptsRequest::make(1);
     $resultP1 = $this->dispatcher->handlePromptsList($requestP1);
     expect($resultP1->prompts)->toHaveCount(DISPATCHER_PAGINATION_LIMIT);
-    expect(array_map(fn($p) => $p->name, $resultP1->prompts))->toEqual(['promptA', 'promptB', 'promptC']);
+    expect(array_map(fn ($p) => $p->name, $resultP1->prompts))->toEqual(['promptA', 'promptB', 'promptC']);
     expect($resultP1->nextCursor)->toBe(base64_encode('offset=3'));
 
     // Page 2
     $requestP2 = ListPromptsRequest::make(2, $resultP1->nextCursor);
     $resultP2 = $this->dispatcher->handlePromptsList($requestP2);
     expect($resultP2->prompts)->toHaveCount(DISPATCHER_PAGINATION_LIMIT); // 3 more
-    expect(array_map(fn($p) => $p->name, $resultP2->prompts))->toEqual(['promptD', 'promptE', 'promptF']);
+    expect(array_map(fn ($p) => $p->name, $resultP2->prompts))->toEqual(['promptD', 'promptE', 'promptF']);
     expect($resultP2->nextCursor)->toBeNull(); // End of list
 });
 
@@ -394,7 +421,9 @@ it('can handle prompt get request and return prompt messages', function () {
     $promptMessages = [PromptMessage::make(Role::User, TextContent::make("Summary for 2024-07-16"))];
 
     $this->registry->shouldReceive('getPrompt')->with($promptName)->andReturn($registeredPromptMock);
-    $registeredPromptMock->shouldReceive('get')->with($this->container, $args, $this->context)->andReturn($promptMessages);
+    $registeredPromptMock->shouldReceive('get')->with($this->container, $args, $this->context)->andReturn(
+        $promptMessages,
+    );
 
     $request = GetPromptRequest::make(1, $promptName, $args);
     $result = $this->dispatcher->handlePromptGet($request, $this->context);
@@ -432,21 +461,27 @@ it('can handle completion complete request for prompt and delegate to provider',
     $currentValue = 'php';
     $completions = ['php-mcp', 'php-fig'];
     $mockCompletionProvider = Mockery::mock(CompletionProviderInterface::class);
-    $providerClass = get_class($mockCompletionProvider);
+    $providerClass = $mockCompletionProvider::class;
 
     $promptSchema = PromptSchema::make($promptName, '', [PromptArgument::make($argName)]);
     $registeredPrompt = new RegisteredPrompt(
         schema: $promptSchema,
         handler: ['MyPromptHandler', 'get'],
         isManual: false,
-        completionProviders: [$argName => $providerClass]
+        completionProviders: [$argName => $providerClass],
     );
 
     $this->registry->shouldReceive('getPrompt')->with($promptName)->andReturn($registeredPrompt);
     $this->container->shouldReceive('get')->with($providerClass)->andReturn($mockCompletionProvider);
-    $mockCompletionProvider->shouldReceive('getCompletions')->with($currentValue, $this->session)->andReturn($completions);
+    $mockCompletionProvider->shouldReceive('getCompletions')->with($currentValue, $this->session)->andReturn(
+        $completions,
+    );
 
-    $request = CompletionCompleteRequest::make(1, PromptReference::make($promptName), ['name' => $argName, 'value' => $currentValue]);
+    $request = CompletionCompleteRequest::make(
+        1,
+        PromptReference::make($promptName),
+        ['name' => $argName, 'value' => $currentValue],
+    );
     $result = $this->dispatcher->handleCompletionComplete($request, $this->session);
 
     expect($result)->toBeInstanceOf(CompletionCompleteResult::class);
@@ -461,21 +496,27 @@ it('can handle completion complete request for resource template and delegate to
     $currentValue = 'boo';
     $completions = ['books', 'boomerangs'];
     $mockCompletionProvider = Mockery::mock(CompletionProviderInterface::class);
-    $providerClass = get_class($mockCompletionProvider);
+    $providerClass = $mockCompletionProvider::class;
 
     $templateSchema = ResourceTemplateSchema::make($templateUri, 'item-template');
     $registeredTemplate = new RegisteredResourceTemplate(
         schema: $templateSchema,
         handler: ['MyResourceTemplateHandler', 'get'],
         isManual: false,
-        completionProviders: [$uriVarName => $providerClass]
+        completionProviders: [$uriVarName => $providerClass],
     );
 
     $this->registry->shouldReceive('getResourceTemplate')->with($templateUri)->andReturn($registeredTemplate);
     $this->container->shouldReceive('get')->with($providerClass)->andReturn($mockCompletionProvider);
-    $mockCompletionProvider->shouldReceive('getCompletions')->with($currentValue, $this->session)->andReturn($completions);
+    $mockCompletionProvider->shouldReceive('getCompletions')->with($currentValue, $this->session)->andReturn(
+        $completions,
+    );
 
-    $request = CompletionCompleteRequest::make(1, ResourceReference::make($templateUri), ['name' => $uriVarName, 'value' => $currentValue]);
+    $request = CompletionCompleteRequest::make(
+        1,
+        ResourceReference::make($templateUri),
+        ['name' => $uriVarName, 'value' => $currentValue],
+    );
     $result = $this->dispatcher->handleCompletionComplete($request, $this->session);
 
     expect($result->values)->toEqual($completions);
@@ -488,7 +529,7 @@ it('can handle completion complete request and return empty if no provider', fun
         schema: $promptSchema,
         handler: ['MyPromptHandler', 'get'],
         isManual: false,
-        completionProviders: []
+        completionProviders: [],
     );
     $this->registry->shouldReceive('getPrompt')->with($promptName)->andReturn($registeredPrompt);
 
@@ -510,12 +551,16 @@ it('can handle completion complete request with ListCompletionProvider instance'
         schema: $promptSchema,
         handler: ['MyPromptHandler', 'get'],
         isManual: false,
-        completionProviders: [$argName => $listProvider]
+        completionProviders: [$argName => $listProvider],
     );
 
     $this->registry->shouldReceive('getPrompt')->with($promptName)->andReturn($registeredPrompt);
 
-    $request = CompletionCompleteRequest::make(1, PromptReference::make($promptName), ['name' => $argName, 'value' => $currentValue]);
+    $request = CompletionCompleteRequest::make(
+        1,
+        PromptReference::make($promptName),
+        ['name' => $argName, 'value' => $currentValue],
+    );
     $result = $this->dispatcher->handleCompletionComplete($request, $this->session);
 
     expect($result->values)->toEqual($expectedCompletions);
@@ -536,12 +581,16 @@ it('can handle completion complete request with EnumCompletionProvider instance'
         schema: $promptSchema,
         handler: ['MyPromptHandler', 'get'],
         isManual: false,
-        completionProviders: [$argName => $enumProvider]
+        completionProviders: [$argName => $enumProvider],
     );
 
     $this->registry->shouldReceive('getPrompt')->with($promptName)->andReturn($registeredPrompt);
 
-    $request = CompletionCompleteRequest::make(1, PromptReference::make($promptName), ['name' => $argName, 'value' => $currentValue]);
+    $request = CompletionCompleteRequest::make(
+        1,
+        PromptReference::make($promptName),
+        ['name' => $argName, 'value' => $currentValue],
+    );
     $result = $this->dispatcher->handleCompletionComplete($request, $this->session);
 
     expect($result->values)->toEqual($expectedCompletions);
@@ -552,7 +601,6 @@ it('can handle completion complete request with EnumCompletionProvider instance'
 
 it('decodeCursor handles null and invalid cursors', function () {
     $method = new \ReflectionMethod(Dispatcher::class, 'decodeCursor');
-    $method->setAccessible(true);
 
     expect($method->invoke($this->dispatcher, null))->toBe(0);
     expect($method->invoke($this->dispatcher, 'not_base64_$$$'))->toBe(0);
@@ -562,12 +610,13 @@ it('decodeCursor handles null and invalid cursors', function () {
 
 it('encodeNextCursor generates correct cursor or null', function () {
     $method = new \ReflectionMethod(Dispatcher::class, 'encodeNextCursor');
-    $method->setAccessible(true);
     $limit = DISPATCHER_PAGINATION_LIMIT;
 
     expect($method->invoke($this->dispatcher, 0, $limit, 10, $limit))->toBe(base64_encode('offset=3'));
     expect($method->invoke($this->dispatcher, 0, $limit, $limit, $limit))->toBeNull();
-    expect($method->invoke($this->dispatcher, $limit, 2, $limit + 2 + 1, $limit))->toBe(base64_encode('offset=' . ($limit + 2)));
+    expect($method->invoke($this->dispatcher, $limit, 2, $limit + 2 + 1, $limit))->toBe(
+        base64_encode('offset=' . ($limit + 2)),
+    );
     expect($method->invoke($this->dispatcher, $limit, 1, $limit + 1, $limit))->toBeNull();
     expect($method->invoke($this->dispatcher, 0, 0, 10, $limit))->toBeNull();
 });

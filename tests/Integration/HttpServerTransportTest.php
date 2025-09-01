@@ -67,7 +67,7 @@ afterEach(function () {
         $this->process->terminate(SIGTERM);
         try {
             await(delay(0.02, $this->loop));
-        } catch (\Throwable $e) {
+        } catch (\Throwable) {
         }
 
         if ($this->process->isRunning()) {
@@ -436,7 +436,7 @@ it('executes middleware that modifies request attributes', function () {
     $this->sseClient = new MockSseClient();
     $sseBaseUrl = "http://" . HTTP_SERVER_HOST . ":" . $this->port . "/" . HTTP_MCP_PATH_PREFIX . "/sse";
 
-    // 1. Connect 
+    // 1. Connect
     await($this->sseClient->connect($sseBaseUrl));
     await(delay(0.05, $this->loop));
 

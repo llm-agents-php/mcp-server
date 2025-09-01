@@ -1,14 +1,17 @@
-<?php declare(strict_types = 1);
+<?php
+
+declare(strict_types=1);
+
 namespace PhpMcp\Server;
 
 use PhpMcp\Server\Contracts\SessionInterface;
 use Psr\Http\Message\ServerRequestInterface;
 
-final class Context
+final readonly class Context
 {
     public function __construct(
-        public readonly SessionInterface $session,
-        public readonly ?ServerRequestInterface $request = null,
+        public SessionInterface $session,
+        public ?ServerRequestInterface $request = null,
     ) {
     }
 }

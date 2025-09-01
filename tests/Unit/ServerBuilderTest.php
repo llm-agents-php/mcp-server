@@ -146,7 +146,6 @@ it('creates ArraySessionHandler when array driver is specified', function () {
     $sessionManager = $server->getSessionManager();
     $smReflection = new ReflectionClass(SessionManager::class);
     $handlerProp = $smReflection->getProperty('handler');
-    $handlerProp->setAccessible(true);
     $handler = $handlerProp->getValue($sessionManager);
 
     expect($handler)->toBeInstanceOf(ArraySessionHandler::class);
@@ -166,7 +165,6 @@ it('creates CacheSessionHandler when cache driver is specified', function () {
     $sessionManager = $server->getSessionManager();
     $smReflection = new ReflectionClass(SessionManager::class);
     $handlerProp = $smReflection->getProperty('handler');
-    $handlerProp->setAccessible(true);
     $handler = $handlerProp->getValue($sessionManager);
 
     expect($handler)->toBeInstanceOf(CacheSessionHandler::class);
@@ -186,7 +184,6 @@ it('prefers custom session handler over session driver', function () {
     $sessionManager = $server->getSessionManager();
     $smReflection = new ReflectionClass(SessionManager::class);
     $handlerProp = $smReflection->getProperty('handler');
-    $handlerProp->setAccessible(true);
 
     expect($handlerProp->getValue($sessionManager))->toBe($customHandler);
 });
@@ -256,7 +253,6 @@ it('resolves default Logger, Loop, Container, SessionHandler if not provided', f
     $sessionManager = $server->getSessionManager();
     $smReflection = new ReflectionClass(SessionManager::class);
     $handlerProp = $smReflection->getProperty('handler');
-    $handlerProp->setAccessible(true);
     expect($handlerProp->getValue($sessionManager))->toBeInstanceOf(ArraySessionHandler::class);
 });
 
@@ -298,7 +294,6 @@ it('builds Server with correct Configuration, Registry, Protocol, SessionManager
     expect($server->getSessionManager())->toBeInstanceOf(SessionManager::class);
     $smReflection = new ReflectionClass($server->getSessionManager());
     $handlerProp = $smReflection->getProperty('handler');
-    $handlerProp->setAccessible(true);
     expect($handlerProp->getValue($server->getSessionManager()))->toBe($sessionHandler);
 });
 
@@ -335,9 +330,7 @@ it('infers tool name from invokable class if not provided', function () {
 });
 
 it('registers tool with closure handler', function () {
-    $closure = function (string $message): string {
-        return "Hello, $message!";
-    };
+    $closure = (fn (string $message): string => "Hello, $message!");
 
     $server = $this->builder
         ->withServerInfo('ClosureTest', '1.0')
@@ -373,13 +366,11 @@ it('registers tool with static method handler', function () {
 });
 
 it('registers resource with closure handler', function () {
-    $closure = function (string $id): array {
-        return [
-            'uri' => "res://item/$id",
-            'name' => "Item $id",
-            'mimeType' => 'application/json'
-        ];
-    };
+    $closure = (fn (string $id): array => [
+        'uri' => "res://item/$id",
+        'name' => "Item $id",
+        'mimeType' => 'application/json'
+    ]);
 
     $server = $this->builder
         ->withServerInfo('ResourceTest', '1.0')
@@ -393,12 +384,10 @@ it('registers resource with closure handler', function () {
 });
 
 it('registers prompt with closure handler', function () {
-    $closure = function (string $topic): array {
-        return [
-            'role' => 'user',
-            'content' => ['type' => 'text', 'text' => "Tell me about $topic"]
-        ];
-    };
+    $closure = (fn (string $topic): array => [
+        'role' => 'user',
+        'content' => ['type' => 'text', 'text' => "Tell me about $topic"]
+    ]);
 
     $server = $this->builder
         ->withServerInfo('PromptTest', '1.0')
@@ -412,9 +401,7 @@ it('registers prompt with closure handler', function () {
 });
 
 it('infers closure tool name automatically', function () {
-    $closure = function (int $count): array {
-        return ['count' => $count];
-    };
+    $closure = (fn (int $count): array => ['count' => $count]);
 
     $server = $this->builder
         ->withServerInfo('AutoNameTest', '1.0')
@@ -432,12 +419,8 @@ it('infers closure tool name automatically', function () {
 });
 
 it('generates unique names for multiple closures', function () {
-    $closure1 = function (string $a): string {
-        return $a;
-    };
-    $closure2 = function (int $b): int {
-        return $b;
-    };
+    $closure1 = (fn (string $a): string => $a);
+    $closure2 = (fn (int $b): int => $b);
 
     $server = $this->builder
         ->withServerInfo('MultiClosureTest', '1.0')

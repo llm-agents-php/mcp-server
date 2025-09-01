@@ -35,10 +35,10 @@ use function React\Promise\resolve;
  * This handler manages the JSON-RPC parsing, processing delegation, and response sending
  * based on events received from the transport layer.
  */
-class Protocol
+final class Protocol
 {
-    public const LATEST_PROTOCOL_VERSION = '2025-03-26';
-    public const SUPPORTED_PROTOCOL_VERSIONS = [self::LATEST_PROTOCOL_VERSION, '2024-11-05'];
+    public const string LATEST_PROTOCOL_VERSION = '2025-03-26';
+    public const array SUPPORTED_PROTOCOL_VERSIONS = [self::LATEST_PROTOCOL_VERSION, '2024-11-05'];
 
     protected ?ServerTransportInterface $transport = null;
 
@@ -51,12 +51,11 @@ class Protocol
         protected Configuration $configuration,
         protected Registry $registry,
         protected SessionManager $sessionManager,
-        protected ?Dispatcher $dispatcher = null,
+        protected Dispatcher $dispatcher,
         protected ?SubscriptionManager $subscriptionManager = null,
     ) {
         $this->logger = $this->configuration->logger;
         $this->subscriptionManager ??= new SubscriptionManager($this->logger);
-        $this->dispatcher ??= new Dispatcher($this->configuration, $this->registry, $this->subscriptionManager);
 
         $this->sessionManager->on('session_deleted', function (string $sessionId) {
             $this->subscriptionManager->cleanupSession($sessionId);
@@ -80,10 +79,10 @@ class Protocol
         $this->transport = $transport;
 
         $this->listeners = [
-            'message' => [$this, 'processMessage'],
-            'client_connected' => [$this, 'handleClientConnected'],
-            'client_disconnected' => [$this, 'handleClientDisconnected'],
-            'error' => [$this, 'handleTransportError'],
+            'message' => $this->processMessage(...),
+            'client_connected' => $this->handleClientConnected(...),
+            'client_disconnected' => $this->handleClientDisconnected(...),
+            'error' => $this->handleTransportError(...),
         ];
 
         $this->transport->on('message', $this->listeners['message']);
@@ -97,7 +96,7 @@ class Protocol
      */
     public function unbindTransport(): void
     {
-        if ($this->transport && ! empty($this->listeners)) {
+        if ($this->transport && !empty($this->listeners)) {
             $this->transport->removeListener('message', $this->listeners['message']);
             $this->transport->removeListener('client_connected', $this->listeners['client_connected']);
             $this->transport->removeListener('client_disconnected', $this->listeners['client_disconnected']);
@@ -113,22 +112,35 @@ class Protocol
      *
      * Processes via Processor, sends Response/Error.
      */
-    public function processMessage(Request|Notification|BatchRequest $message, string $sessionId, array $messageContext = []): void
-    {
+    public function processMessage(
+        Request|Notification|BatchRequest $message,
+        string $sessionId,
+        array $messageContext = [],
+    ): void {
         $this->logger->debug('Message received.', ['sessionId' => $sessionId, 'message' => $message]);
 
         $session = $this->sessionManager->getSession($sessionId);
 
         if ($session === null) {
-            $error = Error::forInvalidRequest('Invalid or expired session. Please re-initialize the session.', $message->id);
+            $error = Error::forInvalidRequest(
+                'Invalid or expired session. Please re-initialize the session.',
+                $message->id,
+            );
             $messageContext['status_code'] = 404;
 
-            $this->transport->sendMessage($error, $sessionId, $messageContext)
+            $this->transport
+                ->sendMessage($error, $sessionId, $messageContext)
                 ->then(function () use ($sessionId, $error, $messageContext) {
-                    $this->logger->debug('Response sent.', ['sessionId' => $sessionId, 'payload' => $error, 'context' => $messageContext]);
+                    $this->logger->debug(
+                        'Response sent.',
+                        ['sessionId' => $sessionId, 'payload' => $error, 'context' => $messageContext],
+                    );
                 })
                 ->catch(function (Throwable $e) use ($sessionId) {
-                    $this->logger->error('Failed to send response.', ['sessionId' => $sessionId, 'error' => $e->getMessage()]);
+                    $this->logger->error(
+                        'Failed to send response.',
+                        ['sessionId' => $sessionId, 'error' => $e->getMessage()],
+                    );
                 });
 
             return;
@@ -161,20 +173,27 @@ class Protocol
             return;
         }
 
-        $this->transport->sendMessage($response, $sessionId, $messageContext)
+        $this->transport
+            ->sendMessage($response, $sessionId, $messageContext)
             ->then(function () use ($sessionId, $response) {
                 $this->logger->debug('Response sent.', ['sessionId' => $sessionId, 'payload' => $response]);
             })
             ->catch(function (Throwable $e) use ($sessionId) {
-                $this->logger->error('Failed to send response.', ['sessionId' => $sessionId, 'error' => $e->getMessage()]);
+                $this->logger->error(
+                    'Failed to send response.',
+                    ['sessionId' => $sessionId, 'error' => $e->getMessage()],
+                );
             });
     }
 
     /**
      * Process a batch message
      */
-    private function processBatchRequest(BatchRequest $batch, SessionInterface $session, Context $context): ?BatchResponse
-    {
+    private function processBatchRequest(
+        BatchRequest $batch,
+        SessionInterface $session,
+        Context $context,
+    ): ?BatchResponse {
         $items = [];
 
         foreach ($batch->getNotifications() as $notification) {
@@ -204,7 +223,15 @@ class Protocol
 
             return Response::make($request->id, $result);
         } catch (McpServerException $e) {
-            $this->logger->debug('MCP Processor caught McpServerException', ['method' => $request->method, 'code' => $e->getCode(), 'message' => $e->getMessage(), 'data' => $e->getData()]);
+            $this->logger->debug(
+                'MCP Processor caught McpServerException',
+                [
+                    'method' => $request->method,
+                    'code' => $e->getCode(),
+                    'message' => $e->getMessage(),
+                    'data' => $e->getData(),
+                ],
+            );
 
             return $e->toJsonRpcError($request->id);
         } catch (Throwable $e) {
@@ -219,7 +246,7 @@ class Protocol
                 id: $request->id,
                 code: Constants::INTERNAL_ERROR,
                 message: 'Internal error processing method ' . $request->method,
-                data: $e->getMessage()
+                data: $e->getMessage(),
             );
         }
     }
@@ -235,7 +262,10 @@ class Protocol
         try {
             $this->dispatcher->handleNotification($notification, $session);
         } catch (Throwable $e) {
-            $this->logger->error('Error while processing notification', ['method' => $method, 'exception' => $e->getMessage()]);
+            $this->logger->error(
+                'Error while processing notification',
+                ['method' => $method, 'exception' => $e->getMessage()],
+            );
             return;
         }
     }
@@ -248,18 +278,15 @@ class Protocol
         if ($this->transport === null) {
             $this->logger->error('Cannot send notification, transport not bound', [
                 'sessionId' => $sessionId,
-                'method' => $notification->method
+                'method' => $notification->method,
             ]);
             return reject(new McpServerException('Transport not bound'));
         }
 
-        return $this->transport->sendMessage($notification, $sessionId, [])
-            ->then(function () {
-                return resolve(null);
-            })
-            ->catch(function (Throwable $e) {
-                return reject(new McpServerException('Failed to send notification: ' . $e->getMessage(), previous: $e));
-            });
+        return $this->transport
+            ->sendMessage($notification, $sessionId, [])
+            ->then(fn () => resolve(null))
+            ->catch(fn (Throwable $e) => reject(new McpServerException('Failed to send notification: ' . $e->getMessage(), previous: $e)));
     }
 
     /**
@@ -281,7 +308,7 @@ class Protocol
 
         $this->logger->debug("Sent resource change notification", [
             'uri' => $uri,
-            'subscriber_count' => count($subscribers)
+            'subscriber_count' => count($subscribers),
         ]);
     }
 
@@ -329,7 +356,10 @@ class Protocol
                     throw McpServerException::methodNotFound($method, 'Resources are not enabled on this server.');
                 }
                 if (!$capabilities->resourcesSubscribe) {
-                    throw McpServerException::methodNotFound($method, 'Resources subscription is not enabled on this server.');
+                    throw McpServerException::methodNotFound(
+                        $method,
+                        'Resources subscription is not enabled on this server.',
+                    );
                 }
                 break;
 
@@ -366,7 +396,9 @@ class Protocol
         switch ($method) {
             case 'notifications/message':
                 if (!$capabilities->logging) {
-                    $this->logger->warning('Logging is not enabled on this server. Notifications/message will not be sent.');
+                    $this->logger->warning(
+                        'Logging is not enabled on this server. Notifications/message will not be sent.',
+                    );
                     $valid = false;
                 }
                 break;
@@ -374,21 +406,27 @@ class Protocol
             case "notifications/resources/updated":
             case "notifications/resources/list_changed":
                 if (!$capabilities->resources || !$capabilities->resourcesListChanged) {
-                    $this->logger->warning('Resources list changed notifications are not enabled on this server. Notifications/resources/list_changed will not be sent.');
+                    $this->logger->warning(
+                        'Resources list changed notifications are not enabled on this server. Notifications/resources/list_changed will not be sent.',
+                    );
                     $valid = false;
                 }
                 break;
 
             case "notifications/tools/list_changed":
                 if (!$capabilities->tools || !$capabilities->toolsListChanged) {
-                    $this->logger->warning('Tools list changed notifications are not enabled on this server. Notifications/tools/list_changed will not be sent.');
+                    $this->logger->warning(
+                        'Tools list changed notifications are not enabled on this server. Notifications/tools/list_changed will not be sent.',
+                    );
                     $valid = false;
                 }
                 break;
 
             case "notifications/prompts/list_changed":
                 if (!$capabilities->prompts || !$capabilities->promptsListChanged) {
-                    $this->logger->warning('Prompts list changed notifications are not enabled on this server. Notifications/prompts/list_changed will not be sent.');
+                    $this->logger->warning(
+                        'Prompts list changed notifications are not enabled on this server. Notifications/prompts/list_changed will not be sent.',
+                    );
                     $valid = false;
                 }
                 break;
@@ -458,7 +496,7 @@ class Protocol
 
         $this->logger->debug("Sent list change notification", [
             'list_type' => $listType,
-            'subscriber_count' => count($subscribers)
+            'subscriber_count' => count($subscribers),
         ]);
     }
 
@@ -467,7 +505,7 @@ class Protocol
      */
     public function handleTransportError(Throwable $error, ?string $clientId = null): void
     {
-        $context = ['error' => $error->getMessage(), 'exception_class' => get_class($error)];
+        $context = ['error' => $error->getMessage(), 'exception_class' => $error::class];
 
         if ($clientId) {
             $context['clientId'] = $clientId;

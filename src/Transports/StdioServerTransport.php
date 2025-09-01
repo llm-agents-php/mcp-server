@@ -51,7 +51,7 @@ class StdioServerTransport implements ServerTransportInterface, LoggerAwareInter
 
     protected bool $listening = false;
 
-    private const CLIENT_ID = 'stdio';
+    private const string CLIENT_ID = 'stdio';
 
     /**
      * Constructor takes optional stream resources.
@@ -155,7 +155,7 @@ class StdioServerTransport implements ServerTransportInterface, LoggerAwareInter
             };
             $this->loop->addSignal(SIGTERM, $signalHandler);
             $this->loop->addSignal(SIGINT, $signalHandler);
-        } catch (Throwable $e) {
+        } catch (Throwable) {
             $this->logger->debug('Signal handling not supported by current event loop.');
         }
 

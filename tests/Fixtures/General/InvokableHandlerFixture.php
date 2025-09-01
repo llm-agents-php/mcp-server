@@ -4,12 +4,10 @@ namespace PhpMcp\Server\Tests\Fixtures\General;
 
 class InvokableHandlerFixture
 {
-    public string $type;
     public array $argsReceived;
 
-    public function __construct(string $type = "default")
+    public function __construct(public string $type = "default")
     {
-        $this->type = $type;
     }
 
     public function __invoke(string $arg1, int $arg2 = 0): array

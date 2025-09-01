@@ -46,8 +46,6 @@ class StreamableHttpServerTransport implements ServerTransportInterface, LoggerA
     private bool $listening = false;
     private bool $closing = false;
 
-    private ?EventStoreInterface $eventStore;
-
     /**
      * Stores Deferred objects for POST requests awaiting a direct JSON response.
      * Keyed by a unique pendingRequestId.
@@ -79,13 +77,12 @@ class StreamableHttpServerTransport implements ServerTransportInterface, LoggerA
         private ?array $sslContext = null,
         private readonly bool $enableJsonResponse = true,
         private readonly bool $stateless = false,
-        ?EventStoreInterface $eventStore = null,
-        private array $middlewares = []
+        private ?EventStoreInterface $eventStore = null,
+        private array $middlewares = [],
     ) {
         $this->logger = new NullLogger();
         $this->loop = Loop::get();
         $this->mcpPath = '/' . trim($mcpPath, '/');
-        $this->eventStore = $eventStore;
 
         foreach ($this->middlewares as $mw) {
             if (!is_callable($mw)) {
@@ -126,7 +123,7 @@ class StreamableHttpServerTransport implements ServerTransportInterface, LoggerA
             $this->socket = new SocketServer(
                 $listenAddress,
                 $this->sslContext ?? [],
-                $this->loop
+                $this->loop,
             );
 
             $handlers = array_merge($this->middlewares, [$this->createRequestHandler()]);
@@ -135,7 +132,10 @@ class StreamableHttpServerTransport implements ServerTransportInterface, LoggerA
 
             $this->socket->on('error', function (Throwable $error) {
                 $this->logger->error('Socket server error (StreamableHttp).', ['error' => $error->getMessage()]);
-                $this->emit('error', [new TransportException("Socket server error: {$error->getMessage()}", 0, $error)]);
+                $this->emit(
+                    'error',
+                    [new TransportException("Socket server error: {$error->getMessage()}", 0, $error)],
+                );
                 $this->close();
             });
 
@@ -147,7 +147,11 @@ class StreamableHttpServerTransport implements ServerTransportInterface, LoggerA
             $this->emit('ready');
         } catch (Throwable $e) {
             $this->logger->error("Failed to start StreamableHttp listener on {$listenAddress}", ['exception' => $e]);
-            throw new TransportException("Failed to start StreamableHttp listener on {$listenAddress}: {$e->getMessage()}", 0, $e);
+            throw new TransportException(
+                "Failed to start StreamableHttp listener on {$listenAddress}: {$e->getMessage()}",
+                0,
+                $e,
+            );
         }
     }
 
@@ -157,7 +161,10 @@ class StreamableHttpServerTransport implements ServerTransportInterface, LoggerA
             $path = $request->getUri()->getPath();
             $method = $request->getMethod();
 
-            $this->logger->debug("Request received", ['method' => $method, 'path' => $path, 'target' => $this->mcpPath]);
+            $this->logger->debug(
+                "Request received",
+                ['method' => $method, 'path' => $path, 'target' => $this->mcpPath],
+            );
 
             if ($path !== $this->mcpPath) {
                 $error = Error::forInvalidRequest("Not found: {$path}");
@@ -183,9 +190,18 @@ class StreamableHttpServerTransport implements ServerTransportInterface, LoggerA
 
             try {
                 return match ($method) {
-                    'GET' => $this->handleGetRequest($request)->then($addCors, fn($e) => $addCors($this->handleRequestError($e, $request))),
-                    'POST' => $this->handlePostRequest($request)->then($addCors, fn($e) => $addCors($this->handleRequestError($e, $request))),
-                    'DELETE' => $this->handleDeleteRequest($request)->then($addCors, fn($e) => $addCors($this->handleRequestError($e, $request))),
+                    'GET' => $this->handleGetRequest($request)->then(
+                        $addCors,
+                        fn ($e) => $addCors($this->handleRequestError($e, $request)),
+                    ),
+                    'POST' => $this->handlePostRequest($request)->then(
+                        $addCors,
+                        fn ($e) => $addCors($this->handleRequestError($e, $request)),
+                    ),
+                    'DELETE' => $this->handleDeleteRequest($request)->then(
+                        $addCors,
+                        fn ($e) => $addCors($this->handleRequestError($e, $request)),
+                    ),
                     default => $addCors($this->handleUnsupportedRequest($request)),
                 };
             } catch (Throwable $e) {
@@ -249,7 +265,9 @@ class StreamableHttpServerTransport implements ServerTransportInterface, LoggerA
 
         $acceptHeader = $request->getHeaderLine('Accept');
         if (!str_contains($acceptHeader, 'application/json') && !str_contains($acceptHeader, 'text/event-stream')) {
-            $error = Error::forInvalidRequest("Not Acceptable: Client must accept both application/json or text/event-stream");
+            $error = Error::forInvalidRequest(
+                "Not Acceptable: Client must accept both application/json or text/event-stream",
+            );
             $deferred->resolve(new HttpResponse(406, ['Content-Type' => 'application/json'], json_encode($error)));
             return $deferred->promise();
         }
@@ -287,9 +305,17 @@ class StreamableHttpServerTransport implements ServerTransportInterface, LoggerA
         } else {
             if ($isInitializeRequest) {
                 if ($request->hasHeader('Mcp-Session-Id')) {
-                    $this->logger->warning("Client sent Mcp-Session-Id with InitializeRequest. Ignoring.", ['clientSentId' => $request->getHeaderLine('Mcp-Session-Id')]);
-                    $error = Error::forInvalidRequest("Invalid request: Session already initialized. Mcp-Session-Id header not allowed with InitializeRequest.", $message->getId());
-                    $deferred->resolve(new HttpResponse(400, ['Content-Type' => 'application/json'], json_encode($error)));
+                    $this->logger->warning(
+                        "Client sent Mcp-Session-Id with InitializeRequest. Ignoring.",
+                        ['clientSentId' => $request->getHeaderLine('Mcp-Session-Id')],
+                    );
+                    $error = Error::forInvalidRequest(
+                        "Invalid request: Session already initialized. Mcp-Session-Id header not allowed with InitializeRequest.",
+                        $message->getId(),
+                    );
+                    $deferred->resolve(
+                        new HttpResponse(400, ['Content-Type' => 'application/json'], json_encode($error)),
+                    );
                     return $deferred->promise();
                 }
 
@@ -300,8 +326,13 @@ class StreamableHttpServerTransport implements ServerTransportInterface, LoggerA
 
                 if (empty($sessionId)) {
                     $this->logger->warning("POST request without Mcp-Session-Id.");
-                    $error = Error::forInvalidRequest("Mcp-Session-Id header required for POST requests.", $message->getId());
-                    $deferred->resolve(new HttpResponse(400, ['Content-Type' => 'application/json'], json_encode($error)));
+                    $error = Error::forInvalidRequest(
+                        "Mcp-Session-Id header required for POST requests.",
+                        $message->getId(),
+                    );
+                    $deferred->resolve(
+                        new HttpResponse(400, ['Content-Type' => 'application/json'], json_encode($error)),
+                    );
                     return $deferred->promise();
                 }
             }
@@ -329,9 +360,20 @@ class StreamableHttpServerTransport implements ServerTransportInterface, LoggerA
                     if (isset($this->pendingRequests[$pendingRequestId])) {
                         $deferred = $this->pendingRequests[$pendingRequestId];
                         unset($this->pendingRequests[$pendingRequestId]);
-                        $this->logger->warning("Timeout waiting for direct JSON response processing.", ['pending_request_id' => $pendingRequestId, 'session_id' => $sessionId]);
-                        $errorResponse = McpServerException::internalError("Request processing timed out.")->toJsonRpcError($pendingRequestId);
-                        $deferred->resolve(new HttpResponse(500, ['Content-Type' => 'application/json'], json_encode($errorResponse->toArray())));
+                        $this->logger->warning(
+                            "Timeout waiting for direct JSON response processing.",
+                            ['pending_request_id' => $pendingRequestId, 'session_id' => $sessionId],
+                        );
+                        $errorResponse = McpServerException::internalError(
+                            "Request processing timed out.",
+                        )->toJsonRpcError($pendingRequestId);
+                        $deferred->resolve(
+                            new HttpResponse(
+                                500,
+                                ['Content-Type' => 'application/json'],
+                                json_encode($errorResponse->toArray()),
+                            ),
+                        );
                     }
                 });
 
@@ -347,15 +389,25 @@ class StreamableHttpServerTransport implements ServerTransportInterface, LoggerA
                 $this->activeSseStreams[$streamId] = [
                     'stream' => $sseStream,
                     'sessionId' => $sessionId,
-                    'context' => ['nRequests' => $nRequests, 'nResponses' => 0]
+                    'context' => ['nRequests' => $nRequests, 'nResponses' => 0],
                 ];
 
                 $sseStream->on('close', function () use ($streamId) {
-                    $this->logger->info("POST SSE stream closed by client/server.", ['streamId' => $streamId, 'sessionId' => $this->activeSseStreams[$streamId]['sessionId']]);
+                    $this->logger->info(
+                        "POST SSE stream closed by client/server.",
+                        ['streamId' => $streamId, 'sessionId' => $this->activeSseStreams[$streamId]['sessionId']],
+                    );
                     unset($this->activeSseStreams[$streamId]);
                 });
                 $sseStream->on('error', function (Throwable $e) use ($streamId) {
-                    $this->logger->error("POST SSE stream error.", ['streamId' => $streamId, 'sessionId' => $this->activeSseStreams[$streamId]['sessionId'], 'error' => $e->getMessage()]);
+                    $this->logger->error(
+                        "POST SSE stream error.",
+                        [
+                            'streamId' => $streamId,
+                            'sessionId' => $this->activeSseStreams[$streamId]['sessionId'],
+                            'error' => $e->getMessage(),
+                        ],
+                    );
                     unset($this->activeSseStreams[$streamId]);
                 });
 
@@ -437,7 +489,7 @@ class StreamableHttpServerTransport implements ServerTransportInterface, LoggerA
         $this->logger->error("Error processing HTTP request", [
             'method' => $request->getMethod(),
             'path' => $request->getUri()->getPath(),
-            'exception' => $e->getMessage()
+            'exception' => $e->getMessage(),
         ]);
 
         if ($e instanceof TransportException) {
@@ -464,13 +516,19 @@ class StreamableHttpServerTransport implements ServerTransportInterface, LoggerA
             case 'post_sse':
                 $streamId = $context['streamId'];
                 if (!isset($this->activeSseStreams[$streamId])) {
-                    $this->logger->error("SSE stream for POST not found.", ['streamId' => $streamId, 'sessionId' => $sessionId]);
+                    $this->logger->error(
+                        "SSE stream for POST not found.",
+                        ['streamId' => $streamId, 'sessionId' => $sessionId],
+                    );
                     return reject(new TransportException("SSE stream {$streamId} not found for POST response."));
                 }
 
                 $stream = $this->activeSseStreams[$streamId]['stream'];
                 if (!$stream->isWritable()) {
-                    $this->logger->warning("SSE stream for POST is not writable.", ['streamId' => $streamId, 'sessionId' => $sessionId]);
+                    $this->logger->warning(
+                        "SSE stream for POST is not writable.",
+                        ['streamId' => $streamId, 'sessionId' => $sessionId],
+                    );
                     return reject(new TransportException("SSE stream {$streamId} for POST is not writable."));
                 }
 
@@ -493,7 +551,10 @@ class StreamableHttpServerTransport implements ServerTransportInterface, LoggerA
                 if (isset($this->activeSseStreams[$streamId]['context'])) {
                     $this->activeSseStreams[$streamId]['context']['nResponses'] += $sentCountThisCall;
                     if ($this->activeSseStreams[$streamId]['context']['nResponses'] >= $this->activeSseStreams[$streamId]['context']['nRequests']) {
-                        $this->logger->info("All expected responses sent for POST SSE stream. Closing.", ['streamId' => $streamId, 'sessionId' => $sessionId]);
+                        $this->logger->info(
+                            "All expected responses sent for POST SSE stream. Closing.",
+                            ['streamId' => $streamId, 'sessionId' => $sessionId],
+                        );
                         $stream->end(); // Will trigger 'close' event.
 
                         if ($context['stateless'] ?? false) {
@@ -509,7 +570,10 @@ class StreamableHttpServerTransport implements ServerTransportInterface, LoggerA
             case 'post_json':
                 $pendingRequestId = $context['pending_request_id'];
                 if (!isset($this->pendingRequests[$pendingRequestId])) {
-                    $this->logger->error("Pending direct JSON request not found.", ['pending_request_id' => $pendingRequestId, 'session_id' => $sessionId]);
+                    $this->logger->error(
+                        "Pending direct JSON request not found.",
+                        ['pending_request_id' => $pendingRequestId, 'session_id' => $sessionId],
+                    );
                     return reject(new TransportException("Pending request {$pendingRequestId} not found."));
                 }
 
@@ -570,7 +634,7 @@ class StreamableHttpServerTransport implements ServerTransportInterface, LoggerA
                 function (string $replayedEventId, string $json) use ($sseStream) {
                     $this->logger->debug("Replaying event", ['replayedEventId' => $replayedEventId]);
                     $this->sendSseEventToStream($sseStream, $json, $replayedEventId);
-                }
+                },
             );
         } catch (Throwable $e) {
             $this->logger->error("Error during event replay.", ['sessionId' => $sessionId, 'exception' => $e]);
@@ -579,7 +643,7 @@ class StreamableHttpServerTransport implements ServerTransportInterface, LoggerA
 
     private function sendSseEventToStream(ThroughStream $stream, string $data, ?string $eventId = null): bool
     {
-        if (! $stream->isWritable()) {
+        if (!$stream->isWritable()) {
             return false;
         }
 

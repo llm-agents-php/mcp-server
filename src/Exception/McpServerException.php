@@ -14,18 +14,6 @@ use Throwable;
  */
 class McpServerException extends Exception
 {
-    // MCP reserved range: -32000 to -32099 (Server error)
-    // Add specific server-side codes if needed later, e.g.:
-    // public const CODE_RESOURCE_ACTION_FAILED = -32000;
-    // public const CODE_TOOL_EXECUTION_FAILED = -32001;
-
-    /**
-     * Additional data associated with the error, suitable for JSON-RPC 'data' field.
-     *
-     * @var mixed|null
-     */
-    protected mixed $data = null;
-
     /**
      * @param  string  $message  Error message.
      * @param  int  $code  Error code (use constants or appropriate HTTP status codes if applicable).
@@ -35,11 +23,13 @@ class McpServerException extends Exception
     public function __construct(
         string $message = '',
         int $code = 0,
-        mixed $data = null,
+        /**
+         * Additional data associated with the error, suitable for JSON-RPC 'data' field.
+         */
+        protected mixed $data = null,
         ?Throwable $previous = null
     ) {
         parent::__construct($message, $code, $previous);
-        $this->data = $data;
     }
 
     /**

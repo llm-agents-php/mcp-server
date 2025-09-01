@@ -8,25 +8,22 @@ use PhpMcp\Server\Contracts\SessionHandlerInterface;
 use PhpMcp\Server\Defaults\SystemClock;
 use Psr\Clock\ClockInterface;
 
-class ArraySessionHandler implements SessionHandlerInterface
+final class ArraySessionHandler implements SessionHandlerInterface
 {
     /**
      * @var array<string, array{ data: array, timestamp: int }>
      */
     protected array $store = [];
 
-    private ClockInterface $clock;
-
     public function __construct(
         public readonly int $ttl = 3600,
-        ?ClockInterface $clock = null
+        private readonly ClockInterface $clock = new SystemClock(),
     ) {
-        $this->clock = $clock ?? new SystemClock();
     }
 
-    public function read(string $sessionId): string|false
+    public function read(string $id): string|false
     {
-        $session = $this->store[$sessionId] ?? '';
+        $session = $this->store[$id] ?? '';
         if ($session === '') {
             return false;
         }
@@ -34,16 +31,16 @@ class ArraySessionHandler implements SessionHandlerInterface
         $currentTimestamp = $this->clock->now()->getTimestamp();
 
         if ($currentTimestamp - $session['timestamp'] > $this->ttl) {
-            unset($this->store[$sessionId]);
+            unset($this->store[$id]);
             return false;
         }
 
         return $session['data'];
     }
 
-    public function write(string $sessionId, string $data): bool
+    public function write(string $id, string $data): bool
     {
-        $this->store[$sessionId] = [
+        $this->store[$id] = [
             'data' => $data,
             'timestamp' => $this->clock->now()->getTimestamp(),
         ];
@@ -51,10 +48,10 @@ class ArraySessionHandler implements SessionHandlerInterface
         return true;
     }
 
-    public function destroy(string $sessionId): bool
+    public function destroy(string $id): bool
     {
-        if (isset($this->store[$sessionId])) {
-            unset($this->store[$sessionId]);
+        if (isset($this->store[$id])) {
+            unset($this->store[$id]);
         }
 
         return true;
