@@ -1,5 +1,5 @@
 {
-  "name": "llm-agents/mcp-erver",
+  "name": "llm-agents/mcp-server",
   "description": "PHP SDK for building MCP servers",
   "keywords": [],
   "type": "library",
