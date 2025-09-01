@@ -71,10 +71,10 @@ class MockStreamHttpClient
             if (!empty($eventData)) {
                 try {
                     $decodedJson = json_decode($eventData, true, 512, JSON_THROW_ON_ERROR);
-                    if (isset($decodedJson['method']) && str_starts_with($decodedJson['method'], 'notifications/')) {
+                    if (isset($decodedJson['method']) && str_starts_with((string) $decodedJson['method'], 'notifications/')) {
                         $targetArray[] = $decodedJson;
                     }
-                } catch (\JsonException $e) { /* ignore non-json data lines or log */
+                } catch (\JsonException) { /* ignore non-json data lines or log */
                 }
             }
         }

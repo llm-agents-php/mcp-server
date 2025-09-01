@@ -32,7 +32,7 @@ beforeEach(function () {
         'Generates a greeting.',
         [PromptArgument::make('name', 'The name to greet.', true)]
     );
-    
+
     $this->context = new Context(Mockery::mock(SessionInterface::class));
 });
 

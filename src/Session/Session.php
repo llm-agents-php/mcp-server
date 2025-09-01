@@ -7,7 +7,7 @@ namespace PhpMcp\Server\Session;
 use PhpMcp\Server\Contracts\SessionHandlerInterface;
 use PhpMcp\Server\Contracts\SessionInterface;
 
-class Session implements SessionInterface
+final class Session implements SessionInterface
 {
     /**
      * @var array<string, mixed> Stores all session data.
@@ -26,7 +26,7 @@ class Session implements SessionInterface
     public function __construct(
         protected SessionHandlerInterface $handler,
         protected string $id = '',
-        ?array $data = null
+        ?array $data = null,
     ) {
         if (empty($this->id)) {
             $this->id = $this->generateId();
@@ -55,7 +55,7 @@ class Session implements SessionInterface
             return null;
         }
 
-        return new static($handler, $id, $data);
+        return new self($handler, $id, $data);
     }
 
     public function getId(): string
@@ -177,14 +177,14 @@ class Session implements SessionInterface
                 'message_queue' => [],
                 'log_level' => null,
             ],
-            $attributes
+            $attributes,
         );
         unset($this->data['id']);
     }
 
-    public function queueMessage(string $rawFramedMessage): void
+    public function queueMessage(string $message): void
     {
-        $this->data['message_queue'][] = $rawFramedMessage;
+        $this->data['message_queue'][] = $message;
     }
 
     public function dequeueMessages(): array

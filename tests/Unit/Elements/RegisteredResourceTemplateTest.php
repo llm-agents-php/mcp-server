@@ -105,7 +105,6 @@ it('matches URIs against template and extracts variables correctly', function (s
         expect($template->matches($uriToTest))->toBeTrue();
         $reflection = new \ReflectionClass($template);
         $prop = $reflection->getProperty('uriVariables');
-        $prop->setAccessible(true);
         expect($prop->getValue($template))->toEqual($expectedVariables);
     } else {
         expect($template->matches($uriToTest))->toBeFalse();

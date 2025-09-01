@@ -56,7 +56,7 @@ function readResponseFromServer(Process $process, string $expectedRequestId, Loo
                         $process->stdout->removeListener('data', $dataListener);
                         $deferred->resolve($response);
                         return;
-                    } elseif (isset($response['method']) && str_starts_with($response['method'], 'notifications/')) {
+                    } elseif (isset($response['method']) && str_starts_with((string) $response['method'], 'notifications/')) {
                         // It's a notification, log it or handle if necessary for a specific test, but don't resolve
                     }
                 } catch (\JsonException $e) {

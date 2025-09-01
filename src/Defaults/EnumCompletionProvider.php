@@ -7,7 +7,7 @@ namespace PhpMcp\Server\Defaults;
 use PhpMcp\Server\Contracts\CompletionProviderInterface;
 use PhpMcp\Server\Contracts\SessionInterface;
 
-class EnumCompletionProvider implements CompletionProviderInterface
+final readonly class EnumCompletionProvider implements CompletionProviderInterface
 {
     private array $values;
 
@@ -18,8 +18,8 @@ class EnumCompletionProvider implements CompletionProviderInterface
         }
 
         $this->values = array_map(
-            fn($case) => isset($case->value) && is_string($case->value) ? $case->value : $case->name,
-            $enumClass::cases()
+            static fn ($case) => isset($case->value) && is_string($case->value) ? $case->value : $case->name,
+            $enumClass::cases(),
         );
     }
 
@@ -29,9 +29,11 @@ class EnumCompletionProvider implements CompletionProviderInterface
             return $this->values;
         }
 
-        return array_values(array_filter(
-            $this->values,
-            fn(string $value) => str_starts_with($value, $currentValue)
-        ));
+        return array_values(
+            array_filter(
+                $this->values,
+                static fn (string $value): bool => str_starts_with($value, $currentValue),
+            ),
+        );
     }
 }

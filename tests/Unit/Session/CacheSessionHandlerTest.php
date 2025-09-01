@@ -41,7 +41,6 @@ it('constructs with default TTL and SystemClock if no clock provided', function 
     expect($handler->ttl)->toBe(DEFAULT_TTL_CACHE);
     $reflection = new \ReflectionClass($handler);
     $clockProp = $reflection->getProperty('clock');
-    $clockProp->setAccessible(true);
     expect($clockProp->getValue($handler))->toBeInstanceOf(\PhpMcp\Server\Defaults\SystemClock::class);
 });
 
@@ -55,7 +54,6 @@ it('constructs with a custom TTL and injected clock', function () {
 
     $reflection = new \ReflectionClass($handler);
     $clockProp = $reflection->getProperty('clock');
-    $clockProp->setAccessible(true);
     expect($clockProp->getValue($handler))->toBe($clock);
 });
 

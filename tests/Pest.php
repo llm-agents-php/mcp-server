@@ -11,7 +11,6 @@ function getPrivateProperty(object $object, string $propertyName)
 {
     $reflector = new ReflectionClass($object);
     $property = $reflector->getProperty($propertyName);
-    $property->setAccessible(true);
     return $property->getValue($object);
 }
 

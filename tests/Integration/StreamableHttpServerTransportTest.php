@@ -70,7 +70,7 @@ afterEach(function () {
         $this->process->terminate(SIGTERM);
         try {
             await(delay(0.02));
-        } catch (\Throwable $e) {
+        } catch (\Throwable) {
         }
         if ($this->process->isRunning()) {
             $this->process->terminate(SIGKILL);
@@ -532,15 +532,15 @@ describe('STREAM MODE', function () {
 
 /**
  * STATELESS MODE TESTS
- * 
+ *
  * Tests for the stateless mode of StreamableHttpServerTransport, which:
  * - Generates session IDs internally but doesn't expose them to clients
  * - Doesn't require session IDs in requests after initialization
  * - Doesn't include session IDs in response headers
- * - Disables GET requests (SSE streaming) 
+ * - Disables GET requests (SSE streaming)
  * - Makes DELETE requests meaningless (but returns 204)
  * - Treats each request as independent (no persistent session state)
- * 
+ *
  * This mode is designed to work with clients like OpenAI's MCP implementation
  * that have issues with session management in "never require approval" mode.
  */
@@ -886,7 +886,7 @@ it('executes middleware that modifies request attributes', function () {
     $this->jsonClient = new MockJsonHttpClient(STREAMABLE_HTTP_HOST, $this->port, STREAMABLE_MCP_PATH);
     await(delay(0.1));
 
-    // 1. Initialize 
+    // 1. Initialize
     await($this->jsonClient->sendRequest('initialize', [
         'protocolVersion' => Protocol::LATEST_PROTOCOL_VERSION,
         'clientInfo' => ['name' => 'MiddlewareAttrTestClient', 'version' => '1.0'],

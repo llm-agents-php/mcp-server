@@ -26,8 +26,14 @@ class SchemaGenerationTarget
      * @param array $pArray Array param
      * @param stdClass $pObject Object param
      */
-    public function simpleRequiredTypes(string $pString, int $pInt, bool $pBool, float $pFloat, array $pArray, stdClass $pObject): void
-    {
+    public function simpleRequiredTypes(
+        string $pString,
+        int $pInt,
+        bool $pBool,
+        float $pFloat,
+        array $pArray,
+        stdClass $pObject,
+    ): void {
     }
 
     /**
@@ -45,7 +51,7 @@ class SchemaGenerationTarget
         bool $pBoolOpt = true,
         ?float $pFloatOptNullable = 1.23,
         array $pArrayOpt = ['a', 'b'],
-        ?stdClass $pObjectOptNullable = null
+        ?stdClass $pObjectOptNullable = null,
     ): void {
     }
 
@@ -54,8 +60,11 @@ class SchemaGenerationTarget
      * @param ?string $pNullableString Nullable string
      * @param int|null $pUnionNullableInt Union nullable int
      */
-    public function nullableTypes(?string $pNullableString, ?int $pUnionNullableInt, ?BackedStringEnum $pNullableEnum): void
-    {
+    public function nullableTypes(
+        ?string $pNullableString,
+        ?int $pUnionNullableInt,
+        ?BackedStringEnum $pNullableEnum,
+    ): void {
     }
 
     /**
@@ -63,8 +72,10 @@ class SchemaGenerationTarget
      * @param string|int $pStringOrInt String or Int
      * @param bool|float|null $pBoolOrFloatOrNull Bool, Float or Null
      */
-    public function unionTypes(string|int $pStringOrInt, $pBoolOrFloatOrNull): void
-    {
+    public function unionTypes(
+        string|int $pStringOrInt,
+        $pBoolOrFloatOrNull,
+    ): void {
     } // PHP 7.x style union in docblock usually
 
     /**
@@ -82,7 +93,7 @@ class SchemaGenerationTarget
         array $pAssocArray,
         array $pEnumArray,
         array $pShapeArray,
-        array $pArrayOfShapes
+        array $pArrayOfShapes,
     ): void {
     }
 
@@ -92,8 +103,11 @@ class SchemaGenerationTarget
      * @param BackedIntEnum $pBackedIntEnum Backed int enum
      * @param UnitEnum $pUnitEnum Unit enum
      */
-    public function enumTypes(BackedStringEnum $pBackedStringEnum, BackedIntEnum $pBackedIntEnum, UnitEnum $pUnitEnum): void
-    {
+    public function enumTypes(
+        BackedStringEnum $pBackedStringEnum,
+        BackedIntEnum $pBackedIntEnum,
+        UnitEnum $pUnitEnum,
+    ): void {
     }
 
     /**
@@ -134,7 +148,7 @@ class SchemaGenerationTarget
             required: ['id', 'username'],
             additionalProperties: false
         )]
-        array $userProfile
+        array $userProfile,
     ): void {
     }
 }

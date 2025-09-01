@@ -21,14 +21,12 @@ class RegisteredElement implements JsonSerializable
 {
     /** @var callable|array|string */
     public readonly mixed $handler;
-    public readonly bool $isManual;
 
     public function __construct(
         callable|array|string $handler,
-        bool $isManual = false,
+        public readonly bool $isManual = false,
     ) {
         $this->handler = $handler;
-        $this->isManual = $isManual;
     }
 
     public function handle(ContainerInterface $container, array $arguments, Context $context): mixed
@@ -67,8 +65,11 @@ class RegisteredElement implements JsonSerializable
     }
 
 
-    protected function prepareArguments(\ReflectionFunctionAbstract $reflection, array $arguments, Context $context): array
-    {
+    protected function prepareArguments(
+        \ReflectionFunctionAbstract $reflection,
+        array $arguments,
+        Context $context,
+    ): array {
         $finalArgs = [];
 
         foreach ($reflection->getParameters() as $parameter) {
@@ -92,7 +93,7 @@ class RegisteredElement implements JsonSerializable
                 } catch (Throwable $e) {
                     throw McpServerException::internalError(
                         "Error processing parameter `{$paramName}`: {$e->getMessage()}",
-                        $e
+                        $e,
                     );
                 }
             } elseif ($parameter->isDefaultValueAvailable()) {
@@ -106,7 +107,7 @@ class RegisteredElement implements JsonSerializable
                     ? $reflection->class . '::' . $reflection->name
                     : 'Closure';
                 throw McpServerException::internalError(
-                    "Missing required argument `{$paramName}` for {$reflectionName}."
+                    "Missing required argument `{$paramName}` for {$reflectionName}.",
                 );
             }
         }
@@ -151,7 +152,7 @@ class RegisteredElement implements JsonSerializable
             }
         }
 
-        if (! $type instanceof ReflectionNamedType) {
+        if (!$type instanceof ReflectionNamedType) {
             return $argument;
         }
 
@@ -177,13 +178,16 @@ class RegisteredElement implements JsonSerializable
                             return $case;
                         }
                     }
-                    $validNames = array_map(fn($c) => $c->name, $typeName::cases());
+                    $validNames = array_map(fn ($c) => $c->name, $typeName::cases());
                     throw new InvalidArgumentException(
-                        "Invalid value '{$argument}' for unit enum {$typeName}. Expected one of: " . implode(', ', $validNames) . "."
+                        "Invalid value '{$argument}' for unit enum {$typeName}. Expected one of: " . implode(
+                            ', ',
+                            $validNames,
+                        ) . ".",
                     );
                 } else {
                     throw new InvalidArgumentException(
-                        "Invalid value type '{$argument}' for unit enum {$typeName}. Expected a string matching a case name."
+                        "Invalid value type '{$argument}' for unit enum {$typeName}. Expected a string matching a case name.",
                     );
                 }
             }
@@ -202,7 +206,7 @@ class RegisteredElement implements JsonSerializable
             throw new InvalidArgumentException(
                 "Value cannot be cast to required type `{$typeName}`.",
                 0,
-                $e
+                $e,
             );
         }
     }
@@ -228,7 +232,7 @@ class RegisteredElement implements JsonSerializable
         if (is_int($argument)) {
             return $argument;
         }
-        if (is_numeric($argument) && floor((float) $argument) == $argument && ! is_string($argument)) {
+        if (is_numeric($argument) && floor((float) $argument) == $argument && !is_string($argument)) {
             return (int) $argument;
         }
         if (is_string($argument) && ctype_digit(ltrim($argument, '-'))) {

@@ -11,9 +11,9 @@ use PhpMcp\Server\Contracts\EventStoreInterface;
  * This is primarily intended for examples and testing, not for production use
  * where a persistent storage solution would be more appropriate.
  */
-class InMemoryEventStore implements EventStoreInterface
+final class InMemoryEventStore implements EventStoreInterface
 {
-    public const DEFAULT_MAX_EVENTS_PER_STREAM = 1000;
+    public const int DEFAULT_MAX_EVENTS_PER_STREAM = 1000;
 
     /**
      * @var array<string, array{streamId: string, message: string}>
@@ -23,7 +23,7 @@ class InMemoryEventStore implements EventStoreInterface
 
     private function generateEventId(string $streamId): string
     {
-        return $streamId . '_' . (int)(microtime(true) * 1000) . '_' . bin2hex(random_bytes(4));
+        return $streamId . '_' . (int) (microtime(true) * 1000) . '_' . bin2hex(random_bytes(4));
     }
 
     private function getStreamIdFromEventId(string $eventId): ?string

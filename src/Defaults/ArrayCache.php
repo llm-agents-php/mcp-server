@@ -9,15 +9,15 @@ use Psr\SimpleCache\CacheInterface;
 /**
  * Very basic PSR-16 array cache implementation (not for production).
  */
-class ArrayCache implements CacheInterface
+final class ArrayCache implements CacheInterface
 {
     private array $store = [];
 
-    private array $expiries = [];
+    private array $expires = [];
 
     public function get(string $key, mixed $default = null): mixed
     {
-        if (! $this->has($key)) {
+        if (!$this->has($key)) {
             return $default;
         }
 
@@ -27,14 +27,14 @@ class ArrayCache implements CacheInterface
     public function set(string $key, mixed $value, DateInterval|int|null $ttl = null): bool
     {
         $this->store[$key] = $value;
-        $this->expiries[$key] = $this->calculateExpiry($ttl);
+        $this->expires[$key] = $this->calculateExpiry($ttl);
 
         return true;
     }
 
     public function delete(string $key): bool
     {
-        unset($this->store[$key], $this->expiries[$key]);
+        unset($this->store[$key], $this->expires[$key]);
 
         return true;
     }
@@ -42,7 +42,7 @@ class ArrayCache implements CacheInterface
     public function clear(): bool
     {
         $this->store = [];
-        $this->expiries = [];
+        $this->expires = [];
 
         return true;
     }
@@ -62,7 +62,7 @@ class ArrayCache implements CacheInterface
         $expiry = $this->calculateExpiry($ttl);
         foreach ($values as $key => $value) {
             $this->store[$key] = $value;
-            $this->expiries[$key] = $expiry;
+            $this->expires[$key] = $expiry;
         }
 
         return true;
@@ -71,7 +71,7 @@ class ArrayCache implements CacheInterface
     public function deleteMultiple(iterable $keys): bool
     {
         foreach ($keys as $key) {
-            unset($this->store[$key], $this->expiries[$key]);
+            unset($this->store[$key], $this->expires[$key]);
         }
 
         return true;
@@ -79,11 +79,11 @@ class ArrayCache implements CacheInterface
 
     public function has(string $key): bool
     {
-        if (! isset($this->store[$key])) {
+        if (!isset($this->store[$key])) {
             return false;
         }
         // Check expiry
-        if (isset($this->expiries[$key]) && $this->expiries[$key] !== null && time() >= $this->expiries[$key]) {
+        if (isset($this->expires[$key]) && $this->expires[$key] !== null && time() >= $this->expires[$key]) {
             $this->delete($key);
 
             return false;

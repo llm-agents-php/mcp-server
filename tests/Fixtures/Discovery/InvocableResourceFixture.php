@@ -11,6 +11,6 @@ class InvocableResourceFixture
 {
     public function __invoke(): array
     {
-        return ["status" => "OK", "load" => rand(1, 100) / 100.0];
+        return ["status" => "OK", "load" => random_int(1, 100) / 100.0];
     }
 }

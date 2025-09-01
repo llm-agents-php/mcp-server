@@ -9,20 +9,36 @@ use InvalidArgumentException;
 
 class ValidHandlerClass
 {
-    public function publicMethod() {}
-    protected function protectedMethod() {}
-    private function privateMethod() {}
-    public static function staticMethod() {}
-    public function __construct() {}
-    public function __destruct() {}
+    public function publicMethod()
+    {
+    }
+    protected function protectedMethod()
+    {
+    }
+    private function privateMethod()
+    {
+    }
+    public static function staticMethod()
+    {
+    }
+    public function __construct()
+    {
+    }
+    public function __destruct()
+    {
+    }
 }
 
 class ValidInvokableClass
 {
-    public function __invoke() {}
+    public function __invoke()
+    {
+    }
 }
 
-class NonInvokableClass {}
+class NonInvokableClass
+{
+}
 
 abstract class AbstractHandlerClass
 {
@@ -31,9 +47,7 @@ abstract class AbstractHandlerClass
 
 // Test closure support
 it('resolves closures to ReflectionFunction', function () {
-    $closure = function (string $input): string {
-        return "processed: $input";
-    };
+    $closure = (fn (string $input): string => "processed: $input");
 
     $resolved = HandlerResolver::resolve($closure);
 
@@ -61,7 +75,7 @@ it('resolves valid invokable class string handler', function () {
 });
 
 it('resolves static methods for manual registration', function () {
-    $handler = [ValidHandlerClass::class, 'staticMethod'];
+    $handler = ValidHandlerClass::staticMethod(...);
     $resolved = HandlerResolver::resolve($handler);
 
     expect($resolved)->toBeInstanceOf(ReflectionMethod::class);
@@ -115,15 +129,9 @@ it('throws for abstract method handler', function () {
 
 // Test different closure types
 it('resolves closures with different signatures', function () {
-    $noParams = function () {
-        return 'test';
-    };
-    $withParams = function (int $a, string $b = 'default') {
-        return $a . $b;
-    };
-    $variadic = function (...$args) {
-        return $args;
-    };
+    $noParams = (fn () => 'test');
+    $withParams = (fn (int $a, string $b = 'default') => $a . $b);
+    $variadic = (fn (...$args) => $args);
 
     expect(HandlerResolver::resolve($noParams))->toBeInstanceOf(ReflectionFunction::class);
     expect(HandlerResolver::resolve($withParams))->toBeInstanceOf(ReflectionFunction::class);
@@ -136,9 +144,7 @@ it('resolves closures with different signatures', function () {
 
 // Test that we can distinguish between closures and callable arrays
 it('distinguishes between closures and callable arrays', function () {
-    $closure = function () {
-        return 'closure';
-    };
+    $closure = (fn () => 'closure');
     $array = [ValidHandlerClass::class, 'publicMethod'];
     $string = ValidInvokableClass::class;
 

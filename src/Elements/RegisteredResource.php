@@ -99,7 +99,7 @@ class RegisteredResource extends RegisteredElement
             }
 
             if ($allAreEmbeddedResource && $hasEmbeddedResource) {
-                return array_map(fn($item) => $item->resource, $readResult);
+                return array_map(fn ($item) => $item->resource, $readResult);
             }
 
             if ($hasResourceContents || $hasEmbeddedResource) {
@@ -118,7 +118,7 @@ class RegisteredResource extends RegisteredElement
         }
 
         if (is_string($readResult)) {
-            $mimeType = $mimeType ?? $this->guessMimeTypeFromString($readResult);
+            $mimeType ??= $this->guessMimeTypeFromString($readResult);
 
             return [TextResourceContents::make($uri, $mimeType, $readResult)];
         }
@@ -169,7 +169,7 @@ class RegisteredResource extends RegisteredElement
 
             try {
                 $jsonString = json_encode($readResult, JSON_THROW_ON_ERROR | JSON_PRETTY_PRINT);
-                $mimeType = $mimeType ?? 'application/json';
+                $mimeType ??= 'application/json';
 
                 return [TextResourceContents::make($uri, $mimeType, $jsonString)];
             } catch (\JsonException $e) {
@@ -227,7 +227,7 @@ class RegisteredResource extends RegisteredElement
                 $data['handler'],
                 $data['isManual'] ?? false,
             );
-        } catch (Throwable $e) {
+        } catch (Throwable) {
             return false;
         }
     }

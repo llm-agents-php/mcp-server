@@ -162,7 +162,6 @@ it('unbinds transport and removes listeners', function () {
 
     $reflection = new \ReflectionClass($this->protocol);
     $transportProp = $reflection->getProperty('transport');
-    $transportProp->setAccessible(true);
     expect($transportProp->getValue($this->protocol))->toBeNull();
 });
 

@@ -134,7 +134,7 @@ class RegisteredTool extends RegisteredElement
                 $data['handler'],
                 $data['isManual'] ?? false,
             );
-        } catch (Throwable $e) {
+        } catch (Throwable) {
             return false;
         }
     }

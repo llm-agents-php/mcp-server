@@ -20,11 +20,9 @@ use PhpMcp\Server\Defaults\BasicContainer;
 use PhpMcp\Server\Defaults\EnumCompletionProvider;
 use PhpMcp\Server\Defaults\ListCompletionProvider;
 use PhpMcp\Server\Exception\ConfigurationException;
-
 use PhpMcp\Server\Session\ArraySessionHandler;
 use PhpMcp\Server\Session\CacheSessionHandler;
 use PhpMcp\Server\Session\SessionManager;
-use PhpMcp\Server\Utils\HandlerResolver;
 use Psr\Container\ContainerInterface;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
@@ -93,7 +91,9 @@ final class ServerBuilder
      * > */
     private array $manualPrompts = [];
 
-    public function __construct() {}
+    public function __construct()
+    {
+    }
 
     /**
      * Sets the server's identity. Required.
@@ -126,10 +126,10 @@ final class ServerBuilder
     }
 
     /**
-     * Configures the instructions describing how to use the server and its features. 
-     * 
+     * Configures the instructions describing how to use the server and its features.
+     *
      * This can be used by clients to improve the LLM's understanding of available tools, resources,
-     * etc. It can be thought of like a "hint" to the model. For example, this information MAY 
+     * etc. It can be thought of like a "hint" to the model. For example, this information MAY
      * be added to the system prompt.
      */
     public function withInstructions(?string $instructions): self
@@ -161,7 +161,7 @@ final class ServerBuilder
 
     /**
      * Configures session handling with a specific driver.
-     * 
+     *
      * @param 'array' | 'cache' $driver The session driver: 'array' for in-memory sessions, 'cache' for cache-backed sessions
      * @param int $ttl Session time-to-live in seconds. Defaults to 3600.
      */
@@ -170,7 +170,7 @@ final class ServerBuilder
         if (!in_array($driver, ['array', 'cache'], true)) {
             throw new \InvalidArgumentException(
                 "Unsupported session driver '{$driver}'. Only 'array' and 'cache' drivers are supported. " .
-                    "For custom session handling, use withSessionHandler() instead."
+                "For custom session handling, use withSessionHandler() instead.",
             );
         }
 
@@ -215,8 +215,13 @@ final class ServerBuilder
     /**
      * Manually registers a tool handler.
      */
-    public function withTool(callable|array|string $handler, ?string $name = null, ?string $description = null, ?ToolAnnotations $annotations = null, ?array $inputSchema = null): self
-    {
+    public function withTool(
+        callable|array|string $handler,
+        ?string $name = null,
+        ?string $description = null,
+        ?ToolAnnotations $annotations = null,
+        ?array $inputSchema = null,
+    ): self {
         $this->manualTools[] = compact('handler', 'name', 'description', 'annotations', 'inputSchema');
 
         return $this;
@@ -225,8 +230,15 @@ final class ServerBuilder
     /**
      * Manually registers a resource handler.
      */
-    public function withResource(callable|array|string $handler, string $uri, ?string $name = null, ?string $description = null, ?string $mimeType = null, ?int $size = null, ?Annotations $annotations = null): self
-    {
+    public function withResource(
+        callable|array|string $handler,
+        string $uri,
+        ?string $name = null,
+        ?string $description = null,
+        ?string $mimeType = null,
+        ?int $size = null,
+        ?Annotations $annotations = null,
+    ): self {
         $this->manualResources[] = compact('handler', 'uri', 'name', 'description', 'mimeType', 'size', 'annotations');
 
         return $this;
@@ -235,9 +247,22 @@ final class ServerBuilder
     /**
      * Manually registers a resource template handler.
      */
-    public function withResourceTemplate(callable|array|string $handler, string $uriTemplate, ?string $name = null, ?string $description = null, ?string $mimeType = null, ?Annotations $annotations = null): self
-    {
-        $this->manualResourceTemplates[] = compact('handler', 'uriTemplate', 'name', 'description', 'mimeType', 'annotations');
+    public function withResourceTemplate(
+        callable|array|string $handler,
+        string $uriTemplate,
+        ?string $name = null,
+        ?string $description = null,
+        ?string $mimeType = null,
+        ?Annotations $annotations = null,
+    ): self {
+        $this->manualResourceTemplates[] = compact(
+            'handler',
+            'uriTemplate',
+            'name',
+            'description',
+            'mimeType',
+            'annotations',
+        );
 
         return $this;
     }
@@ -331,11 +356,21 @@ final class ServerBuilder
                 $tool = Tool::make($name, $inputSchema, $description, $data['annotations']);
                 $registry->registerTool($tool, $data['handler'], true);
 
-                $handlerDesc = $data['handler'] instanceof \Closure ? 'Closure' : (is_array($data['handler']) ? implode('::', $data['handler']) : $data['handler']);
+                $handlerDesc = $data['handler'] instanceof \Closure ? 'Closure' : (is_array($data['handler']) ? implode(
+                    '::',
+                    $data['handler'],
+                ) : $data['handler']);
                 $logger->debug("Registered manual tool {$name} from handler {$handlerDesc}");
             } catch (Throwable $e) {
-                $logger->error('Failed to register manual tool', ['handler' => $data['handler'], 'name' => $data['name'], 'exception' => $e]);
-                throw new ConfigurationException("Error registering manual tool '{$data['name']}': {$e->getMessage()}", 0, $e);
+                $logger->error(
+                    'Failed to register manual tool',
+                    ['handler' => $data['handler'], 'name' => $data['name'], 'exception' => $e],
+                );
+                throw new ConfigurationException(
+                    "Error registering manual tool '{$data['name']}': {$e->getMessage()}",
+                    0,
+                    $e,
+                );
             }
         }
 
@@ -364,11 +399,21 @@ final class ServerBuilder
                 $resource = Resource::make($uri, $name, $description, $mimeType, $annotations, $size);
                 $registry->registerResource($resource, $data['handler'], true);
 
-                $handlerDesc = $data['handler'] instanceof \Closure ? 'Closure' : (is_array($data['handler']) ? implode('::', $data['handler']) : $data['handler']);
+                $handlerDesc = $data['handler'] instanceof \Closure ? 'Closure' : (is_array($data['handler']) ? implode(
+                    '::',
+                    $data['handler'],
+                ) : $data['handler']);
                 $logger->debug("Registered manual resource {$name} from handler {$handlerDesc}");
             } catch (Throwable $e) {
-                $logger->error('Failed to register manual resource', ['handler' => $data['handler'], 'uri' => $data['uri'], 'exception' => $e]);
-                throw new ConfigurationException("Error registering manual resource '{$data['uri']}': {$e->getMessage()}", 0, $e);
+                $logger->error(
+                    'Failed to register manual resource',
+                    ['handler' => $data['handler'], 'uri' => $data['uri'], 'exception' => $e],
+                );
+                throw new ConfigurationException(
+                    "Error registering manual resource '{$data['uri']}': {$e->getMessage()}",
+                    0,
+                    $e,
+                );
             }
         }
 
@@ -397,11 +442,21 @@ final class ServerBuilder
                 $completionProviders = $this->getCompletionProviders($reflection);
                 $registry->registerResourceTemplate($template, $data['handler'], $completionProviders, true);
 
-                $handlerDesc = $data['handler'] instanceof \Closure ? 'Closure' : (is_array($data['handler']) ? implode('::', $data['handler']) : $data['handler']);
+                $handlerDesc = $data['handler'] instanceof \Closure ? 'Closure' : (is_array($data['handler']) ? implode(
+                    '::',
+                    $data['handler'],
+                ) : $data['handler']);
                 $logger->debug("Registered manual template {$name} from handler {$handlerDesc}");
             } catch (Throwable $e) {
-                $logger->error('Failed to register manual template', ['handler' => $data['handler'], 'uriTemplate' => $data['uriTemplate'], 'exception' => $e]);
-                throw new ConfigurationException("Error registering manual resource template '{$data['uriTemplate']}': {$e->getMessage()}", 0, $e);
+                $logger->error(
+                    'Failed to register manual template',
+                    ['handler' => $data['handler'], 'uriTemplate' => $data['uriTemplate'], 'exception' => $e],
+                );
+                throw new ConfigurationException(
+                    "Error registering manual resource template '{$data['uriTemplate']}': {$e->getMessage()}",
+                    0,
+                    $e,
+                );
             }
         }
 
@@ -423,12 +478,14 @@ final class ServerBuilder
                 }
 
                 $arguments = [];
-                $paramTags = $reflection instanceof \ReflectionMethod ? $docBlockParser->getParamTags($docBlockParser->parseDocBlock($reflection->getDocComment() ?? null)) : [];
+                $paramTags = $reflection instanceof \ReflectionMethod ? $docBlockParser->getParamTags(
+                    $docBlockParser->parseDocBlock($reflection->getDocComment() ?? null),
+                ) : [];
                 foreach ($reflection->getParameters() as $param) {
                     $reflectionType = $param->getType();
 
                     // Basic DI check (heuristic)
-                    if ($reflectionType instanceof \ReflectionNamedType && ! $reflectionType->isBuiltin()) {
+                    if ($reflectionType instanceof \ReflectionNamedType && !$reflectionType->isBuiltin()) {
                         continue;
                     }
 
@@ -436,7 +493,7 @@ final class ServerBuilder
                     $arguments[] = PromptArgument::make(
                         name: $param->getName(),
                         description: $paramTag ? trim((string) $paramTag->getDescription()) : null,
-                        required: ! $param->isOptional() && ! $param->isDefaultValueAvailable()
+                        required: !$param->isOptional() && !$param->isDefaultValueAvailable(),
                     );
                 }
 
@@ -444,11 +501,21 @@ final class ServerBuilder
                 $completionProviders = $this->getCompletionProviders($reflection);
                 $registry->registerPrompt($prompt, $data['handler'], $completionProviders, true);
 
-                $handlerDesc = $data['handler'] instanceof \Closure ? 'Closure' : (is_array($data['handler']) ? implode('::', $data['handler']) : $data['handler']);
+                $handlerDesc = $data['handler'] instanceof \Closure ? 'Closure' : (is_array($data['handler']) ? implode(
+                    '::',
+                    $data['handler'],
+                ) : $data['handler']);
                 $logger->debug("Registered manual prompt {$name} from handler {$handlerDesc}");
             } catch (Throwable $e) {
-                $logger->error('Failed to register manual prompt', ['handler' => $data['handler'], 'name' => $data['name'], 'exception' => $e]);
-                throw new ConfigurationException("Error registering manual prompt '{$data['name']}': {$e->getMessage()}", 0, $e);
+                $logger->error(
+                    'Failed to register manual prompt',
+                    ['handler' => $data['handler'], 'name' => $data['name'], 'exception' => $e],
+                );
+                throw new ConfigurationException(
+                    "Error registering manual prompt '{$data['name']}': {$e->getMessage()}",
+                    0,
+                    $e,
+                );
             }
         }
 
@@ -457,7 +524,7 @@ final class ServerBuilder
 
     /**
      * Creates the appropriate session handler based on configuration.
-     * 
+     *
      * @throws ConfigurationException If cache driver is selected but no cache is provided
      */
     private function createSessionHandler(): SessionHandlerInterface
@@ -482,14 +549,14 @@ final class ServerBuilder
 
     /**
      * Creates a cache-based session handler.
-     * 
+     *
      * @throws ConfigurationException If no cache is configured
      */
     private function createCacheSessionHandler(): CacheSessionHandler
     {
         if ($this->cache === null) {
             throw new ConfigurationException(
-                "Cache session driver requires a cache instance. Please configure a cache using withCache() before using withSession('cache')."
+                "Cache session driver requires a cache instance. Please configure a cache using withCache() before using withSession('cache').",
             );
         }
 
@@ -505,7 +572,10 @@ final class ServerBuilder
                 continue;
             }
 
-            $completionAttributes = $param->getAttributes(CompletionProvider::class, \ReflectionAttribute::IS_INSTANCEOF);
+            $completionAttributes = $param->getAttributes(
+                CompletionProvider::class,
+                \ReflectionAttribute::IS_INSTANCEOF,
+            );
             if (!empty($completionAttributes)) {
                 $attributeInstance = $completionAttributes[0]->newInstance();
 

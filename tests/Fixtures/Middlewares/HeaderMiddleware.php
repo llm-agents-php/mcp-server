@@ -15,7 +15,7 @@ class HeaderMiddleware
         $result = $next($request);
 
         return match (true) {
-            $result instanceof PromiseInterface => $result->then(fn($response) => $this->handle($response)),
+            $result instanceof PromiseInterface => $result->then(fn ($response) => $this->handle($response)),
             $result instanceof ResponseInterface => $this->handle($result),
             default => $result
         };

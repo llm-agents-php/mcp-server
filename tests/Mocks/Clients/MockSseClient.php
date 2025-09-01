@@ -41,7 +41,7 @@ class MockSseClient
                 $stream = $response->getBody();
                 assert($stream instanceof ReadableStreamInterface, "SSE response body is not a readable stream");
                 $this->stream = $stream;
-                $this->stream->on('data', [$this, 'handleSseData']);
+                $this->stream->on('data', $this->handleSseData(...));
                 $this->stream->on('close', function () {
                     $this->stream = null;
                 });
@@ -82,7 +82,7 @@ class MockSseClient
                 try {
                     $decodedJson = json_decode($event['data'], true, 512, JSON_THROW_ON_ERROR);
                     $this->receivedMessages[] = $decodedJson;
-                } catch (\JsonException $e) {
+                } catch (\JsonException) {
                 }
             }
         }
