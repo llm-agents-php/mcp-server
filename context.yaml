@@ -35,3 +35,14 @@ documents:
           - Utils/DocBlockParser.php
           - Utils/SchemaGenerator.php
 
+  - description: Dispatcher
+    outputPath: src/dispatcher.md
+    sources:
+      - type: file
+        description: Recent Git Changes
+        sourcePaths:
+          - src/Dispatcher.php
+          - src/DispatcherRouter.php
+          - src/Routes
+          - src/Contracts/RouteInterface.php
+

@@ -1,0 +1,59 @@
+<?php
+
+declare(strict_types=1);
+
+namespace PhpMcp\Server\Routes;
+
+use PhpMcp\Schema\JsonRpc\Request;
+use PhpMcp\Schema\JsonRpc\Notification;
+use PhpMcp\Schema\JsonRpc\Result;
+use PhpMcp\Schema\Request\SetLogLevelRequest;
+use PhpMcp\Schema\Result\EmptyResult;
+use PhpMcp\Server\Configuration;
+use PhpMcp\Server\Context;
+use PhpMcp\Server\Contracts\RouteInterface;
+use Psr\Log\LoggerInterface;
+
+final readonly class LoggingRoute implements RouteInterface
+{
+    private LoggerInterface $logger;
+
+    public function __construct(
+        private Configuration $configuration,
+    ) {
+        $this->logger = $this->configuration->logger;
+    }
+
+    public function getMethods(): array
+    {
+        return [
+            'logging/setLevel',
+        ];
+    }
+
+    public function handleRequest(Request $request, Context $context): Result
+    {
+        return match ($request->method) {
+            'logging/setLevel' => $this->handleLoggingSetLevel(
+                SetLogLevelRequest::fromRequest($request),
+                $context,
+            ),
+        };
+    }
+
+    public function handleNotification(Notification $notification, Context $context): void
+    {
+        // No notifications handled by this route
+    }
+
+    private function handleLoggingSetLevel(SetLogLevelRequest $request, Context $context): EmptyResult
+    {
+        $level = $request->level;
+
+        $context->session->set('log_level', $level->value);
+
+        $this->logger->info("Log level set to '{$level->value}'.", ['sessionId' => $context->session->getId()]);
+
+        return new EmptyResult();
+    }
+}
