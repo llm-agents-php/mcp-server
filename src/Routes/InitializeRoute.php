@@ -17,6 +17,7 @@ use PhpMcp\Server\Context;
 use PhpMcp\Server\Contracts\RouteInterface;
 use PhpMcp\Server\Contracts\SessionInterface;
 use PhpMcp\Server\Protocol;
+use PhpMcp\Server\RequestMethod;
 
 final readonly class InitializeRoute implements RouteInterface
 {
@@ -28,24 +29,27 @@ final readonly class InitializeRoute implements RouteInterface
     public function getMethods(): array
     {
         return [
-            'initialize',
-            'ping',
-            'notifications/initialized',
+            RequestMethod::Initialize->value,
+            RequestMethod::Ping->value,
+            RequestMethod::NotificationsInitialized->value,
         ];
     }
 
     public function handleRequest(Request $request, Context $context): Result
     {
         return match ($request->method) {
-            'initialize' => $this->handleInitialize(InitializeRequest::fromRequest($request), $context->session),
-            'ping' => $this->handlePing(PingRequest::fromRequest($request)),
+            RequestMethod::Initialize->value => $this->handleInitialize(
+                InitializeRequest::fromRequest($request),
+                $context->session,
+            ),
+            RequestMethod::Ping->value => $this->handlePing(PingRequest::fromRequest($request)),
         };
     }
 
     public function handleNotification(Notification $notification, Context $context): void
     {
         match ($notification->method) {
-            'notifications/initialized' => $this->handleNotificationInitialized(
+            RequestMethod::NotificationsInitialized->value => $this->handleNotificationInitialized(
                 InitializedNotification::fromNotification($notification),
                 $context->session,
             ),

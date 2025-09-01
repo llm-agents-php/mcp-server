@@ -14,6 +14,7 @@ use PhpMcp\Server\Context;
 use PhpMcp\Server\Contracts\RouteInterface;
 use PhpMcp\Server\Exception\McpServerException;
 use PhpMcp\Server\Registry;
+use PhpMcp\Server\RequestMethod;
 use Psr\Container\ContainerInterface;
 
 final readonly class CompletionRoute implements RouteInterface
@@ -30,14 +31,14 @@ final readonly class CompletionRoute implements RouteInterface
     public function getMethods(): array
     {
         return [
-            'completion/complete',
+            RequestMethod::CompletionComplete->value,
         ];
     }
 
     public function handleRequest(Request $request, Context $context): Result
     {
         return match ($request->method) {
-            'completion/complete' => $this->handleCompletionComplete(
+            RequestMethod::CompletionComplete->value => $this->handleCompletionComplete(
                 CompletionCompleteRequest::fromRequest($request),
                 $context,
             ),

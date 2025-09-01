@@ -20,6 +20,7 @@ use PhpMcp\Server\Contracts\ToolExecutorInterface;
 use PhpMcp\Server\Exception\McpServerException;
 use PhpMcp\Server\Exception\ValidationException;
 use PhpMcp\Server\Registry;
+use PhpMcp\Server\RequestMethod;
 use Psr\Log\LoggerInterface;
 use Throwable;
 
@@ -38,16 +39,16 @@ final readonly class ToolRoute implements RouteInterface
     public function getMethods(): array
     {
         return [
-            'tools/list',
-            'tools/call',
+            RequestMethod::ToolsList->value,
+            RequestMethod::ToolsCall->value,
         ];
     }
 
     public function handleRequest(Request $request, Context $context): Result
     {
         return match ($request->method) {
-            'tools/list' => $this->handleToolList(ListToolsRequest::fromRequest($request)),
-            'tools/call' => $this->handleToolCall(CallToolRequest::fromRequest($request), $context),
+            RequestMethod::ToolsList->value => $this->handleToolList(ListToolsRequest::fromRequest($request)),
+            RequestMethod::ToolsCall->value => $this->handleToolCall(CallToolRequest::fromRequest($request), $context),
         };
     }
 

@@ -22,6 +22,7 @@ use PhpMcp\Server\Context;
 use PhpMcp\Server\Contracts\RouteInterface;
 use PhpMcp\Server\Exception\McpServerException;
 use PhpMcp\Server\Registry;
+use PhpMcp\Server\RequestMethod;
 use PhpMcp\Server\Session\SubscriptionManager;
 use Psr\Container\ContainerInterface;
 use Psr\Log\LoggerInterface;
@@ -44,27 +45,32 @@ final readonly class ResourceRoute implements RouteInterface
     public function getMethods(): array
     {
         return [
-            'resources/list',
-            'resources/templates/list',
-            'resources/read',
-            'resources/subscribe',
-            'resources/unsubscribe',
+            RequestMethod::ResourcesList->value,
+            RequestMethod::ResourcesTemplatesList->value,
+            RequestMethod::ResourcesRead->value,
+            RequestMethod::ResourcesSubscribe->value,
+            RequestMethod::ResourcesUnsubscribe->value,
         ];
     }
 
     public function handleRequest(Request $request, Context $context): Result
     {
         return match ($request->method) {
-            'resources/list' => $this->handleResourcesList(ListResourcesRequest::fromRequest($request)),
-            'resources/templates/list' => $this->handleResourceTemplateList(
+            RequestMethod::ResourcesList->value => $this->handleResourcesList(
+                ListResourcesRequest::fromRequest($request),
+            ),
+            RequestMethod::ResourcesTemplatesList->value => $this->handleResourceTemplateList(
                 ListResourceTemplatesRequest::fromRequest($request),
             ),
-            'resources/read' => $this->handleResourceRead(ReadResourceRequest::fromRequest($request), $context),
-            'resources/subscribe' => $this->handleResourceSubscribe(
+            RequestMethod::ResourcesRead->value => $this->handleResourceRead(
+                ReadResourceRequest::fromRequest($request),
+                $context,
+            ),
+            RequestMethod::ResourcesSubscribe->value => $this->handleResourceSubscribe(
                 ResourceSubscribeRequest::fromRequest($request),
                 $context,
             ),
-            'resources/unsubscribe' => $this->handleResourceUnsubscribe(
+            RequestMethod::ResourcesUnsubscribe->value => $this->handleResourceUnsubscribe(
                 ResourceUnsubscribeRequest::fromRequest($request),
                 $context,
             ),

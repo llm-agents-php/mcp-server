@@ -12,6 +12,7 @@ use PhpMcp\Schema\Result\EmptyResult;
 use PhpMcp\Server\Configuration;
 use PhpMcp\Server\Context;
 use PhpMcp\Server\Contracts\RouteInterface;
+use PhpMcp\Server\RequestMethod;
 use Psr\Log\LoggerInterface;
 
 final readonly class LoggingRoute implements RouteInterface
@@ -27,14 +28,14 @@ final readonly class LoggingRoute implements RouteInterface
     public function getMethods(): array
     {
         return [
-            'logging/setLevel',
+            RequestMethod::LoggingSetLevel->value,
         ];
     }
 
     public function handleRequest(Request $request, Context $context): Result
     {
         return match ($request->method) {
-            'logging/setLevel' => $this->handleLoggingSetLevel(
+            RequestMethod::LoggingSetLevel->value => $this->handleLoggingSetLevel(
                 SetLogLevelRequest::fromRequest($request),
                 $context,
             ),

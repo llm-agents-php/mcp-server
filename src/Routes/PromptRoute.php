@@ -17,6 +17,7 @@ use PhpMcp\Server\Context;
 use PhpMcp\Server\Contracts\RouteInterface;
 use PhpMcp\Server\Exception\McpServerException;
 use PhpMcp\Server\Registry;
+use PhpMcp\Server\RequestMethod;
 use Psr\Container\ContainerInterface;
 use Psr\Log\LoggerInterface;
 use Throwable;
@@ -37,16 +38,19 @@ final readonly class PromptRoute implements RouteInterface
     public function getMethods(): array
     {
         return [
-            'prompts/list',
-            'prompts/get',
+            RequestMethod::PromptsList->value,
+            RequestMethod::PromptsGet->value,
         ];
     }
 
     public function handleRequest(Request $request, Context $context): Result
     {
         return match ($request->method) {
-            'prompts/list' => $this->handlePromptsList(ListPromptsRequest::fromRequest($request)),
-            'prompts/get' => $this->handlePromptGet(GetPromptRequest::fromRequest($request), $context),
+            RequestMethod::PromptsList->value => $this->handlePromptsList(ListPromptsRequest::fromRequest($request)),
+            RequestMethod::PromptsGet->value => $this->handlePromptGet(
+                GetPromptRequest::fromRequest($request),
+                $context,
+            ),
         };
     }
 
