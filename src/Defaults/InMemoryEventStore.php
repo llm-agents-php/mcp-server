@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace PhpMcp\Server\Defaults;
+namespace Mcp\Server\Defaults;
 
-use PhpMcp\Server\Contracts\EventStoreInterface;
+use Mcp\Server\Contracts\EventStoreInterface;
 
 /**
  * Simple in-memory implementation of the EventStore interface for resumability
@@ -20,17 +20,6 @@ final class InMemoryEventStore implements EventStoreInterface
      * Example: [eventId1 => ['streamId' => 'abc', 'message' => '...']]
      */
     private array $events = [];
-
-    private function generateEventId(string $streamId): string
-    {
-        return $streamId . '_' . (int) (microtime(true) * 1000) . '_' . bin2hex(random_bytes(4));
-    }
-
-    private function getStreamIdFromEventId(string $eventId): ?string
-    {
-        $parts = explode('_', $eventId);
-        return $parts[0] ?? null;
-    }
 
     public function storeEvent(string $streamId, string $message): string
     {
@@ -58,7 +47,7 @@ final class InMemoryEventStore implements EventStoreInterface
         $foundLastEvent = false;
 
         // Sort by eventId for deterministic ordering
-        ksort($this->events);
+        \ksort($this->events);
 
         foreach ($this->events as $eventId => ['streamId' => $eventStreamId, 'message' => $message]) {
             if ($eventStreamId !== $streamId) {
@@ -74,5 +63,16 @@ final class InMemoryEventStore implements EventStoreInterface
                 $sendCallback($eventId, $message);
             }
         }
+    }
+
+    private function generateEventId(string $streamId): string
+    {
+        return $streamId . '_' . (int) (\microtime(true) * 1000) . '_' . \bin2hex(\random_bytes(4));
+    }
+
+    private function getStreamIdFromEventId(string $eventId): ?string
+    {
+        $parts = \explode('_', $eventId);
+        return $parts[0] ?? null;
     }
 }

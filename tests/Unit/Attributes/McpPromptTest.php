@@ -1,10 +1,12 @@
 <?php
 
-namespace PhpMcp\Server\Tests\Unit\Attributes;
+declare(strict_types=1);
 
-use PhpMcp\Server\Attributes\McpPrompt;
+namespace Mcp\Server\Tests\Unit\Attributes;
 
-it('instantiates with name and description', function () {
+use Mcp\Server\Attributes\McpPrompt;
+
+it('instantiates with name and description', static function (): void {
     // Arrange
     $name = 'test-prompt-name';
     $description = 'This is a test prompt description.';
@@ -17,7 +19,7 @@ it('instantiates with name and description', function () {
     expect($attribute->description)->toBe($description);
 });
 
-it('instantiates with null values for name and description', function () {
+it('instantiates with null values for name and description', static function (): void {
     // Arrange & Act
     $attribute = new McpPrompt(name: null, description: null);
 
@@ -26,7 +28,7 @@ it('instantiates with null values for name and description', function () {
     expect($attribute->description)->toBeNull();
 });
 
-it('instantiates with missing optional arguments', function () {
+it('instantiates with missing optional arguments', static function (): void {
     // Arrange & Act
     $attribute = new McpPrompt(); // Use default constructor values
 

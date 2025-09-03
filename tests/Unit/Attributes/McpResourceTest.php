@@ -1,10 +1,12 @@
 <?php
 
-namespace PhpMcp\Server\Tests\Unit\Attributes;
+declare(strict_types=1);
 
-use PhpMcp\Server\Attributes\McpResource;
+namespace Mcp\Server\Tests\Unit\Attributes;
 
-it('instantiates with correct properties', function () {
+use Mcp\Server\Attributes\McpResource;
+
+it('instantiates with correct properties', static function (): void {
     // Arrange
     $uri = 'file:///test/resource';
     $name = 'test-resource-name';
@@ -29,7 +31,7 @@ it('instantiates with correct properties', function () {
     expect($attribute->size)->toBe($size);
 });
 
-it('instantiates with null values for name and description', function () {
+it('instantiates with null values for name and description', static function (): void {
     // Arrange & Act
     $attribute = new McpResource(
         uri: 'file:///test', // URI is required
@@ -47,7 +49,7 @@ it('instantiates with null values for name and description', function () {
     expect($attribute->size)->toBeNull();
 });
 
-it('instantiates with missing optional arguments', function () {
+it('instantiates with missing optional arguments', static function (): void {
     // Arrange & Act
     $uri = 'file:///only-uri';
     $attribute = new McpResource(uri: $uri);

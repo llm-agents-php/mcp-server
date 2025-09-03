@@ -1,21 +1,20 @@
 <?php
 
-namespace PhpMcp\Server\Tests\Fixtures\Schema;
+declare(strict_types=1);
 
-use PhpMcp\Server\Attributes\Schema;
-use PhpMcp\Server\Attributes\Schema\Format;
-use PhpMcp\Server\Attributes\Schema\ArrayItems;
-use PhpMcp\Server\Attributes\Schema\Property;
-use PhpMcp\Server\Tests\Fixtures\Enums\BackedIntEnum;
-use PhpMcp\Server\Tests\Fixtures\Enums\BackedStringEnum;
-use PhpMcp\Server\Tests\Fixtures\Enums\UnitEnum;
-use stdClass;
+namespace Mcp\Server\Tests\Fixtures\Schema;
+
+use Mcp\Server\Attributes\Schema;
+use Mcp\Server\Attributes\Schema\Format;
+use Mcp\Server\Attributes\Schema\ArrayItems;
+use Mcp\Server\Attributes\Schema\Property;
+use Mcp\Server\Tests\Fixtures\Enums\BackedIntEnum;
+use Mcp\Server\Tests\Fixtures\Enums\BackedStringEnum;
+use Mcp\Server\Tests\Fixtures\Enums\UnitEnum;
 
 class SchemaGenerationTarget
 {
-    public function noParamsMethod(): void
-    {
-    }
+    public function noParamsMethod(): void {}
 
     /**
      * Method with simple required types.
@@ -24,7 +23,7 @@ class SchemaGenerationTarget
      * @param bool $pBool Bool param
      * @param float $pFloat Float param
      * @param array $pArray Array param
-     * @param stdClass $pObject Object param
+     * @param \stdClass $pObject Object param
      */
     public function simpleRequiredTypes(
         string $pString,
@@ -32,9 +31,8 @@ class SchemaGenerationTarget
         bool $pBool,
         float $pFloat,
         array $pArray,
-        stdClass $pObject,
-    ): void {
-    }
+        \stdClass $pObject,
+    ): void {}
 
     /**
      * Method with simple optional types with default values.
@@ -43,7 +41,7 @@ class SchemaGenerationTarget
      * @param bool $pBoolOpt Bool param with default
      * @param ?float $pFloatOptNullable Float param with default, also nullable
      * @param array $pArrayOpt Array param with default
-     * @param ?stdClass $pObjectOptNullable Object param with default null
+     * @param ?\stdClass $pObjectOptNullable Object param with default null
      */
     public function optionalTypesWithDefaults(
         string $pStringOpt = "hello",
@@ -51,9 +49,8 @@ class SchemaGenerationTarget
         bool $pBoolOpt = true,
         ?float $pFloatOptNullable = 1.23,
         array $pArrayOpt = ['a', 'b'],
-        ?stdClass $pObjectOptNullable = null,
-    ): void {
-    }
+        ?\stdClass $pObjectOptNullable = null,
+    ): void {}
 
     /**
      * Nullable types without explicit defaults.
@@ -64,8 +61,7 @@ class SchemaGenerationTarget
         ?string $pNullableString,
         ?int $pUnionNullableInt,
         ?BackedStringEnum $pNullableEnum,
-    ): void {
-    }
+    ): void {}
 
     /**
      * Union types.
@@ -75,8 +71,7 @@ class SchemaGenerationTarget
     public function unionTypes(
         string|int $pStringOrInt,
         $pBoolOrFloatOrNull,
-    ): void {
-    } // PHP 7.x style union in docblock usually
+    ): void {} // PHP 7.x style union in docblock usually
 
     /**
      * Various array type hints.
@@ -94,8 +89,7 @@ class SchemaGenerationTarget
         array $pEnumArray,
         array $pShapeArray,
         array $pArrayOfShapes,
-    ): void {
-    }
+    ): void {}
 
     /**
      * Enum types.
@@ -107,24 +101,19 @@ class SchemaGenerationTarget
         BackedStringEnum $pBackedStringEnum,
         BackedIntEnum $pBackedIntEnum,
         UnitEnum $pUnitEnum,
-    ): void {
-    }
+    ): void {}
 
     /**
      * Variadic parameters.
      * @param string ...$pVariadicStrings Variadic strings
      */
-    public function variadicParams(string ...$pVariadicStrings): void
-    {
-    }
+    public function variadicParams(string ...$pVariadicStrings): void {}
 
     /**
      * Mixed type.
      * @param mixed $pMixed Mixed type
      */
-    public function mixedType(mixed $pMixed): void
-    {
-    }
+    public function mixedType(mixed $pMixed): void {}
 
     /**
      * With #[Schema] attributes for enhanced validation.
@@ -146,9 +135,8 @@ class SchemaGenerationTarget
                 new Property(name: 'username', pattern: '^[a-z0-9_]{3,16}$'),
             ],
             required: ['id', 'username'],
-            additionalProperties: false
+            additionalProperties: false,
         )]
         array $userProfile,
-    ): void {
-    }
+    ): void {}
 }

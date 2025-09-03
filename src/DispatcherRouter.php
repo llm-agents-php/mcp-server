@@ -2,27 +2,26 @@
 
 declare(strict_types=1);
 
-namespace PhpMcp\Server;
+namespace Mcp\Server;
 
-use PhpMcp\Server\Contracts\RouteInterface;
-use PhpMcp\Server\Contracts\ToolExecutorInterface;
-use PhpMcp\Server\Routes\CompletionRoute;
-use PhpMcp\Server\Routes\InitializeRoute;
-use PhpMcp\Server\Routes\LoggingRoute;
-use PhpMcp\Server\Routes\PromptRoute;
-use PhpMcp\Server\Routes\ResourceRoute;
-use PhpMcp\Server\Routes\ToolRoute;
-use PhpMcp\Server\Session\SubscriptionManager;
+use Mcp\Server\Contracts\RouteInterface;
+use Mcp\Server\Contracts\ToolExecutorInterface;
+use Mcp\Server\Routes\CompletionRoute;
+use Mcp\Server\Routes\InitializeRoute;
+use Mcp\Server\Routes\LoggingRoute;
+use Mcp\Server\Routes\PromptRoute;
+use Mcp\Server\Routes\ResourceRoute;
+use Mcp\Server\Routes\ToolRoute;
+use Mcp\Server\Session\SubscriptionManager;
 
-final class DispatcherRouter
+final readonly class DispatcherRouter
 {
     /**
      * @param RouteInterface[] $routes
      */
     public function __construct(
         private array $routes = [],
-    ) {
-    }
+    ) {}
 
     public static function create(
         Configuration $configuration,
@@ -32,7 +31,7 @@ final class DispatcherRouter
     ): self {
         $routes = [
             new InitializeRoute($configuration),
-            new ToolRoute($registry, $toolExecutor, $configuration),
+            new ToolRoute($registry, $configuration),
             new ResourceRoute($registry, $subscriptionManager, $configuration),
             new PromptRoute($registry, $configuration),
             new LoggingRoute($configuration),
@@ -46,12 +45,4 @@ final class DispatcherRouter
     {
         return $this->routes;
     }
-
-    public function addRoute(RouteInterface $route): void
-    {
-        foreach ($route->getMethods() as $method) {
-            $this->routes[$method] = $route;
-        }
-    }
-
 }

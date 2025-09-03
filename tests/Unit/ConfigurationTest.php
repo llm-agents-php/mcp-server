@@ -1,30 +1,31 @@
 <?php
 
-namespace PhpMcp\Server\Tests\Unit;
+declare(strict_types=1);
 
-use Mockery;
+namespace Mcp\Server\Tests\Unit;
+
 use PhpMcp\Schema\Implementation;
 use PhpMcp\Schema\ServerCapabilities;
-use PhpMcp\Server\Configuration;
+use Mcp\Server\Configuration;
 use Psr\Container\ContainerInterface;
 use Psr\Log\LoggerInterface;
 use Psr\SimpleCache\CacheInterface;
 use React\EventLoop\LoopInterface;
 
-beforeEach(function () {
+beforeEach(function (): void {
     $this->serverInfo = Implementation::make('TestServer', '1.1.0');
-    $this->logger = Mockery::mock(LoggerInterface::class);
-    $this->loop = Mockery::mock(LoopInterface::class);
-    $this->cache = Mockery::mock(CacheInterface::class);
-    $this->container = Mockery::mock(ContainerInterface::class);
+    $this->logger = \Mockery::mock(LoggerInterface::class);
+    $this->loop = \Mockery::mock(LoopInterface::class);
+    $this->cache = \Mockery::mock(CacheInterface::class);
+    $this->container = \Mockery::mock(ContainerInterface::class);
     $this->capabilities = ServerCapabilities::make();
 });
 
-afterEach(function () {
-    Mockery::close();
+afterEach(static function (): void {
+    \Mockery::close();
 });
 
-it('constructs configuration object with all properties', function () {
+it('constructs configuration object with all properties', function (): void {
     $paginationLimit = 100;
     $config = new Configuration(
         serverInfo: $this->serverInfo,
@@ -33,7 +34,7 @@ it('constructs configuration object with all properties', function () {
         loop: $this->loop,
         cache: $this->cache,
         container: $this->container,
-        paginationLimit: $paginationLimit
+        paginationLimit: $paginationLimit,
     );
 
     expect($config->serverInfo)->toBe($this->serverInfo);
@@ -45,33 +46,33 @@ it('constructs configuration object with all properties', function () {
     expect($config->paginationLimit)->toBe($paginationLimit);
 });
 
-it('constructs configuration object with default pagination limit', function () {
+it('constructs configuration object with default pagination limit', function (): void {
     $config = new Configuration(
         serverInfo: $this->serverInfo,
         capabilities: $this->capabilities,
         logger: $this->logger,
         loop: $this->loop,
         cache: $this->cache,
-        container: $this->container
+        container: $this->container,
     );
 
     expect($config->paginationLimit)->toBe(50); // Default value
 });
 
-it('constructs configuration object with null cache', function () {
+it('constructs configuration object with null cache', function (): void {
     $config = new Configuration(
         serverInfo: $this->serverInfo,
         capabilities: $this->capabilities,
         logger: $this->logger,
         loop: $this->loop,
         cache: null,
-        container: $this->container
+        container: $this->container,
     );
 
     expect($config->cache)->toBeNull();
 });
 
-it('constructs configuration object with specific capabilities', function () {
+it('constructs configuration object with specific capabilities', function (): void {
     $customCaps = ServerCapabilities::make(
         resourcesSubscribe: true,
         logging: true,
@@ -83,7 +84,7 @@ it('constructs configuration object with specific capabilities', function () {
         logger: $this->logger,
         loop: $this->loop,
         cache: null,
-        container: $this->container
+        container: $this->container,
     );
 
     expect($config->capabilities)->toBe($customCaps);

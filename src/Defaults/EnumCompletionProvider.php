@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace PhpMcp\Server\Defaults;
+namespace Mcp\Server\Defaults;
 
-use PhpMcp\Server\Contracts\CompletionProviderInterface;
-use PhpMcp\Server\Contracts\SessionInterface;
+use Mcp\Server\Contracts\CompletionProviderInterface;
+use Mcp\Server\Contracts\SessionInterface;
 
 final readonly class EnumCompletionProvider implements CompletionProviderInterface
 {
@@ -13,12 +13,12 @@ final readonly class EnumCompletionProvider implements CompletionProviderInterfa
 
     public function __construct(string $enumClass)
     {
-        if (!enum_exists($enumClass)) {
+        if (!\enum_exists($enumClass)) {
             throw new \InvalidArgumentException("Class {$enumClass} is not an enum");
         }
 
-        $this->values = array_map(
-            static fn ($case) => isset($case->value) && is_string($case->value) ? $case->value : $case->name,
+        $this->values = \array_map(
+            static fn($case) => isset($case->value) && \is_string($case->value) ? $case->value : $case->name,
             $enumClass::cases(),
         );
     }
@@ -29,10 +29,10 @@ final readonly class EnumCompletionProvider implements CompletionProviderInterfa
             return $this->values;
         }
 
-        return array_values(
-            array_filter(
+        return \array_values(
+            \array_filter(
                 $this->values,
-                static fn (string $value): bool => str_starts_with($value, $currentValue),
+                static fn(string $value): bool => \str_starts_with($value, $currentValue),
             ),
         );
     }

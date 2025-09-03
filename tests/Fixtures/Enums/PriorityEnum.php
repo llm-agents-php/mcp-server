@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace PhpMcp\Server\Tests\Fixtures\Enums;
+namespace Mcp\Server\Tests\Fixtures\Enums;
 
 enum PriorityEnum: int
 {

@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace PhpMcp\Server;
+namespace Mcp\Server;
 
 use PhpMcp\Schema\Constants;
-use PhpMcp\Server\Contracts\ServerTransportInterface;
-use PhpMcp\Server\Contracts\SessionInterface;
-use PhpMcp\Server\Exception\McpServerException;
+use Mcp\Server\Contracts\ServerTransportInterface;
+use Mcp\Server\Contracts\SessionInterface;
+use Mcp\Server\Exception\McpServerException;
 use PhpMcp\Schema\JsonRpc\BatchRequest;
 use PhpMcp\Schema\JsonRpc\BatchResponse;
 use PhpMcp\Schema\JsonRpc\Error;
@@ -19,11 +19,10 @@ use PhpMcp\Schema\Notification\ResourceListChangedNotification;
 use PhpMcp\Schema\Notification\ResourceUpdatedNotification;
 use PhpMcp\Schema\Notification\RootsListChangedNotification;
 use PhpMcp\Schema\Notification\ToolListChangedNotification;
-use PhpMcp\Server\Session\SessionManager;
-use PhpMcp\Server\Session\SubscriptionManager;
+use Mcp\Server\Session\SessionManager;
+use Mcp\Server\Session\SubscriptionManager;
 use Psr\Log\LoggerInterface;
 use React\Promise\PromiseInterface;
-use Throwable;
 
 use function React\Promise\reject;
 use function React\Promise\resolve;
@@ -41,7 +40,6 @@ final class Protocol
     public const array SUPPORTED_PROTOCOL_VERSIONS = [self::LATEST_PROTOCOL_VERSION, '2024-11-05'];
 
     protected ?ServerTransportInterface $transport = null;
-
     protected LoggerInterface $logger;
 
     /** Stores listener references for proper removal */
@@ -57,11 +55,11 @@ final class Protocol
         $this->logger = $this->configuration->logger;
         $this->subscriptionManager ??= new SubscriptionManager($this->logger);
 
-        $this->sessionManager->on('session_deleted', function (string $sessionId) {
+        $this->sessionManager->on('session_deleted', function (string $sessionId): void {
             $this->subscriptionManager->cleanupSession($sessionId);
         });
 
-        $this->registry->on('list_changed', function (string $listType) {
+        $this->registry->on('list_changed', function (string $listType): void {
             $this->handleListChanged($listType);
         });
     }
@@ -130,13 +128,13 @@ final class Protocol
 
             $this->transport
                 ->sendMessage($error, $sessionId, $messageContext)
-                ->then(function () use ($sessionId, $error, $messageContext) {
+                ->then(function () use ($sessionId, $error, $messageContext): void {
                     $this->logger->debug(
                         'Response sent.',
                         ['sessionId' => $sessionId, 'payload' => $error, 'context' => $messageContext],
                     );
                 })
-                ->catch(function (Throwable $e) use ($sessionId) {
+                ->catch(function (\Throwable $e) use ($sessionId): void {
                     $this->logger->error(
                         'Failed to send response.',
                         ['sessionId' => $sessionId, 'error' => $e->getMessage()],
@@ -175,15 +173,126 @@ final class Protocol
 
         $this->transport
             ->sendMessage($response, $sessionId, $messageContext)
-            ->then(function () use ($sessionId, $response) {
+            ->then(function () use ($sessionId, $response): void {
                 $this->logger->debug('Response sent.', ['sessionId' => $sessionId, 'payload' => $response]);
             })
-            ->catch(function (Throwable $e) use ($sessionId) {
+            ->catch(function (\Throwable $e) use ($sessionId): void {
                 $this->logger->error(
                     'Failed to send response.',
                     ['sessionId' => $sessionId, 'error' => $e->getMessage()],
                 );
             });
+    }
+
+    /**
+     * Send a notification to a session
+     */
+    public function sendNotification(Notification $notification, string $sessionId): PromiseInterface
+    {
+        if ($this->transport === null) {
+            $this->logger->error('Cannot send notification, transport not bound', [
+                'sessionId' => $sessionId,
+                'method' => $notification->method,
+            ]);
+            return reject(new McpServerException('Transport not bound'));
+        }
+
+        return $this->transport
+            ->sendMessage($notification, $sessionId, [])
+            ->then(static fn() => resolve(null))
+            ->catch(static fn(\Throwable $e) => reject(new McpServerException('Failed to send notification: ' . $e->getMessage(), previous: $e)));
+    }
+
+    /**
+     * Notify subscribers about resource content change
+     */
+    public function notifyResourceUpdated(string $uri): void
+    {
+        $subscribers = $this->subscriptionManager->getSubscribers($uri);
+
+        if (empty($subscribers)) {
+            return;
+        }
+
+        $notification = ResourceUpdatedNotification::make($uri);
+
+        foreach ($subscribers as $sessionId) {
+            $this->sendNotification($notification, $sessionId);
+        }
+
+        $this->logger->debug("Sent resource change notification", [
+            'uri' => $uri,
+            'subscriber_count' => \count($subscribers),
+        ]);
+    }
+
+    /**
+     * Handles 'client_connected' event from the transport
+     */
+    public function handleClientConnected(string $sessionId): void
+    {
+        $this->logger->info('Client connected', ['sessionId' => $sessionId]);
+
+        $this->sessionManager->createSession($sessionId);
+    }
+
+    /**
+     * Handles 'client_disconnected' event from the transport
+     */
+    public function handleClientDisconnected(string $sessionId, ?string $reason = null): void
+    {
+        $this->logger->info('Client disconnected', ['clientId' => $sessionId, 'reason' => $reason ?? 'N/A']);
+
+        $this->sessionManager->deleteSession($sessionId);
+    }
+
+    /**
+     * Handle list changed event from registry
+     */
+    public function handleListChanged(string $listType): void
+    {
+        $listChangeUri = "mcp://changes/{$listType}";
+
+        $subscribers = $this->subscriptionManager->getSubscribers($listChangeUri);
+        if (empty($subscribers)) {
+            return;
+        }
+
+        $notification = match ($listType) {
+            'resources' => ResourceListChangedNotification::make(),
+            'tools' => ToolListChangedNotification::make(),
+            'prompts' => PromptListChangedNotification::make(),
+            'roots' => RootsListChangedNotification::make(),
+            default => throw new \InvalidArgumentException("Invalid list type: {$listType}"),
+        };
+
+        if (!$this->canSendNotification($notification->method)) {
+            return;
+        }
+
+        foreach ($subscribers as $sessionId) {
+            $this->sendNotification($notification, $sessionId);
+        }
+
+        $this->logger->debug("Sent list change notification", [
+            'list_type' => $listType,
+            'subscriber_count' => \count($subscribers),
+        ]);
+    }
+
+    /**
+     * Handles 'error' event from the transport
+     */
+    public function handleTransportError(\Throwable $error, ?string $clientId = null): void
+    {
+        $context = ['error' => $error->getMessage(), 'exception_class' => $error::class];
+
+        if ($clientId) {
+            $context['clientId'] = $clientId;
+            $this->logger->error('Transport error for client', $context);
+        } else {
+            $this->logger->error('General transport error', $context);
+        }
     }
 
     /**
@@ -234,7 +343,7 @@ final class Protocol
             );
 
             return $e->toJsonRpcError($request->id);
-        } catch (Throwable $e) {
+        } catch (\Throwable $e) {
             $this->logger->error('MCP Processor caught unexpected error', [
                 'method' => $request->method,
                 'exception' => $e->getMessage(),
@@ -261,55 +370,13 @@ final class Protocol
 
         try {
             $this->dispatcher->handleNotification($notification, $session);
-        } catch (Throwable $e) {
+        } catch (\Throwable $e) {
             $this->logger->error(
                 'Error while processing notification',
                 ['method' => $method, 'exception' => $e->getMessage()],
             );
             return;
         }
-    }
-
-    /**
-     * Send a notification to a session
-     */
-    public function sendNotification(Notification $notification, string $sessionId): PromiseInterface
-    {
-        if ($this->transport === null) {
-            $this->logger->error('Cannot send notification, transport not bound', [
-                'sessionId' => $sessionId,
-                'method' => $notification->method,
-            ]);
-            return reject(new McpServerException('Transport not bound'));
-        }
-
-        return $this->transport
-            ->sendMessage($notification, $sessionId, [])
-            ->then(fn () => resolve(null))
-            ->catch(fn (Throwable $e) => reject(new McpServerException('Failed to send notification: ' . $e->getMessage(), previous: $e)));
-    }
-
-    /**
-     * Notify subscribers about resource content change
-     */
-    public function notifyResourceUpdated(string $uri): void
-    {
-        $subscribers = $this->subscriptionManager->getSubscribers($uri);
-
-        if (empty($subscribers)) {
-            return;
-        }
-
-        $notification = ResourceUpdatedNotification::make($uri);
-
-        foreach ($subscribers as $sessionId) {
-            $this->sendNotification($notification, $sessionId);
-        }
-
-        $this->logger->debug("Sent resource change notification", [
-            'uri' => $uri,
-            'subscriber_count' => count($subscribers),
-        ]);
     }
 
     /**
@@ -444,74 +511,5 @@ final class Protocol
         }
 
         return $valid;
-    }
-
-    /**
-     * Handles 'client_connected' event from the transport
-     */
-    public function handleClientConnected(string $sessionId): void
-    {
-        $this->logger->info('Client connected', ['sessionId' => $sessionId]);
-
-        $this->sessionManager->createSession($sessionId);
-    }
-
-    /**
-     * Handles 'client_disconnected' event from the transport
-     */
-    public function handleClientDisconnected(string $sessionId, ?string $reason = null): void
-    {
-        $this->logger->info('Client disconnected', ['clientId' => $sessionId, 'reason' => $reason ?? 'N/A']);
-
-        $this->sessionManager->deleteSession($sessionId);
-    }
-
-    /**
-     * Handle list changed event from registry
-     */
-    public function handleListChanged(string $listType): void
-    {
-        $listChangeUri = "mcp://changes/{$listType}";
-
-        $subscribers = $this->subscriptionManager->getSubscribers($listChangeUri);
-        if (empty($subscribers)) {
-            return;
-        }
-
-        $notification = match ($listType) {
-            'resources' => ResourceListChangedNotification::make(),
-            'tools' => ToolListChangedNotification::make(),
-            'prompts' => PromptListChangedNotification::make(),
-            'roots' => RootsListChangedNotification::make(),
-            default => throw new \InvalidArgumentException("Invalid list type: {$listType}"),
-        };
-
-        if (!$this->canSendNotification($notification->method)) {
-            return;
-        }
-
-        foreach ($subscribers as $sessionId) {
-            $this->sendNotification($notification, $sessionId);
-        }
-
-        $this->logger->debug("Sent list change notification", [
-            'list_type' => $listType,
-            'subscriber_count' => count($subscribers),
-        ]);
-    }
-
-    /**
-     * Handles 'error' event from the transport
-     */
-    public function handleTransportError(Throwable $error, ?string $clientId = null): void
-    {
-        $context = ['error' => $error->getMessage(), 'exception_class' => $error::class];
-
-        if ($clientId) {
-            $context['clientId'] = $clientId;
-            $this->logger->error('Transport error for client', $context);
-        } else {
-            $this->logger->error('General transport error', $context);
-        }
     }
 }

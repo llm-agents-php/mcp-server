@@ -1,10 +1,12 @@
 <?php
 
-namespace PhpMcp\Server\Tests\Unit\Attributes;
+declare(strict_types=1);
 
-use PhpMcp\Server\Attributes\McpResourceTemplate;
+namespace Mcp\Server\Tests\Unit\Attributes;
 
-it('instantiates with correct properties', function () {
+use Mcp\Server\Attributes\McpResourceTemplate;
+
+it('instantiates with correct properties', static function (): void {
     // Arrange
     $uriTemplate = 'file:///{path}/data';
     $name = 'test-template-name';
@@ -26,7 +28,7 @@ it('instantiates with correct properties', function () {
     expect($attribute->mimeType)->toBe($mimeType);
 });
 
-it('instantiates with null values for name and description', function () {
+it('instantiates with null values for name and description', static function (): void {
     // Arrange & Act
     $attribute = new McpResourceTemplate(
         uriTemplate: 'test://{id}', // uriTemplate is required
@@ -42,7 +44,7 @@ it('instantiates with null values for name and description', function () {
     expect($attribute->mimeType)->toBeNull();
 });
 
-it('instantiates with missing optional arguments', function () {
+it('instantiates with missing optional arguments', static function (): void {
     // Arrange & Act
     $uriTemplate = 'tmpl://{key}';
     $attribute = new McpResourceTemplate(uriTemplate: $uriTemplate);

@@ -1,14 +1,15 @@
 <?php
 
-namespace PhpMcp\Server\Tests\Unit\Session;
+declare(strict_types=1);
 
-use Mockery;
+namespace Mcp\Server\Tests\Unit\Session;
+
 use Mockery\MockInterface;
-use PhpMcp\Server\Contracts\SessionHandlerInterface;
-use PhpMcp\Server\Contracts\SessionInterface;
-use PhpMcp\Server\Session\ArraySessionHandler;
-use PhpMcp\Server\Session\SessionManager;
-use PhpMcp\Server\Tests\Mocks\Clock\FixedClock;
+use Mcp\Server\Contracts\SessionHandlerInterface;
+use Mcp\Server\Contracts\SessionInterface;
+use Mcp\Server\Session\ArraySessionHandler;
+use Mcp\Server\Session\SessionManager;
+use Mcp\Server\Tests\Mocks\Clock\FixedClock;
 use Psr\Log\LoggerInterface;
 use React\EventLoop\Loop;
 use React\EventLoop\LoopInterface;
@@ -19,30 +20,30 @@ const SESSION_ID_MGR_2 = 'manager-session-2';
 const DEFAULT_TTL_MGR = 3600;
 const GC_INTERVAL_MGR = 5;
 
-beforeEach(function () {
+beforeEach(function (): void {
     /** @var MockInterface&SessionHandlerInterface $sessionHandler */
-    $this->sessionHandler = Mockery::mock(SessionHandlerInterface::class);
+    $this->sessionHandler = \Mockery::mock(SessionHandlerInterface::class);
     /** @var MockInterface&LoggerInterface $logger */
-    $this->logger = Mockery::mock(LoggerInterface::class)->shouldIgnoreMissing();
+    $this->logger = \Mockery::mock(LoggerInterface::class)->shouldIgnoreMissing();
     $this->loop = Loop::get();
 
     $this->sessionManager = new SessionManager(
         $this->sessionHandler,
         $this->logger,
         $this->loop,
-        DEFAULT_TTL_MGR
+        DEFAULT_TTL_MGR,
     );
 
-    $this->sessionHandler->shouldReceive('read')->with(Mockery::any())->andReturn(false)->byDefault();
-    $this->sessionHandler->shouldReceive('write')->with(Mockery::any(), Mockery::any())->andReturn(true)->byDefault();
-    $this->sessionHandler->shouldReceive('destroy')->with(Mockery::any())->andReturn(true)->byDefault();
-    $this->sessionHandler->shouldReceive('gc')->with(Mockery::any())->andReturn([])->byDefault();
+    $this->sessionHandler->shouldReceive('read')->with(\Mockery::any())->andReturn(false)->byDefault();
+    $this->sessionHandler->shouldReceive('write')->with(\Mockery::any(), \Mockery::any())->andReturn(true)->byDefault();
+    $this->sessionHandler->shouldReceive('destroy')->with(\Mockery::any())->andReturn(true)->byDefault();
+    $this->sessionHandler->shouldReceive('gc')->with(\Mockery::any())->andReturn([])->byDefault();
 });
 
-it('creates a new session with default hydrated values and saves it', function () {
+it('creates a new session with default hydrated values and saves it', function (): void {
     $this->sessionHandler->shouldReceive('write')
-        ->with(SESSION_ID_MGR_1, Mockery::on(function ($dataJson) {
-            $data = json_decode($dataJson, true);
+        ->with(SESSION_ID_MGR_1, \Mockery::on(static function ($dataJson) {
+            $data = \json_decode($dataJson, true);
             expect($data['initialized'])->toBeFalse();
             expect($data['client_info'])->toBeNull();
             expect($data['protocol_version'])->toBeNull();
@@ -55,7 +56,7 @@ it('creates a new session with default hydrated values and saves it', function (
     $sessionCreatedEmitted = false;
     $emittedSessionId = null;
     $emittedSessionObj = null;
-    $this->sessionManager->on('session_created', function ($id, $session) use (&$sessionCreatedEmitted, &$emittedSessionId, &$emittedSessionObj) {
+    $this->sessionManager->on('session_created', static function ($id, $session) use (&$sessionCreatedEmitted, &$emittedSessionId, &$emittedSessionObj): void {
         $sessionCreatedEmitted = true;
         $emittedSessionId = $id;
         $emittedSessionObj = $session;
@@ -72,9 +73,9 @@ it('creates a new session with default hydrated values and saves it', function (
     expect($emittedSessionObj)->toBe($session);
 });
 
-it('gets an existing session if handler read returns data', function () {
+it('gets an existing session if handler read returns data', function (): void {
     $existingData = ['user_id' => 123, 'initialized' => true];
-    $this->sessionHandler->shouldReceive('read')->with(SESSION_ID_MGR_1)->once()->andReturn(json_encode($existingData));
+    $this->sessionHandler->shouldReceive('read')->with(SESSION_ID_MGR_1)->once()->andReturn(\json_encode($existingData));
 
     $session = $this->sessionManager->getSession(SESSION_ID_MGR_1);
     expect($session)->toBeInstanceOf(SessionInterface::class);
@@ -82,25 +83,25 @@ it('gets an existing session if handler read returns data', function () {
     expect($session->get('user_id'))->toBe(123);
 });
 
-it('returns null from getSession if session does not exist (handler read returns false)', function () {
+it('returns null from getSession if session does not exist (handler read returns false)', function (): void {
     $this->sessionHandler->shouldReceive('read')->with('non-existent')->once()->andReturn(false);
     $session = $this->sessionManager->getSession('non-existent');
     expect($session)->toBeNull();
 });
 
-it('returns null from getSession if session data is empty after load', function () {
+it('returns null from getSession if session data is empty after load', function (): void {
     $this->sessionHandler->shouldReceive('read')->with(SESSION_ID_MGR_1)->once()->andReturn(false);
     $session = $this->sessionManager->getSession(SESSION_ID_MGR_1);
     expect($session)->toBeNull();
 });
 
 
-it('deletes a session successfully and emits event', function () {
+it('deletes a session successfully and emits event', function (): void {
     $this->sessionHandler->shouldReceive('destroy')->with(SESSION_ID_MGR_1)->once()->andReturn(true);
 
     $sessionDeletedEmitted = false;
     $emittedSessionId = null;
-    $this->sessionManager->on('session_deleted', function ($id) use (&$sessionDeletedEmitted, &$emittedSessionId) {
+    $this->sessionManager->on('session_deleted', static function ($id) use (&$sessionDeletedEmitted, &$emittedSessionId): void {
         $sessionDeletedEmitted = true;
         $emittedSessionId = $id;
     });
@@ -113,10 +114,10 @@ it('deletes a session successfully and emits event', function () {
     expect($emittedSessionId)->toBe(SESSION_ID_MGR_1);
 });
 
-it('logs warning and does not emit event if deleteSession fails', function () {
+it('logs warning and does not emit event if deleteSession fails', function (): void {
     $this->sessionHandler->shouldReceive('destroy')->with(SESSION_ID_MGR_1)->once()->andReturn(false);
     $sessionDeletedEmitted = false;
-    $this->sessionManager->on('session_deleted', function () use (&$sessionDeletedEmitted) {
+    $this->sessionManager->on('session_deleted', static function () use (&$sessionDeletedEmitted): void {
         $sessionDeletedEmitted = true;
     });
 
@@ -127,13 +128,13 @@ it('logs warning and does not emit event if deleteSession fails', function () {
     expect($sessionDeletedEmitted)->toBeFalse();
 });
 
-it('queues message for existing session', function () {
+it('queues message for existing session', function (): void {
     $sessionData = ['message_queue' => []];
-    $this->sessionHandler->shouldReceive('read')->with(SESSION_ID_MGR_1)->andReturn(json_encode($sessionData));
+    $this->sessionHandler->shouldReceive('read')->with(SESSION_ID_MGR_1)->andReturn(\json_encode($sessionData));
     $message = '{"id":1}';
 
-    $this->sessionHandler->shouldReceive('write')->with(SESSION_ID_MGR_1, Mockery::on(function ($dataJson) use ($message) {
-        $data = json_decode($dataJson, true);
+    $this->sessionHandler->shouldReceive('write')->with(SESSION_ID_MGR_1, \Mockery::on(static function ($dataJson) use ($message) {
+        $data = \json_decode($dataJson, true);
         expect($data['message_queue'])->toEqual([$message]);
         return true;
     }))->once()->andReturn(true);
@@ -141,18 +142,18 @@ it('queues message for existing session', function () {
     $this->sessionManager->queueMessage(SESSION_ID_MGR_1, $message);
 });
 
-it('does nothing on queueMessage if session does not exist', function () {
+it('does nothing on queueMessage if session does not exist', function (): void {
     $this->sessionHandler->shouldReceive('read')->with('no-such-session')->andReturn(false);
     $this->sessionHandler->shouldNotReceive('write');
     $this->sessionManager->queueMessage('no-such-session', '{"id":1}');
 });
 
-it('dequeues messages from existing session', function () {
+it('dequeues messages from existing session', function (): void {
     $messages = ['{"id":1}', '{"id":2}'];
     $sessionData = ['message_queue' => $messages];
-    $this->sessionHandler->shouldReceive('read')->with(SESSION_ID_MGR_1)->andReturn(json_encode($sessionData));
-    $this->sessionHandler->shouldReceive('write')->with(SESSION_ID_MGR_1, Mockery::on(function ($dataJson) {
-        $data = json_decode($dataJson, true);
+    $this->sessionHandler->shouldReceive('read')->with(SESSION_ID_MGR_1)->andReturn(\json_encode($sessionData));
+    $this->sessionHandler->shouldReceive('write')->with(SESSION_ID_MGR_1, \Mockery::on(static function ($dataJson) {
+        $data = \json_decode($dataJson, true);
         expect($data['message_queue'])->toEqual([]);
         return true;
     }))->once()->andReturn(true);
@@ -161,35 +162,35 @@ it('dequeues messages from existing session', function () {
     expect($dequeued)->toEqual($messages);
 });
 
-it('returns empty array from dequeueMessages if session does not exist', function () {
+it('returns empty array from dequeueMessages if session does not exist', function (): void {
     $this->sessionHandler->shouldReceive('read')->with('no-such-session')->andReturn(false);
     expect($this->sessionManager->dequeueMessages('no-such-session'))->toBe([]);
 });
 
-it('checks hasQueuedMessages for existing session', function () {
-    $this->sessionHandler->shouldReceive('read')->with(SESSION_ID_MGR_1)->andReturn(json_encode(['message_queue' => ['msg']]));
+it('checks hasQueuedMessages for existing session', function (): void {
+    $this->sessionHandler->shouldReceive('read')->with(SESSION_ID_MGR_1)->andReturn(\json_encode(['message_queue' => ['msg']]));
     expect($this->sessionManager->hasQueuedMessages(SESSION_ID_MGR_1))->toBeTrue();
 
-    $this->sessionHandler->shouldReceive('read')->with(SESSION_ID_MGR_2)->andReturn(json_encode(['message_queue' => []]));
+    $this->sessionHandler->shouldReceive('read')->with(SESSION_ID_MGR_2)->andReturn(\json_encode(['message_queue' => []]));
     expect($this->sessionManager->hasQueuedMessages(SESSION_ID_MGR_2))->toBeFalse();
 });
 
-it('returns false from hasQueuedMessages if session does not exist', function () {
+it('returns false from hasQueuedMessages if session does not exist', function (): void {
     $this->sessionHandler->shouldReceive('read')->with('no-such-session')->andReturn(false);
     expect($this->sessionManager->hasQueuedMessages('no-such-session'))->toBeFalse();
 });
 
-it('can stop GC timer on stopGcTimer ', function () {
-    $loop = Mockery::mock(LoopInterface::class);
-    $loop->shouldReceive('addPeriodicTimer')->with(Mockery::any(), Mockery::type('callable'))->once()->andReturn(Mockery::mock(TimerInterface::class));
-    $loop->shouldReceive('cancelTimer')->with(Mockery::type(TimerInterface::class))->once();
+it('can stop GC timer on stopGcTimer ', function (): void {
+    $loop = \Mockery::mock(LoopInterface::class);
+    $loop->shouldReceive('addPeriodicTimer')->with(\Mockery::any(), \Mockery::type('callable'))->once()->andReturn(\Mockery::mock(TimerInterface::class));
+    $loop->shouldReceive('cancelTimer')->with(\Mockery::type(TimerInterface::class))->once();
 
     $manager = new SessionManager($this->sessionHandler, $this->logger, $loop);
     $manager->startGcTimer();
     $manager->stopGcTimer();
 });
 
-it('GC timer callback deletes expired sessions', function () {
+it('GC timer callback deletes expired sessions', function (): void {
     $clock = new FixedClock();
 
     $sessionHandler = new ArraySessionHandler(60, $clock);
@@ -201,7 +202,7 @@ it('GC timer callback deletes expired sessions', function () {
         $sessionHandler,
         $this->logger,
         ttl: 30,
-        gcInterval: 0.01
+        gcInterval: 0.01,
     );
 
     $session = $manager->getSession('sess_expired');
@@ -209,9 +210,9 @@ it('GC timer callback deletes expired sessions', function () {
 });
 
 
-it('does not start GC timer if already started', function () {
-    $this->loop = Mockery::mock(LoopInterface::class);
-    $this->loop->shouldReceive('addPeriodicTimer')->once()->andReturn(Mockery::mock(TimerInterface::class));
+it('does not start GC timer if already started', function (): void {
+    $this->loop = \Mockery::mock(LoopInterface::class);
+    $this->loop->shouldReceive('addPeriodicTimer')->once()->andReturn(\Mockery::mock(TimerInterface::class));
 
     $manager = new SessionManager($this->sessionHandler, $this->logger, $this->loop);
     $manager->startGcTimer();

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace PhpMcp\Server\Tests\Fixtures\Discovery;
+namespace Mcp\Server\Tests\Fixtures\Discovery;
 
 class NonDiscoverableClass
 {
@@ -12,15 +12,11 @@ class NonDiscoverableClass
     }
 }
 
-interface MyDiscoverableInterface
-{
-}
+interface MyDiscoverableInterface {}
 
 trait MyDiscoverableTrait
 {
-    public function traitMethod()
-    {
-    }
+    public function traitMethod(): void {}
 }
 
 enum MyDiscoverableEnum

@@ -20,6 +20,7 @@
     "psr/clock": "^1.0",
     "psr/container": "^1.0 || ^2.0",
     "psr/log": "^1.0 || ^2.0 || ^3.0",
+    "psr/http-server-middleware": "^1.0 || ^2.0 || ^3.0",
     "psr/simple-cache": "^1.0 || ^2.0 || ^3.0",
     "react/event-loop": "^1.5",
     "react/http": "^1.11",
@@ -27,7 +28,7 @@
     "react/stream": "^1.4"
   },
   "require-dev": {
-    "friendsofphp/php-cs-fixer": "^3.75",
+    "spiral/code-style": "^2.2",
     "mockery/mockery": "^1.6",
     "phpunit/phpunit": "^10.5",
     "rector/rector": "^2.1",
@@ -40,12 +41,12 @@
   },
   "autoload": {
     "psr-4": {
-      "PhpMcp\\Server\\": "src/"
+      "Mcp\\Server\\": "src/"
     }
   },
   "autoload-dev": {
     "psr-4": {
-      "PhpMcp\\Server\\Tests\\": "tests/"
+      "Mcp\\Server\\Tests\\": "tests/"
     }
   },
   "scripts": {

@@ -5,11 +5,11 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/../../../vendor/autoload.php';
 
-use PhpMcp\Server\Server;
-use PhpMcp\Server\Transports\StdioServerTransport;
-use PhpMcp\Server\Tests\Fixtures\General\ToolHandlerFixture;
-use PhpMcp\Server\Tests\Fixtures\General\ResourceHandlerFixture;
-use PhpMcp\Server\Tests\Fixtures\General\PromptHandlerFixture;
+use Mcp\Server\Server;
+use Mcp\Server\Transports\StdioServerTransport;
+use Mcp\Server\Tests\Fixtures\General\ToolHandlerFixture;
+use Mcp\Server\Tests\Fixtures\General\ResourceHandlerFixture;
+use Mcp\Server\Tests\Fixtures\General\PromptHandlerFixture;
 use Psr\Log\AbstractLogger;
 use Psr\Log\NullLogger;
 
@@ -17,7 +17,7 @@ class StdErrLogger extends AbstractLogger
 {
     public function log($level, \Stringable|string $message, array $context = []): void
     {
-        fwrite(STDERR, sprintf("[%s] SERVER_LOG: %s %s\n", strtoupper((string)$level), $message, empty($context) ? '' : json_encode($context)));
+        \fwrite(STDERR, \sprintf("[%s] SERVER_LOG: %s %s\n", \strtoupper((string) $level), $message, empty($context) ? '' : \json_encode($context)));
     }
 }
 
@@ -40,6 +40,6 @@ try {
     $logger->info('StdioTestServer listener stopped.');
     exit(0);
 } catch (\Throwable $e) {
-    fwrite(STDERR, "[STDIO_SERVER_CRITICAL_ERROR]\n" . $e->getMessage() . "\n" . $e->getTraceAsString() . "\n");
+    \fwrite(STDERR, "[STDIO_SERVER_CRITICAL_ERROR]\n" . $e->getMessage() . "\n" . $e->getTraceAsString() . "\n");
     exit(1);
 }

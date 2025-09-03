@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace PhpMcp\Server\Session;
+namespace Mcp\Server\Session;
 
-use PhpMcp\Server\Contracts\SessionHandlerInterface;
-use PhpMcp\Server\Contracts\SessionInterface;
+use Mcp\Server\Contracts\SessionHandlerInterface;
+use Mcp\Server\Contracts\SessionInterface;
 
 final class Session implements SessionInterface
 {
@@ -21,11 +21,11 @@ final class Session implements SessionInterface
      * - message_queue: array<string>
      * - log_level: string|null
      */
-    protected array $data = [];
+    private array $data = [];
 
     public function __construct(
-        protected SessionHandlerInterface $handler,
-        protected string $id = '',
+        private readonly SessionHandlerInterface $handler,
+        private string $id = '',
         ?array $data = null,
     ) {
         if (empty($this->id)) {
@@ -35,7 +35,7 @@ final class Session implements SessionInterface
         if ($data !== null) {
             $this->hydrate($data);
         } elseif ($sessionData = $this->handler->read($this->id)) {
-            $this->data = json_decode($sessionData, true) ?? [];
+            $this->data = \json_decode($sessionData, true) ?? [];
         }
     }
 
@@ -50,7 +50,7 @@ final class Session implements SessionInterface
             return null;
         }
 
-        $data = json_decode($sessionData, true);
+        $data = \json_decode($sessionData, true);
         if ($data === null) {
             return null;
         }
@@ -70,21 +70,21 @@ final class Session implements SessionInterface
 
     public function generateId(): string
     {
-        return bin2hex(random_bytes(16));
+        return \bin2hex(\random_bytes(16));
     }
 
     public function save(): void
     {
-        $this->handler->write($this->id, json_encode($this->data));
+        $this->handler->write($this->id, \json_encode($this->data));
     }
 
     public function get(string $key, mixed $default = null): mixed
     {
-        $key = explode('.', $key);
+        $key = \explode('.', $key);
         $data = $this->data;
 
         foreach ($key as $segment) {
-            if (is_array($data) && array_key_exists($segment, $data)) {
+            if (\is_array($data) && \array_key_exists($segment, $data)) {
                 $data = $data[$segment];
             } else {
                 return $default;
@@ -96,18 +96,18 @@ final class Session implements SessionInterface
 
     public function set(string $key, mixed $value, bool $overwrite = true): void
     {
-        $segments = explode('.', $key);
+        $segments = \explode('.', $key);
         $data = &$this->data;
 
-        while (count($segments) > 1) {
-            $segment = array_shift($segments);
-            if (!isset($data[$segment]) || !is_array($data[$segment])) {
+        while (\count($segments) > 1) {
+            $segment = \array_shift($segments);
+            if (!isset($data[$segment]) || !\is_array($data[$segment])) {
                 $data[$segment] = [];
             }
             $data = &$data[$segment];
         }
 
-        $lastKey = array_shift($segments);
+        $lastKey = \array_shift($segments);
         if ($overwrite || !isset($data[$lastKey])) {
             $data[$lastKey] = $value;
         }
@@ -115,13 +115,13 @@ final class Session implements SessionInterface
 
     public function has(string $key): bool
     {
-        $key = explode('.', $key);
+        $key = \explode('.', $key);
         $data = $this->data;
 
         foreach ($key as $segment) {
-            if (is_array($data) && array_key_exists($segment, $data)) {
+            if (\is_array($data) && \array_key_exists($segment, $data)) {
                 $data = $data[$segment];
-            } elseif (is_object($data) && isset($data->{$segment})) {
+            } elseif (\is_object($data) && isset($data->{$segment})) {
                 $data = $data->{$segment};
             } else {
                 return false;
@@ -133,18 +133,18 @@ final class Session implements SessionInterface
 
     public function forget(string $key): void
     {
-        $segments = explode('.', $key);
+        $segments = \explode('.', $key);
         $data = &$this->data;
 
-        while (count($segments) > 1) {
-            $segment = array_shift($segments);
-            if (!isset($data[$segment]) || !is_array($data[$segment])) {
+        while (\count($segments) > 1) {
+            $segment = \array_shift($segments);
+            if (!isset($data[$segment]) || !\is_array($data[$segment])) {
                 $data[$segment] = [];
             }
             $data = &$data[$segment];
         }
 
-        $lastKey = array_shift($segments);
+        $lastKey = \array_shift($segments);
         if (isset($data[$lastKey])) {
             unset($data[$lastKey]);
         }
@@ -169,7 +169,7 @@ final class Session implements SessionInterface
 
     public function hydrate(array $attributes): void
     {
-        $this->data = array_merge(
+        $this->data = \array_merge(
             [
                 'initialized' => false,
                 'client_info' => null,

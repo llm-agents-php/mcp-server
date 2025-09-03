@@ -2,24 +2,39 @@
 
 declare(strict_types=1);
 
-namespace PhpMcp\Server\Elements;
+namespace Mcp\Server\Elements;
 
 use PhpMcp\Schema\Content\Content;
 use PhpMcp\Schema\Content\TextContent;
-use PhpMcp\Server\Context;
-use PhpMcp\Server\Contracts\HandlerInterface;
-use Psr\Container\ContainerInterface;
+use Mcp\Server\Context;
+use Mcp\Server\Contracts\HandlerInterface;
 use PhpMcp\Schema\Tool;
-use Throwable;
 
-class RegisteredTool extends RegisteredElement
+final class RegisteredTool extends RegisteredElement
 {
     public function __construct(
         public readonly Tool $schema,
-        HandlerInterface|callable|array|string $handler,
+        HandlerInterface $handler,
         bool $isManual = false,
     ) {
         parent::__construct($handler, $isManual);
+    }
+
+    public static function fromArray(array $data): self|false
+    {
+        try {
+            if (!isset($data['schema']) || !isset($data['handler'])) {
+                return false;
+            }
+
+            return new self(
+                Tool::fromArray($data['schema']),
+                $data['handler'],
+                $data['isManual'] ?? false,
+            );
+        } catch (\Throwable) {
+            return false;
+        }
     }
 
     /**
@@ -27,11 +42,19 @@ class RegisteredTool extends RegisteredElement
      *
      * @return Content[] The content items for CallToolResult.
      */
-    public function call(ContainerInterface $container, array $arguments, Context $context): array
+    public function call(array $arguments, Context $context): array
     {
-        $result = $this->handler->handle($container, $arguments, $context);
+        $result = $this->handler->handle($arguments, $context);
 
         return $this->formatResult($result);
+    }
+
+    public function toArray(): array
+    {
+        return [
+            'schema' => $this->schema->toArray(),
+            ...parent::toArray(),
+        ];
     }
 
     /**
@@ -57,7 +80,7 @@ class RegisteredTool extends RegisteredElement
             return [$toolExecutionResult];
         }
 
-        if (is_array($toolExecutionResult)) {
+        if (\is_array($toolExecutionResult)) {
             if (empty($toolExecutionResult)) {
                 return [TextContent::make('[]')];
             }
@@ -83,7 +106,7 @@ class RegisteredTool extends RegisteredElement
                     if ($item instanceof Content) {
                         $result[] = $item;
                     } else {
-                        $result = array_merge($result, $this->formatResult($item));
+                        $result = \array_merge($result, $this->formatResult($item));
                     }
                 }
                 return $result;
@@ -94,44 +117,19 @@ class RegisteredTool extends RegisteredElement
             return [TextContent::make('(null)')];
         }
 
-        if (is_bool($toolExecutionResult)) {
+        if (\is_bool($toolExecutionResult)) {
             return [TextContent::make($toolExecutionResult ? 'true' : 'false')];
         }
 
-        if (is_scalar($toolExecutionResult)) {
+        if (\is_scalar($toolExecutionResult)) {
             return [TextContent::make($toolExecutionResult)];
         }
 
-        $jsonResult = json_encode(
+        $jsonResult = \json_encode(
             $toolExecutionResult,
             JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR | JSON_INVALID_UTF8_SUBSTITUTE,
         );
 
         return [TextContent::make($jsonResult)];
-    }
-
-    public function toArray(): array
-    {
-        return [
-            'schema' => $this->schema->toArray(),
-            ...parent::toArray(),
-        ];
-    }
-
-    public static function fromArray(array $data): self|false
-    {
-        try {
-            if (!isset($data['schema']) || !isset($data['handler'])) {
-                return false;
-            }
-
-            return new self(
-                Tool::fromArray($data['schema']),
-                $data['handler'],
-                $data['isManual'] ?? false,
-            );
-        } catch (Throwable) {
-            return false;
-        }
     }
 }

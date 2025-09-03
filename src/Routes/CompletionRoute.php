@@ -2,31 +2,24 @@
 
 declare(strict_types=1);
 
-namespace PhpMcp\Server\Routes;
+namespace Mcp\Server\Routes;
 
 use PhpMcp\Schema\JsonRpc\Request;
 use PhpMcp\Schema\JsonRpc\Notification;
 use PhpMcp\Schema\JsonRpc\Result;
 use PhpMcp\Schema\Request\CompletionCompleteRequest;
 use PhpMcp\Schema\Result\CompletionCompleteResult;
-use PhpMcp\Server\Configuration;
-use PhpMcp\Server\Context;
-use PhpMcp\Server\Contracts\RouteInterface;
-use PhpMcp\Server\Exception\McpServerException;
-use PhpMcp\Server\Registry;
-use PhpMcp\Server\RequestMethod;
-use Psr\Container\ContainerInterface;
+use Mcp\Server\Context;
+use Mcp\Server\Contracts\RouteInterface;
+use Mcp\Server\Exception\McpServerException;
+use Mcp\Server\Registry;
+use Mcp\Server\RequestMethod;
 
 final readonly class CompletionRoute implements RouteInterface
 {
-    private ContainerInterface $container;
-
     public function __construct(
         private Registry $registry,
-        private Configuration $configuration,
-    ) {
-        $this->container = $this->configuration->container;
-    }
+    ) {}
 
     public function getMethods(): array
     {
@@ -78,7 +71,7 @@ final readonly class CompletionRoute implements RouteInterface
                 );
             }
 
-            return $registeredPrompt->complete($this->container, $argumentName, $currentValue, $context->session);
+            return $registeredPrompt->complete($argumentName, $currentValue, $context->session);
         } elseif ($ref->type === 'ref/resource') {
             $identifier = $ref->uri;
             $registeredResourceTemplate = $this->registry->getResourceTemplate($identifier);
@@ -101,13 +94,12 @@ final readonly class CompletionRoute implements RouteInterface
             }
 
             return $registeredResourceTemplate->complete(
-                $this->container,
                 $argumentName,
                 $currentValue,
                 $context->session,
             );
-        } else {
-            throw McpServerException::invalidParams("Invalid ref type '{$ref->type}' for completion complete request.");
         }
+
+        throw McpServerException::invalidParams("Invalid ref type '{$ref->type}' for completion complete request.");
     }
 }

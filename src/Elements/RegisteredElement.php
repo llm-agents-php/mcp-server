@@ -2,24 +2,16 @@
 
 declare(strict_types=1);
 
-namespace PhpMcp\Server\Elements;
+namespace Mcp\Server\Elements;
 
-use JsonSerializable;
-use PhpMcp\Server\Contracts\HandlerInterface;
-use PhpMcp\Server\Handlers\DefaultHandler;
+use Mcp\Server\Contracts\HandlerInterface;
 
-class RegisteredElement implements JsonSerializable
+class RegisteredElement implements \JsonSerializable
 {
-    public readonly HandlerInterface $handler;
-
     public function __construct(
-        HandlerInterface|callable|array|string $handler,
+        public readonly HandlerInterface $handler,
         public readonly bool $isManual = false,
-    ) {
-        $this->handler = $handler instanceof HandlerInterface
-            ? $handler
-            : new DefaultHandler($handler);
-    }
+    ) {}
 
     public function toArray(): array
     {

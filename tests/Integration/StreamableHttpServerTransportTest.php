@@ -1,64 +1,65 @@
 <?php
 
-use PhpMcp\Server\Protocol;
-use PhpMcp\Server\Tests\Mocks\Clients\MockJsonHttpClient;
-use PhpMcp\Server\Tests\Mocks\Clients\MockStreamHttpClient;
+declare(strict_types=1);
+
+use Mcp\Server\Protocol;
+use Mcp\Server\Tests\Mocks\Clients\MockJsonHttpClient;
+use Mcp\Server\Tests\Mocks\Clients\MockStreamHttpClient;
 use React\ChildProcess\Process;
 use React\Http\Browser;
 use React\Http\Message\ResponseException;
 use React\Stream\ReadableStreamInterface;
 
 use function React\Async\await;
-use function React\Promise\resolve;
 
 const STREAMABLE_HTTP_SCRIPT_PATH = __DIR__ . '/../Fixtures/ServerScripts/StreamableHttpTestServer.php';
 const STREAMABLE_HTTP_PROCESS_TIMEOUT = 9;
 const STREAMABLE_HTTP_HOST = '127.0.0.1';
 const STREAMABLE_MCP_PATH = 'mcp_streamable_json_mode';
 
-beforeEach(function () {
-    if (!is_file(STREAMABLE_HTTP_SCRIPT_PATH)) {
+beforeEach(function (): void {
+    if (!\is_file(STREAMABLE_HTTP_SCRIPT_PATH)) {
         $this->markTestSkipped("Server script not found: " . STREAMABLE_HTTP_SCRIPT_PATH);
     }
-    if (!is_executable(STREAMABLE_HTTP_SCRIPT_PATH)) {
-        chmod(STREAMABLE_HTTP_SCRIPT_PATH, 0755);
+    if (!\is_executable(STREAMABLE_HTTP_SCRIPT_PATH)) {
+        \chmod(STREAMABLE_HTTP_SCRIPT_PATH, 0755);
     }
 
     $phpPath = PHP_BINARY ?: 'php';
-    $commandPhpPath = str_contains($phpPath, ' ') ? '"' . $phpPath . '"' : $phpPath;
-    $commandScriptPath = escapeshellarg(STREAMABLE_HTTP_SCRIPT_PATH);
+    $commandPhpPath = \str_contains($phpPath, ' ') ? '"' . $phpPath . '"' : $phpPath;
+    $commandScriptPath = \escapeshellarg(STREAMABLE_HTTP_SCRIPT_PATH);
     $this->port = findFreePort();
 
     $jsonModeCommandArgs = [
-        escapeshellarg(STREAMABLE_HTTP_HOST),
-        escapeshellarg((string)$this->port),
-        escapeshellarg(STREAMABLE_MCP_PATH),
-        escapeshellarg('true'), // enableJsonResponse = true
+        \escapeshellarg(STREAMABLE_HTTP_HOST),
+        \escapeshellarg((string) $this->port),
+        \escapeshellarg(STREAMABLE_MCP_PATH),
+        \escapeshellarg('true'), // enableJsonResponse = true
     ];
-    $this->jsonModeCommand = $commandPhpPath . ' ' . $commandScriptPath . ' ' . implode(' ', $jsonModeCommandArgs);
+    $this->jsonModeCommand = $commandPhpPath . ' ' . $commandScriptPath . ' ' . \implode(' ', $jsonModeCommandArgs);
 
     $streamModeCommandArgs = [
-        escapeshellarg(STREAMABLE_HTTP_HOST),
-        escapeshellarg((string)$this->port),
-        escapeshellarg(STREAMABLE_MCP_PATH),
-        escapeshellarg('false'), // enableJsonResponse = false
+        \escapeshellarg(STREAMABLE_HTTP_HOST),
+        \escapeshellarg((string) $this->port),
+        \escapeshellarg(STREAMABLE_MCP_PATH),
+        \escapeshellarg('false'), // enableJsonResponse = false
     ];
-    $this->streamModeCommand = $commandPhpPath . ' ' . $commandScriptPath . ' ' . implode(' ', $streamModeCommandArgs);
+    $this->streamModeCommand = $commandPhpPath . ' ' . $commandScriptPath . ' ' . \implode(' ', $streamModeCommandArgs);
 
     $statelessModeCommandArgs = [
-        escapeshellarg(STREAMABLE_HTTP_HOST),
-        escapeshellarg((string)$this->port),
-        escapeshellarg(STREAMABLE_MCP_PATH),
-        escapeshellarg('true'), // enableJsonResponse = true
-        escapeshellarg('false'), // useEventStore = false
-        escapeshellarg('true'), // stateless = true
+        \escapeshellarg(STREAMABLE_HTTP_HOST),
+        \escapeshellarg((string) $this->port),
+        \escapeshellarg(STREAMABLE_MCP_PATH),
+        \escapeshellarg('true'), // enableJsonResponse = true
+        \escapeshellarg('false'), // useEventStore = false
+        \escapeshellarg('true'), // stateless = true
     ];
-    $this->statelessModeCommand = $commandPhpPath . ' ' . $commandScriptPath . ' ' . implode(' ', $statelessModeCommandArgs);
+    $this->statelessModeCommand = $commandPhpPath . ' ' . $commandScriptPath . ' ' . \implode(' ', $statelessModeCommandArgs);
 
     $this->process = null;
 });
 
-afterEach(function () {
+afterEach(function (): void {
     if ($this->process instanceof Process && $this->process->isRunning()) {
         if ($this->process->stdout instanceof ReadableStreamInterface) {
             $this->process->stdout->close();
@@ -79,9 +80,9 @@ afterEach(function () {
     $this->process = null;
 });
 
-describe('JSON MODE', function () {
-    beforeEach(function () {
-        $this->process = new Process($this->jsonModeCommand, getcwd() ?: null, null, []);
+describe('JSON MODE', function (): void {
+    beforeEach(function (): void {
+        $this->process = new Process($this->jsonModeCommand, \getcwd() ?: null, null, []);
         $this->process->start();
 
         $this->jsonClient = new MockJsonHttpClient(STREAMABLE_HTTP_HOST, $this->port, STREAMABLE_MCP_PATH);
@@ -89,12 +90,12 @@ describe('JSON MODE', function () {
         await(delay(0.2));
     });
 
-    it('server starts, initializes via POST JSON, calls a tool, and closes', function () {
+    it('server starts, initializes via POST JSON, calls a tool, and closes', function (): void {
         // 1. Initialize
         $initResult = await($this->jsonClient->sendRequest('initialize', [
             'protocolVersion' => Protocol::LATEST_PROTOCOL_VERSION,
             'clientInfo' => ['name' => 'JsonModeClient', 'version' => '1.0'],
-            'capabilities' => []
+            'capabilities' => [],
         ], 'init-json-1'));
 
         expect($initResult['statusCode'])->toBe(200);
@@ -111,7 +112,7 @@ describe('JSON MODE', function () {
         // 3. Call a tool
         $toolResult = await($this->jsonClient->sendRequest('tools/call', [
             'name' => 'greet_streamable_tool',
-            'arguments' => ['name' => 'JSON Mode User']
+            'arguments' => ['name' => 'JSON Mode User'],
         ], 'tool-json-1'));
 
         expect($toolResult['statusCode'])->toBe(200);
@@ -123,13 +124,13 @@ describe('JSON MODE', function () {
     })->group('integration', 'streamable_http_json');
 
 
-    it('return HTTP 400 error response for invalid JSON in POST request', function () {
+    it('return HTTP 400 error response for invalid JSON in POST request', function (): void {
         $malformedJson = '{"jsonrpc":"2.0", "id": "bad-json-post-1", "method": "tools/list", "params": {"broken"}';
 
         $promise = $this->jsonClient->browser->post(
             $this->jsonClient->baseUrl,
             ['Content-Type' => 'application/json', 'Accept' => 'application/json'],
-            $malformedJson
+            $malformedJson,
         );
 
         try {
@@ -137,7 +138,7 @@ describe('JSON MODE', function () {
         } catch (ResponseException $e) {
             expect($e->getResponse()->getStatusCode())->toBe(400);
             $bodyContent = (string) $e->getResponse()->getBody();
-            $decodedBody = json_decode($bodyContent, true);
+            $decodedBody = \json_decode($bodyContent, true);
 
             expect($decodedBody['jsonrpc'])->toBe('2.0');
             expect($decodedBody['id'])->toBe('');
@@ -146,7 +147,7 @@ describe('JSON MODE', function () {
         }
     })->group('integration', 'streamable_http_json');
 
-    it('returns JSON-RPC error result for request for non-existent method', function () {
+    it('returns JSON-RPC error result for request for non-existent method', function (): void {
         // 1. Initialize
         await($this->jsonClient->sendRequest('initialize', ['protocolVersion' => Protocol::LATEST_PROTOCOL_VERSION, 'clientInfo' => ['name' => 'JsonModeClient', 'version' => '1.0'], 'capabilities' => []], 'init-json-err'));
         await($this->jsonClient->sendNotification('notifications/initialized'));
@@ -160,12 +161,12 @@ describe('JSON MODE', function () {
         expect($errorResult['body']['error']['message'])->toContain("Method 'non/existentToolViaJson' not found");
     })->group('integration', 'streamable_http_json');
 
-    it('can handle batch requests correctly', function () {
+    it('can handle batch requests correctly', function (): void {
         // 1. Initialize
         await($this->jsonClient->sendRequest('initialize', [
             'protocolVersion' => Protocol::LATEST_PROTOCOL_VERSION,
             'clientInfo' => ['name' => 'JsonModeClient', 'version' => '1.0'],
-            'capabilities' => []
+            'capabilities' => [],
         ], 'init-json-batch'));
         expect($this->jsonClient->sessionId)->toBeString()->not->toBeEmpty();
         await($this->jsonClient->sendNotification('notifications/initialized'));
@@ -175,14 +176,14 @@ describe('JSON MODE', function () {
             ['jsonrpc' => '2.0', 'id' => 'batch-req-1', 'method' => 'tools/call', 'params' => ['name' => 'greet_streamable_tool', 'arguments' => ['name' => 'Batch Item 1']]],
             ['jsonrpc' => '2.0', 'method' => 'notifications/something'],
             ['jsonrpc' => '2.0', 'id' => 'batch-req-2', 'method' => 'tools/call', 'params' => ['name' => 'sum_streamable_tool', 'arguments' => ['a' => 10, 'b' => 20]]],
-            ['jsonrpc' => '2.0', 'id' => 'batch-req-3', 'method' => 'nonexistent/method']
+            ['jsonrpc' => '2.0', 'id' => 'batch-req-3', 'method' => 'nonexistent/method'],
         ];
 
         $batchResponse = await($this->jsonClient->sendBatchRequest($batchRequests));
 
 
 
-        $findResponseById = function (array $batch, $id) {
+        $findResponseById = static function (array $batch, $id) {
             foreach ($batch as $item) {
                 if (isset($item['id']) && $item['id'] === $id) {
                     return $item;
@@ -204,11 +205,11 @@ describe('JSON MODE', function () {
         expect($response3['error']['message'])->toContain("Method 'nonexistent/method' not found");
     })->group('integration', 'streamable_http_json');
 
-    it('can handle tool list request', function () {
+    it('can handle tool list request', function (): void {
         await($this->jsonClient->sendRequest('initialize', [
             'protocolVersion' => Protocol::LATEST_PROTOCOL_VERSION,
             'clientInfo' => ['name' => 'JsonModeClient', 'version' => '1.0'],
-            'capabilities' => []
+            'capabilities' => [],
         ], 'init-json-tools'));
         await($this->jsonClient->sendNotification('notifications/initialized'));
 
@@ -217,23 +218,23 @@ describe('JSON MODE', function () {
         expect($toolListResult['statusCode'])->toBe(200);
         expect($toolListResult['body']['id'])->toBe('tool-list-json-1');
         expect($toolListResult['body']['result']['tools'])->toBeArray();
-        expect(count($toolListResult['body']['result']['tools']))->toBe(4);
+        expect(\count($toolListResult['body']['result']['tools']))->toBe(4);
         expect($toolListResult['body']['result']['tools'][0]['name'])->toBe('greet_streamable_tool');
         expect($toolListResult['body']['result']['tools'][1]['name'])->toBe('sum_streamable_tool');
         expect($toolListResult['body']['result']['tools'][2]['name'])->toBe('tool_reads_context');
     })->group('integration', 'streamable_http_json');
 
-    it('passes request in Context', function () {
+    it('passes request in Context', function (): void {
         await($this->jsonClient->sendRequest('initialize', [
             'protocolVersion' => Protocol::LATEST_PROTOCOL_VERSION,
             'clientInfo' => ['name' => 'JsonModeClient', 'version' => '1.0'],
-            'capabilities' => []
+            'capabilities' => [],
         ], 'init-json-context'));
         await($this->jsonClient->sendNotification('notifications/initialized'));
 
         $toolResult = await($this->jsonClient->sendRequest('tools/call', [
             'name' => 'tool_reads_context',
-            'arguments' => []
+            'arguments' => [],
         ], 'tool-json-context-1', ['X-Test-Header' => 'TestValue']));
 
         expect($toolResult['statusCode'])->toBe(200);
@@ -242,11 +243,11 @@ describe('JSON MODE', function () {
         expect($toolResult['body']['result']['content'][0]['text'])->toBe('TestValue');
     })->group('integration', 'streamable_http_json');
 
-    it('can read a registered resource', function () {
+    it('can read a registered resource', function (): void {
         await($this->jsonClient->sendRequest('initialize', [
             'protocolVersion' => Protocol::LATEST_PROTOCOL_VERSION,
             'clientInfo' => ['name' => 'JsonModeClient', 'version' => '1.0'],
-            'capabilities' => []
+            'capabilities' => [],
         ], 'init-json-res'));
         await($this->jsonClient->sendNotification('notifications/initialized'));
 
@@ -256,16 +257,16 @@ describe('JSON MODE', function () {
         expect($resourceResult['body']['id'])->toBe('res-read-json-1');
         $contents = $resourceResult['body']['result']['contents'];
         expect($contents[0]['uri'])->toBe('test://streamable/static');
-        expect($contents[0]['text'])->toBe(\PhpMcp\Server\Tests\Fixtures\General\ResourceHandlerFixture::$staticTextContent);
+        expect($contents[0]['text'])->toBe(\Mcp\Server\Tests\Fixtures\General\ResourceHandlerFixture::$staticTextContent);
     })->group('integration', 'streamable_http_json');
 
-    it('can get a registered prompt', function () {
+    it('can get a registered prompt', function (): void {
         await($this->jsonClient->sendRequest('initialize', ['protocolVersion' => Protocol::LATEST_PROTOCOL_VERSION, 'clientInfo' => ['name' => 'JsonModeClient', 'version' => '1.0'], 'capabilities' => []], 'init-json-prompt'));
         await($this->jsonClient->sendNotification('notifications/initialized'));
 
         $promptResult = await($this->jsonClient->sendRequest('prompts/get', [
             'name' => 'simple_streamable_prompt',
-            'arguments' => ['name' => 'JsonPromptUser', 'style' => 'terse']
+            'arguments' => ['name' => 'JsonPromptUser', 'style' => 'terse'],
         ], 'prompt-get-json-1'));
 
         expect($promptResult['statusCode'])->toBe(200);
@@ -274,7 +275,7 @@ describe('JSON MODE', function () {
         expect($messages[0]['content']['text'])->toBe('Craft a terse greeting for JsonPromptUser.');
     })->group('integration', 'streamable_http_json');
 
-    it('rejects subsequent requests if client does not send initialized notification', function () {
+    it('rejects subsequent requests if client does not send initialized notification', function (): void {
         // 1. Initialize ONLY
         await($this->jsonClient->sendRequest('initialize', ['protocolVersion' => Protocol::LATEST_PROTOCOL_VERSION, 'clientInfo' => ['name' => 'JsonModeClient', 'version' => '1.0'], 'capabilities' => []], 'init-json-noack'));
         // Client "forgets" to send notifications/initialized back
@@ -282,7 +283,7 @@ describe('JSON MODE', function () {
         // 2. Attempt to Call a tool
         $toolResult = await($this->jsonClient->sendRequest('tools/call', [
             'name' => 'greet_streamable_tool',
-            'arguments' => ['name' => 'NoAckJsonUser']
+            'arguments' => ['name' => 'NoAckJsonUser'],
         ], 'tool-json-noack'));
 
         expect($toolResult['statusCode'])->toBe(200); // HTTP is fine
@@ -291,7 +292,7 @@ describe('JSON MODE', function () {
         expect($toolResult['body']['error']['message'])->toContain('Client session not initialized');
     })->group('integration', 'streamable_http_json');
 
-    it('returns HTTP 400 error for non-initialize requests without Mcp-Session-Id', function () {
+    it('returns HTTP 400 error for non-initialize requests without Mcp-Session-Id', function (): void {
         await($this->jsonClient->sendRequest('initialize', ['protocolVersion' => Protocol::LATEST_PROTOCOL_VERSION, 'clientInfo' => ['name' => 'JsonModeClient', 'version' => '1.0'], 'capabilities' => []], 'init-sess-test'));
         $this->jsonClient->sessionId = null;
 
@@ -300,7 +301,7 @@ describe('JSON MODE', function () {
         } catch (ResponseException $e) {
             expect($e->getResponse()->getStatusCode())->toBe(400);
             $bodyContent = (string) $e->getResponse()->getBody();
-            $decodedBody = json_decode($bodyContent, true);
+            $decodedBody = \json_decode($bodyContent, true);
 
             expect($decodedBody['jsonrpc'])->toBe('2.0');
             expect($decodedBody['id'])->toBe('tools-list-no-session');
@@ -310,25 +311,25 @@ describe('JSON MODE', function () {
     })->group('integration', 'streamable_http_json');
 });
 
-describe('STREAM MODE', function () {
-    beforeEach(function () {
-        $this->process = new Process($this->streamModeCommand, getcwd() ?: null, null, []);
+describe('STREAM MODE', function (): void {
+    beforeEach(function (): void {
+        $this->process = new Process($this->streamModeCommand, \getcwd() ?: null, null, []);
         $this->process->start();
         $this->streamClient = new MockStreamHttpClient(STREAMABLE_HTTP_HOST, $this->port, STREAMABLE_MCP_PATH);
         await(delay(0.2));
     });
-    afterEach(function () {
+    afterEach(function (): void {
         if ($this->streamClient ?? null) {
             $this->streamClient->closeMainSseStream();
         }
     });
 
-    it('server starts, initializes via POST JSON, calls a tool, and closes', function () {
+    it('server starts, initializes via POST JSON, calls a tool, and closes', function (): void {
         // 1. Initialize Request
         $initResponse = await($this->streamClient->sendInitializeRequest([
             'protocolVersion' => Protocol::LATEST_PROTOCOL_VERSION,
             'clientInfo' => ['name' => 'StreamModeClient', 'version' => '1.0'],
-            'capabilities' => []
+            'capabilities' => [],
         ], 'init-stream-1'));
 
         expect($this->streamClient->sessionId)->toBeString()->not->toBeEmpty();
@@ -344,7 +345,7 @@ describe('STREAM MODE', function () {
         // 3. Call a tool
         $toolResponse = await($this->streamClient->sendRequest('tools/call', [
             'name' => 'greet_streamable_tool',
-            'arguments' => ['name' => 'Stream Mode User']
+            'arguments' => ['name' => 'Stream Mode User'],
         ], 'tool-stream-1'));
 
         expect($toolResponse['id'])->toBe('tool-stream-1');
@@ -352,13 +353,13 @@ describe('STREAM MODE', function () {
         expect($toolResponse['result']['content'][0]['text'])->toBe('Hello, Stream Mode User!');
     })->group('integration', 'streamable_http_stream');
 
-    it('return HTTP 400 error response for invalid JSON in POST request', function () {
+    it('return HTTP 400 error response for invalid JSON in POST request', function (): void {
         $malformedJson = '{"jsonrpc":"2.0", "id": "bad-json-stream-1", "method": "tools/list", "params": {"broken"}';
 
         $postPromise = $this->streamClient->browser->post(
             $this->streamClient->baseMcpUrl,
             ['Content-Type' => 'application/json', 'Accept' => 'text/event-stream'],
-            $malformedJson
+            $malformedJson,
         );
 
         try {
@@ -366,7 +367,7 @@ describe('STREAM MODE', function () {
         } catch (ResponseException $e) {
             $httpResponse = $e->getResponse();
             $bodyContent = (string) $httpResponse->getBody();
-            $decodedBody = json_decode($bodyContent, true);
+            $decodedBody = \json_decode($bodyContent, true);
 
             expect($httpResponse->getStatusCode())->toBe(400);
             expect($decodedBody['jsonrpc'])->toBe('2.0');
@@ -376,12 +377,12 @@ describe('STREAM MODE', function () {
         }
     })->group('integration', 'streamable_http_stream');
 
-    it('returns JSON-RPC error result for request for non-existent method', function () {
+    it('returns JSON-RPC error result for request for non-existent method', function (): void {
         // 1. Initialize
         await($this->streamClient->sendInitializeRequest([
             'protocolVersion' => Protocol::LATEST_PROTOCOL_VERSION,
             'clientInfo' => ['name' => 'StreamModeClient', 'version' => '1.0'],
-            'capabilities' => []
+            'capabilities' => [],
         ], 'init-stream-err'));
         await($this->streamClient->sendHttpNotification('notifications/initialized'));
 
@@ -393,11 +394,11 @@ describe('STREAM MODE', function () {
         expect($errorResponse['error']['message'])->toContain("Method 'non/existentToolViaStream' not found");
     })->group('integration', 'streamable_http_stream');
 
-    it('can handle batch requests correctly', function () {
+    it('can handle batch requests correctly', function (): void {
         await($this->streamClient->sendInitializeRequest([
             'protocolVersion' => Protocol::LATEST_PROTOCOL_VERSION,
             'clientInfo' => ['name' => 'StreamModeBatchClient', 'version' => '1.0'],
-            'capabilities' => []
+            'capabilities' => [],
         ], 'init-stream-batch'));
         expect($this->streamClient->sessionId)->toBeString()->not->toBeEmpty();
         await($this->streamClient->sendHttpNotification('notifications/initialized'));
@@ -406,14 +407,14 @@ describe('STREAM MODE', function () {
             ['jsonrpc' => '2.0', 'id' => 'batch-req-1', 'method' => 'tools/call', 'params' => ['name' => 'greet_streamable_tool', 'arguments' => ['name' => 'Batch Item 1']]],
             ['jsonrpc' => '2.0', 'method' => 'notifications/something'],
             ['jsonrpc' => '2.0', 'id' => 'batch-req-2', 'method' => 'tools/call', 'params' => ['name' => 'sum_streamable_tool', 'arguments' => ['a' => 10, 'b' => 20]]],
-            ['jsonrpc' => '2.0', 'id' => 'batch-req-3', 'method' => 'nonexistent/method']
+            ['jsonrpc' => '2.0', 'id' => 'batch-req-3', 'method' => 'nonexistent/method'],
         ];
 
         $batchResponseArray = await($this->streamClient->sendBatchRequest($batchRequests));
 
         expect($batchResponseArray)->toBeArray()->toHaveCount(3);
 
-        $findResponseById = function (array $batch, $id) {
+        $findResponseById = static function (array $batch, $id) {
             foreach ($batch as $item) {
                 if (isset($item['id']) && $item['id'] === $id) {
                     return $item;
@@ -432,18 +433,18 @@ describe('STREAM MODE', function () {
         expect($response3['error']['message'])->toContain("Method 'nonexistent/method' not found");
     })->group('integration', 'streamable_http_stream');
 
-    it('passes request in Context', function () {
+    it('passes request in Context', function (): void {
         await($this->streamClient->sendInitializeRequest([
             'protocolVersion' => Protocol::LATEST_PROTOCOL_VERSION,
             'clientInfo' => ['name' => 'StreamModeClient', 'version' => '1.0'],
-            'capabilities' => []
+            'capabilities' => [],
         ], 'init-stream-context'));
         expect($this->streamClient->sessionId)->toBeString()->not->toBeEmpty();
         await($this->streamClient->sendHttpNotification('notifications/initialized'));
 
         $toolResult = await($this->streamClient->sendRequest('tools/call', [
             'name' => 'tool_reads_context',
-            'arguments' => []
+            'arguments' => [],
         ], 'tool-stream-context-1', ['X-Test-Header' => 'TestValue']));
 
         expect($toolResult['id'])->toBe('tool-stream-context-1');
@@ -451,7 +452,7 @@ describe('STREAM MODE', function () {
         expect($toolResult['result']['content'][0]['text'])->toBe('TestValue');
     })->group('integration', 'streamable_http_stream');
 
-    it('can handle tool list request', function () {
+    it('can handle tool list request', function (): void {
         await($this->streamClient->sendInitializeRequest(['protocolVersion' => Protocol::LATEST_PROTOCOL_VERSION, 'clientInfo' => []], 'init-stream-tools'));
         await($this->streamClient->sendHttpNotification('notifications/initialized'));
 
@@ -460,13 +461,13 @@ describe('STREAM MODE', function () {
         expect($toolListResponse['id'])->toBe('tool-list-stream-1');
         expect($toolListResponse)->not->toHaveKey('error');
         expect($toolListResponse['result']['tools'])->toBeArray();
-        expect(count($toolListResponse['result']['tools']))->toBe(4);
+        expect(\count($toolListResponse['result']['tools']))->toBe(4);
         expect($toolListResponse['result']['tools'][0]['name'])->toBe('greet_streamable_tool');
         expect($toolListResponse['result']['tools'][1]['name'])->toBe('sum_streamable_tool');
         expect($toolListResponse['result']['tools'][2]['name'])->toBe('tool_reads_context');
     })->group('integration', 'streamable_http_stream');
 
-    it('can read a registered resource', function () {
+    it('can read a registered resource', function (): void {
         await($this->streamClient->sendInitializeRequest(['protocolVersion' => Protocol::LATEST_PROTOCOL_VERSION, 'clientInfo' => []], 'init-stream-res'));
         await($this->streamClient->sendHttpNotification('notifications/initialized'));
 
@@ -475,16 +476,16 @@ describe('STREAM MODE', function () {
         expect($resourceResponse['id'])->toBe('res-read-stream-1');
         $contents = $resourceResponse['result']['contents'];
         expect($contents[0]['uri'])->toBe('test://streamable/static');
-        expect($contents[0]['text'])->toBe(\PhpMcp\Server\Tests\Fixtures\General\ResourceHandlerFixture::$staticTextContent);
+        expect($contents[0]['text'])->toBe(\Mcp\Server\Tests\Fixtures\General\ResourceHandlerFixture::$staticTextContent);
     })->group('integration', 'streamable_http_stream');
 
-    it('can get a registered prompt', function () {
+    it('can get a registered prompt', function (): void {
         await($this->streamClient->sendInitializeRequest(['protocolVersion' => Protocol::LATEST_PROTOCOL_VERSION, 'clientInfo' => []], 'init-stream-prompt'));
         await($this->streamClient->sendHttpNotification('notifications/initialized'));
 
         $promptResponse = await($this->streamClient->sendRequest('prompts/get', [
             'name' => 'simple_streamable_prompt',
-            'arguments' => ['name' => 'StreamPromptUser', 'style' => 'formal']
+            'arguments' => ['name' => 'StreamPromptUser', 'style' => 'formal'],
         ], 'prompt-get-stream-1'));
 
         expect($promptResponse['id'])->toBe('prompt-get-stream-1');
@@ -492,16 +493,16 @@ describe('STREAM MODE', function () {
         expect($messages[0]['content']['text'])->toBe('Craft a formal greeting for StreamPromptUser.');
     })->group('integration', 'streamable_http_stream');
 
-    it('rejects subsequent requests if client does not send initialized notification', function () {
+    it('rejects subsequent requests if client does not send initialized notification', function (): void {
         await($this->streamClient->sendInitializeRequest([
             'protocolVersion' => Protocol::LATEST_PROTOCOL_VERSION,
             'clientInfo' => ['name' => 'StreamModeClient', 'version' => '1.0'],
-            'capabilities' => []
+            'capabilities' => [],
         ], 'init-stream-noack'));
 
         $toolResponse = await($this->streamClient->sendRequest('tools/call', [
             'name' => 'greet_streamable_tool',
-            'arguments' => ['name' => 'NoAckStreamUser']
+            'arguments' => ['name' => 'NoAckStreamUser'],
         ], 'tool-stream-noack'));
 
         expect($toolResponse['id'])->toBe('tool-stream-noack');
@@ -509,11 +510,11 @@ describe('STREAM MODE', function () {
         expect($toolResponse['error']['message'])->toContain('Client session not initialized');
     })->group('integration', 'streamable_http_stream');
 
-    it('returns HTTP 400 error for non-initialize requests without Mcp-Session-Id', function () {
+    it('returns HTTP 400 error for non-initialize requests without Mcp-Session-Id', function (): void {
         await($this->streamClient->sendInitializeRequest([
             'protocolVersion' => Protocol::LATEST_PROTOCOL_VERSION,
             'clientInfo' => ['name' => 'StreamModeClient', 'version' => '1.0'],
-            'capabilities' => []
+            'capabilities' => [],
         ], 'init-stream-sess-test'));
         $validSessionId = $this->streamClient->sessionId;
         $this->streamClient->sessionId = null;
@@ -544,20 +545,20 @@ describe('STREAM MODE', function () {
  * This mode is designed to work with clients like OpenAI's MCP implementation
  * that have issues with session management in "never require approval" mode.
  */
-describe('STATELESS MODE', function () {
-    beforeEach(function () {
-        $this->process = new Process($this->statelessModeCommand, getcwd() ?: null, null, []);
+describe('STATELESS MODE', function (): void {
+    beforeEach(function (): void {
+        $this->process = new Process($this->statelessModeCommand, \getcwd() ?: null, null, []);
         $this->process->start();
         $this->statelessClient = new MockJsonHttpClient(STREAMABLE_HTTP_HOST, $this->port, STREAMABLE_MCP_PATH);
         await(delay(0.2));
     });
 
-    it('allows tool calls without having to send initialized notification', function () {
+    it('allows tool calls without having to send initialized notification', function (): void {
         // 1. Initialize Request
         $initResult = await($this->statelessClient->sendRequest('initialize', [
             'protocolVersion' => Protocol::LATEST_PROTOCOL_VERSION,
             'clientInfo' => ['name' => 'StatelessModeClient', 'version' => '1.0'],
-            'capabilities' => []
+            'capabilities' => [],
         ], 'init-stateless-1'));
 
         expect($initResult['statusCode'])->toBe(200);
@@ -570,7 +571,7 @@ describe('STATELESS MODE', function () {
         // 2. Call a tool
         $toolResult = await($this->statelessClient->sendRequest('tools/call', [
             'name' => 'greet_streamable_tool',
-            'arguments' => ['name' => 'Stateless Mode User']
+            'arguments' => ['name' => 'Stateless Mode User'],
         ], 'tool-stateless-1'));
 
         expect($toolResult['statusCode'])->toBe(200);
@@ -579,13 +580,13 @@ describe('STATELESS MODE', function () {
         expect($toolResult['body']['result']['content'][0]['text'])->toBe('Hello, Stateless Mode User!');
     })->group('integration', 'streamable_http_stateless');
 
-    it('return HTTP 400 error response for invalid JSON in POST request', function () {
+    it('return HTTP 400 error response for invalid JSON in POST request', function (): void {
         $malformedJson = '{"jsonrpc":"2.0", "id": "bad-json-stateless-1", "method": "tools/list", "params": {"broken"}';
 
         $postPromise = $this->statelessClient->browser->post(
             $this->statelessClient->baseUrl,
             ['Content-Type' => 'application/json', 'Accept' => 'application/json'],
-            $malformedJson
+            $malformedJson,
         );
 
         try {
@@ -593,7 +594,7 @@ describe('STATELESS MODE', function () {
         } catch (ResponseException $e) {
             $httpResponse = $e->getResponse();
             $bodyContent = (string) $httpResponse->getBody();
-            $decodedBody = json_decode($bodyContent, true);
+            $decodedBody = \json_decode($bodyContent, true);
 
             expect($httpResponse->getStatusCode())->toBe(400);
             expect($decodedBody['jsonrpc'])->toBe('2.0');
@@ -603,7 +604,7 @@ describe('STATELESS MODE', function () {
         }
     })->group('integration', 'streamable_http_stateless');
 
-    it('returns JSON-RPC error result for request for non-existent method', function () {
+    it('returns JSON-RPC error result for request for non-existent method', function (): void {
         $errorResult = await($this->statelessClient->sendRequest('non/existentToolViaStateless', [], 'err-meth-stateless-1'));
 
         expect($errorResult['statusCode'])->toBe(200);
@@ -612,17 +613,17 @@ describe('STATELESS MODE', function () {
         expect($errorResult['body']['error']['message'])->toContain("Method 'non/existentToolViaStateless' not found");
     })->group('integration', 'streamable_http_stateless');
 
-    it('can handle batch requests correctly', function () {
+    it('can handle batch requests correctly', function (): void {
         $batchRequests = [
             ['jsonrpc' => '2.0', 'id' => 'batch-req-1', 'method' => 'tools/call', 'params' => ['name' => 'greet_streamable_tool', 'arguments' => ['name' => 'Batch Item 1']]],
             ['jsonrpc' => '2.0', 'method' => 'notifications/something'],
             ['jsonrpc' => '2.0', 'id' => 'batch-req-2', 'method' => 'tools/call', 'params' => ['name' => 'sum_streamable_tool', 'arguments' => ['a' => 10, 'b' => 20]]],
-            ['jsonrpc' => '2.0', 'id' => 'batch-req-3', 'method' => 'nonexistent/method']
+            ['jsonrpc' => '2.0', 'id' => 'batch-req-3', 'method' => 'nonexistent/method'],
         ];
 
         $batchResponse = await($this->statelessClient->sendBatchRequest($batchRequests));
 
-        $findResponseById = function (array $batch, $id) {
+        $findResponseById = static function (array $batch, $id) {
             foreach ($batch as $item) {
                 if (isset($item['id']) && $item['id'] === $id) {
                     return $item;
@@ -644,10 +645,10 @@ describe('STATELESS MODE', function () {
         expect($response3['error']['message'])->toContain("Method 'nonexistent/method' not found");
     })->group('integration', 'streamable_http_stateless');
 
-    it('passes request in Context', function () {
+    it('passes request in Context', function (): void {
         $toolResult = await($this->statelessClient->sendRequest('tools/call', [
             'name' => 'tool_reads_context',
-            'arguments' => []
+            'arguments' => [],
         ], 'tool-stateless-context-1', ['X-Test-Header' => 'TestValue']));
 
         expect($toolResult['statusCode'])->toBe(200);
@@ -656,33 +657,33 @@ describe('STATELESS MODE', function () {
         expect($toolResult['body']['result']['content'][0]['text'])->toBe('TestValue');
     })->group('integration', 'streamable_http_stateless');
 
-    it('can handle tool list request', function () {
+    it('can handle tool list request', function (): void {
         $toolListResult = await($this->statelessClient->sendRequest('tools/list', [], 'tool-list-stateless-1'));
 
         expect($toolListResult['statusCode'])->toBe(200);
         expect($toolListResult['body']['id'])->toBe('tool-list-stateless-1');
         expect($toolListResult['body'])->not->toHaveKey('error');
         expect($toolListResult['body']['result']['tools'])->toBeArray();
-        expect(count($toolListResult['body']['result']['tools']))->toBe(4);
+        expect(\count($toolListResult['body']['result']['tools']))->toBe(4);
         expect($toolListResult['body']['result']['tools'][0]['name'])->toBe('greet_streamable_tool');
         expect($toolListResult['body']['result']['tools'][1]['name'])->toBe('sum_streamable_tool');
         expect($toolListResult['body']['result']['tools'][2]['name'])->toBe('tool_reads_context');
     })->group('integration', 'streamable_http_stateless');
 
-    it('can read a registered resource', function () {
+    it('can read a registered resource', function (): void {
         $resourceResult = await($this->statelessClient->sendRequest('resources/read', ['uri' => 'test://streamable/static'], 'res-read-stateless-1'));
 
         expect($resourceResult['statusCode'])->toBe(200);
         expect($resourceResult['body']['id'])->toBe('res-read-stateless-1');
         $contents = $resourceResult['body']['result']['contents'];
         expect($contents[0]['uri'])->toBe('test://streamable/static');
-        expect($contents[0]['text'])->toBe(\PhpMcp\Server\Tests\Fixtures\General\ResourceHandlerFixture::$staticTextContent);
+        expect($contents[0]['text'])->toBe(\Mcp\Server\Tests\Fixtures\General\ResourceHandlerFixture::$staticTextContent);
     })->group('integration', 'streamable_http_stateless');
 
-    it('can get a registered prompt', function () {
+    it('can get a registered prompt', function (): void {
         $promptResult = await($this->statelessClient->sendRequest('prompts/get', [
             'name' => 'simple_streamable_prompt',
-            'arguments' => ['name' => 'StatelessPromptUser', 'style' => 'formal']
+            'arguments' => ['name' => 'StatelessPromptUser', 'style' => 'formal'],
         ], 'prompt-get-stateless-1'));
 
         expect($promptResult['statusCode'])->toBe(200);
@@ -691,20 +692,20 @@ describe('STATELESS MODE', function () {
         expect($messages[0]['content']['text'])->toBe('Craft a formal greeting for StatelessPromptUser.');
     })->group('integration', 'streamable_http_stateless');
 
-    it('does not return session ID in response headers in stateless mode', function () {
+    it('does not return session ID in response headers in stateless mode', function (): void {
         $promise = $this->statelessClient->browser->post(
             $this->statelessClient->baseUrl,
             ['Content-Type' => 'application/json', 'Accept' => 'application/json'],
-            json_encode([
+            \json_encode([
                 'jsonrpc' => '2.0',
                 'id' => 'init-header-test',
                 'method' => 'initialize',
                 'params' => [
                     'protocolVersion' => Protocol::LATEST_PROTOCOL_VERSION,
                     'clientInfo' => ['name' => 'StatelessHeaderTest', 'version' => '1.0'],
-                    'capabilities' => []
-                ]
-            ])
+                    'capabilities' => [],
+                ],
+            ]),
         );
 
         $response = await(timeout($promise, STREAMABLE_HTTP_PROCESS_TIMEOUT - 2));
@@ -712,28 +713,28 @@ describe('STATELESS MODE', function () {
         expect($response->getStatusCode())->toBe(200);
         expect($response->hasHeader('Mcp-Session-Id'))->toBeFalse();
 
-        $body = json_decode((string) $response->getBody(), true);
+        $body = \json_decode((string) $response->getBody(), true);
         expect($body['id'])->toBe('init-header-test');
         expect($body)->not->toHaveKey('error');
     })->group('integration', 'streamable_http_stateless');
 
-    it('returns HTTP 405 for GET requests (SSE disabled) in stateless mode', function () {
+    it('returns HTTP 405 for GET requests (SSE disabled) in stateless mode', function (): void {
         try {
             $getPromise = $this->statelessClient->browser->get(
                 $this->statelessClient->baseUrl,
-                ['Accept' => 'text/event-stream']
+                ['Accept' => 'text/event-stream'],
             );
             await(timeout($getPromise, STREAMABLE_HTTP_PROCESS_TIMEOUT - 2));
             $this->fail("Expected GET request to fail with 405, but it succeeded.");
         } catch (ResponseException $e) {
             expect($e->getResponse()->getStatusCode())->toBe(405);
             $bodyContent = (string) $e->getResponse()->getBody();
-            $decodedBody = json_decode($bodyContent, true);
+            $decodedBody = \json_decode($bodyContent, true);
             expect($decodedBody['error']['message'])->toContain('GET requests (SSE streaming) are not supported in stateless mode');
         }
     })->group('integration', 'streamable_http_stateless');
 
-    it('returns 204 for DELETE requests in stateless mode (but they are meaningless)', function () {
+    it('returns 204 for DELETE requests in stateless mode (but they are meaningless)', function (): void {
         $deletePromise = $this->statelessClient->browser->delete($this->statelessClient->baseUrl);
         $response = await(timeout($deletePromise, STREAMABLE_HTTP_PROCESS_TIMEOUT - 2));
 
@@ -741,20 +742,20 @@ describe('STATELESS MODE', function () {
         expect((string) $response->getBody())->toBeEmpty();
     })->group('integration', 'streamable_http_stateless');
 
-    it('handles multiple independent tool calls in stateless mode', function () {
+    it('handles multiple independent tool calls in stateless mode', function (): void {
         $toolResult1 = await($this->statelessClient->sendRequest('tools/call', [
             'name' => 'greet_streamable_tool',
-            'arguments' => ['name' => 'User 1']
+            'arguments' => ['name' => 'User 1'],
         ], 'tool-multi-1'));
 
         $toolResult2 = await($this->statelessClient->sendRequest('tools/call', [
             'name' => 'sum_streamable_tool',
-            'arguments' => ['a' => 5, 'b' => 10]
+            'arguments' => ['a' => 5, 'b' => 10],
         ], 'tool-multi-2'));
 
         $toolResult3 = await($this->statelessClient->sendRequest('tools/call', [
             'name' => 'greet_streamable_tool',
-            'arguments' => ['name' => 'User 3']
+            'arguments' => ['name' => 'User 3'],
         ], 'tool-multi-3'));
 
         expect($toolResult1['statusCode'])->toBe(200);
@@ -771,8 +772,8 @@ describe('STATELESS MODE', function () {
     })->group('integration', 'streamable_http_stateless');
 });
 
-it('responds to OPTIONS request with CORS headers', function () {
-    $this->process = new Process($this->jsonModeCommand, getcwd() ?: null, null, []);
+it('responds to OPTIONS request with CORS headers', function (): void {
+    $this->process = new Process($this->jsonModeCommand, \getcwd() ?: null, null, []);
     $this->process->start();
     $this->jsonClient = new MockJsonHttpClient(STREAMABLE_HTTP_HOST, $this->port, STREAMABLE_MCP_PATH);
     await(delay(0.1));
@@ -790,8 +791,8 @@ it('responds to OPTIONS request with CORS headers', function () {
     expect($response->getHeaderLine('Access-Control-Allow-Headers'))->toContain('Mcp-Session-Id');
 })->group('integration', 'streamable_http');
 
-it('returns 404 for unknown paths', function () {
-    $this->process = new Process($this->jsonModeCommand, getcwd() ?: null, null, []);
+it('returns 404 for unknown paths', function (): void {
+    $this->process = new Process($this->jsonModeCommand, \getcwd() ?: null, null, []);
     $this->process->start();
     $this->jsonClient = new MockJsonHttpClient(STREAMABLE_HTTP_HOST, $this->port, STREAMABLE_MCP_PATH);
     await(delay(0.1));
@@ -806,13 +807,13 @@ it('returns 404 for unknown paths', function () {
         $this->fail("Request to unknown path should have failed with 404.");
     } catch (ResponseException $e) {
         expect($e->getResponse()->getStatusCode())->toBe(404);
-        $decodedBody = json_decode((string)$e->getResponse()->getBody(), true);
+        $decodedBody = \json_decode((string) $e->getResponse()->getBody(), true);
         expect($decodedBody['error']['message'])->toContain('Not found');
     }
 })->group('integration', 'streamable_http');
 
-it('can delete client session with DELETE request', function () {
-    $this->process = new Process($this->jsonModeCommand, getcwd() ?: null, null, []);
+it('can delete client session with DELETE request', function (): void {
+    $this->process = new Process($this->jsonModeCommand, \getcwd() ?: null, null, []);
     $this->process->start();
     $this->jsonClient = new MockJsonHttpClient(STREAMABLE_HTTP_HOST, $this->port, STREAMABLE_MCP_PATH);
     await(delay(0.1));
@@ -828,17 +829,17 @@ it('can delete client session with DELETE request', function () {
     $browserForSse = (new Browser())->withTimeout(3);
     $ssePromise = $browserForSse->requestStreaming('GET', $sseUrl, [
         'Accept' => 'text/event-stream',
-        'Mcp-Session-Id' => $sessionIdForDelete
+        'Mcp-Session-Id' => $sessionIdForDelete,
     ]);
     $ssePsrResponse = await(timeout($ssePromise, 3));
     expect($ssePsrResponse->getStatusCode())->toBe(200);
     expect($ssePsrResponse->getHeaderLine('Content-Type'))->toBe('text/event-stream');
 
     $sseStream = $ssePsrResponse->getBody();
-    assert($sseStream instanceof ReadableStreamInterface);
+    \assert($sseStream instanceof ReadableStreamInterface);
 
     $isSseStreamClosed = false;
-    $sseStream->on('close', function () use (&$isSseStreamClosed) {
+    $sseStream->on('close', static function () use (&$isSseStreamClosed): void {
         $isSseStreamClosed = true;
     });
 
@@ -857,14 +858,14 @@ it('can delete client session with DELETE request', function () {
     } catch (ResponseException $e) {
         expect($e->getResponse()->getStatusCode())->toBe(404);
         $bodyContent = (string) $e->getResponse()->getBody();
-        $decodedBody = json_decode($bodyContent, true);
+        $decodedBody = \json_decode($bodyContent, true);
         expect($decodedBody['error']['code'])->toBe(-32600);
         expect($decodedBody['error']['message'])->toContain('Invalid or expired session');
     }
 })->group('integration', 'streamable_http_json');
 
-it('executes middleware that adds headers to response', function () {
-    $this->process = new Process($this->jsonModeCommand, getcwd() ?: null, null, []);
+it('executes middleware that adds headers to response', function (): void {
+    $this->process = new Process($this->jsonModeCommand, \getcwd() ?: null, null, []);
     $this->process->start();
     $this->jsonClient = new MockJsonHttpClient(STREAMABLE_HTTP_HOST, $this->port, STREAMABLE_MCP_PATH);
     await(delay(0.1));
@@ -873,15 +874,15 @@ it('executes middleware that adds headers to response', function () {
     $response = await($this->jsonClient->sendRequest('initialize', [
         'protocolVersion' => Protocol::LATEST_PROTOCOL_VERSION,
         'clientInfo' => ['name' => 'MiddlewareTestClient'],
-        'capabilities' => []
+        'capabilities' => [],
     ], 'init-middleware-headers'));
 
     // Check that the response has the header added by middleware
     expect($this->jsonClient->lastResponseHeaders)->toContain('X-Test-Middleware: header-added');
 })->group('integration', 'streamable_http', 'middleware');
 
-it('executes middleware that modifies request attributes', function () {
-    $this->process = new Process($this->jsonModeCommand, getcwd() ?: null, null, []);
+it('executes middleware that modifies request attributes', function (): void {
+    $this->process = new Process($this->jsonModeCommand, \getcwd() ?: null, null, []);
     $this->process->start();
     $this->jsonClient = new MockJsonHttpClient(STREAMABLE_HTTP_HOST, $this->port, STREAMABLE_MCP_PATH);
     await(delay(0.1));
@@ -890,21 +891,21 @@ it('executes middleware that modifies request attributes', function () {
     await($this->jsonClient->sendRequest('initialize', [
         'protocolVersion' => Protocol::LATEST_PROTOCOL_VERSION,
         'clientInfo' => ['name' => 'MiddlewareAttrTestClient', 'version' => '1.0'],
-        'capabilities' => []
+        'capabilities' => [],
     ], 'init-middleware-attr'));
     await($this->jsonClient->sendNotification('notifications/initialized'));
 
     // 2. Call tool that checks for middleware-added attribute
     $toolResponse = await($this->jsonClient->sendRequest('tools/call', [
         'name' => 'check_request_attribute_tool',
-        'arguments' => []
+        'arguments' => [],
     ], 'tool-attr-check'));
 
     expect($toolResponse['body']['result']['content'][0]['text'])->toBe('middleware-value-found: middleware-value');
 })->group('integration', 'streamable_http', 'middleware');
 
-it('executes middleware that can short-circuit request processing', function () {
-    $this->process = new Process($this->jsonModeCommand, getcwd() ?: null, null, []);
+it('executes middleware that can short-circuit request processing', function (): void {
+    $this->process = new Process($this->jsonModeCommand, \getcwd() ?: null, null, []);
     $this->process->start();
     await(delay(0.1));
 
@@ -925,8 +926,8 @@ it('executes middleware that can short-circuit request processing', function () 
     }
 })->group('integration', 'streamable_http', 'middleware');
 
-it('executes multiple middlewares in correct order', function () {
-    $this->process = new Process($this->jsonModeCommand, getcwd() ?: null, null, []);
+it('executes multiple middlewares in correct order', function (): void {
+    $this->process = new Process($this->jsonModeCommand, \getcwd() ?: null, null, []);
     $this->process->start();
     $this->jsonClient = new MockJsonHttpClient(STREAMABLE_HTTP_HOST, $this->port, STREAMABLE_MCP_PATH);
     await(delay(0.1));
@@ -935,15 +936,15 @@ it('executes multiple middlewares in correct order', function () {
     await($this->jsonClient->sendRequest('initialize', [
         'protocolVersion' => Protocol::LATEST_PROTOCOL_VERSION,
         'clientInfo' => ['name' => 'MiddlewareOrderTestClient'],
-        'capabilities' => []
+        'capabilities' => [],
     ], 'init-middleware-order'));
 
     // Check that headers from multiple middlewares are present in correct order
     expect($this->jsonClient->lastResponseHeaders)->toContain('X-Middleware-Order: third,second,first');
 })->group('integration', 'streamable_http', 'middleware');
 
-it('handles middleware that throws exceptions gracefully', function () {
-    $this->process = new Process($this->jsonModeCommand, getcwd() ?: null, null, []);
+it('handles middleware that throws exceptions gracefully', function (): void {
+    $this->process = new Process($this->jsonModeCommand, \getcwd() ?: null, null, []);
     $this->process->start();
     await(delay(0.1));
 

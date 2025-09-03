@@ -1,12 +1,11 @@
 <?php
 
-namespace PhpMcp\Server\Defaults;
+declare(strict_types=1);
 
-use DateInterval;
-use DateTimeImmutable;
+namespace Mcp\Server\Defaults;
+
 use InvalidArgumentException;
 use Psr\SimpleCache\CacheInterface;
-use Throwable;
 
 /**
  * Basic PSR-16 file cache implementation.
@@ -28,7 +27,7 @@ final readonly class FileCache implements CacheInterface
         private int $filePermission = 0664,
         private int $dirPermission = 0775,
     ) {
-        $this->ensureDirectoryExists(dirname($this->cacheFile));
+        $this->ensureDirectoryExists(\dirname($this->cacheFile));
     }
 
     // ---------------------------------------------------------------------
@@ -53,7 +52,7 @@ final readonly class FileCache implements CacheInterface
         return $data[$key]['value'] ?? $default;
     }
 
-    public function set(string $key, mixed $value, DateInterval|int|null $ttl = null): bool
+    public function set(string $key, mixed $value, \DateInterval|int|null $ttl = null): bool
     {
         $data = $this->readCacheFile();
         $key = $this->sanitizeKey($key);
@@ -121,10 +120,10 @@ final readonly class FileCache implements CacheInterface
         return $results;
     }
 
-    public function setMultiple(iterable $values, DateInterval|int|null $ttl = null): bool
+    public function setMultiple(iterable $values, \DateInterval|int|null $ttl = null): bool
     {
         $values = $this->iterableToArray($values);
-        $this->validateKeys(array_keys($values));
+        $this->validateKeys(\array_keys($values));
 
         $data = $this->readCacheFile();
         $expiry = $this->calculateExpiry($ttl);
@@ -187,118 +186,118 @@ final readonly class FileCache implements CacheInterface
 
     private function readCacheFile(): array
     {
-        if (!file_exists($this->cacheFile) || filesize($this->cacheFile) === 0) {
+        if (!\file_exists($this->cacheFile) || \filesize($this->cacheFile) === 0) {
             return [];
         }
 
-        $handle = @fopen($this->cacheFile, 'rb');
+        $handle = @\fopen($this->cacheFile, 'rb');
         if ($handle === false) {
             return [];
         }
 
         try {
-            if (!flock($handle, LOCK_SH)) {
+            if (!\flock($handle, LOCK_SH)) {
                 return [];
             }
-            $content = stream_get_contents($handle);
-            flock($handle, LOCK_UN);
+            $content = \stream_get_contents($handle);
+            \flock($handle, LOCK_UN);
 
             if ($content === false || $content === '') {
                 return [];
             }
 
-            $data = unserialize($content);
+            $data = \unserialize($content);
             if ($data === false) {
                 return [];
             }
 
             return $data;
         } finally {
-            if (is_resource($handle)) {
-                fclose($handle);
+            if (\is_resource($handle)) {
+                \fclose($handle);
             }
         }
     }
 
     private function writeCacheFile(array $data): bool
     {
-        $jsonData = serialize($data);
+        $jsonData = \serialize($data);
 
         if ($jsonData === false) {
             return false;
         }
 
-        $handle = @fopen($this->cacheFile, 'cb');
+        $handle = @\fopen($this->cacheFile, 'cb');
         if ($handle === false) {
             return false;
         }
 
         try {
-            if (!flock($handle, LOCK_EX)) {
+            if (!\flock($handle, LOCK_EX)) {
                 return false;
             }
-            if (!ftruncate($handle, 0)) {
+            if (!\ftruncate($handle, 0)) {
                 return false;
             }
-            if (fwrite($handle, $jsonData) === false) {
+            if (\fwrite($handle, $jsonData) === false) {
                 return false;
             }
-            fflush($handle);
-            flock($handle, LOCK_UN);
-            @chmod($this->cacheFile, $this->filePermission);
+            \fflush($handle);
+            \flock($handle, LOCK_UN);
+            @\chmod($this->cacheFile, $this->filePermission);
 
             return true;
-        } catch (Throwable) {
-            flock($handle, LOCK_UN); // Ensure lock release on error
+        } catch (\Throwable) {
+            \flock($handle, LOCK_UN); // Ensure lock release on error
 
             return false;
         } finally {
-            if (is_resource($handle)) {
-                fclose($handle);
+            if (\is_resource($handle)) {
+                \fclose($handle);
             }
         }
     }
 
     private function ensureDirectoryExists(string $directory): void
     {
-        if (!is_dir($directory)) {
-            if (!@mkdir($directory, $this->dirPermission, true)) {
-                throw new InvalidArgumentException(
+        if (!\is_dir($directory)) {
+            if (!@\mkdir($directory, $this->dirPermission, true)) {
+                throw new \InvalidArgumentException(
                     "Cache directory does not exist and could not be created: {$directory}",
                 );
             }
-            @chmod($directory, $this->dirPermission);
+            @\chmod($directory, $this->dirPermission);
         }
     }
 
-    private function calculateExpiry(DateInterval|int|null $ttl): ?int
+    private function calculateExpiry(\DateInterval|int|null $ttl): ?int
     {
         if ($ttl === null) {
             return null;
         }
-        $now = time();
-        if (is_int($ttl)) {
+        $now = \time();
+        if (\is_int($ttl)) {
             return $ttl <= 0 ? $now - 1 : $now + $ttl;
         }
-        if ($ttl instanceof DateInterval) {
+        if ($ttl instanceof \DateInterval) {
             try {
-                return (new DateTimeImmutable())->add($ttl)->getTimestamp();
-            } catch (Throwable) {
+                return (new \DateTimeImmutable())->add($ttl)->getTimestamp();
+            } catch (\Throwable) {
                 return null;
             }
         }
-        throw new InvalidArgumentException('Invalid TTL type provided. Must be null, int, or DateInterval.');
+        throw new \InvalidArgumentException('Invalid TTL type provided. Must be null, int, or DateInterval.');
     }
 
     private function isExpired(?int $expiry): bool
     {
-        return $expiry !== null && time() >= $expiry;
+        return $expiry !== null && \time() >= $expiry;
     }
 
     private function sanitizeKey(string $key): string
     {
         if ($key === '') {
-            throw new InvalidArgumentException('Cache key cannot be empty.');
+            throw new \InvalidArgumentException('Cache key cannot be empty.');
         }
 
         // PSR-16 validation (optional stricter check)
@@ -311,8 +310,8 @@ final readonly class FileCache implements CacheInterface
     private function validateKeys(array $keys): void
     {
         foreach ($keys as $key) {
-            if (!is_string($key)) {
-                throw new InvalidArgumentException('Cache key must be a string, got ' . gettype($key));
+            if (!\is_string($key)) {
+                throw new \InvalidArgumentException('Cache key must be a string, got ' . \gettype($key));
             }
             $this->sanitizeKey($key);
         }
@@ -320,10 +319,10 @@ final readonly class FileCache implements CacheInterface
 
     private function iterableToArray(iterable $iterable): array
     {
-        if (is_array($iterable)) {
+        if (\is_array($iterable)) {
             return $iterable;
         }
 
-        return iterator_to_array($iterable);
+        return \iterator_to_array($iterable);
     }
 }

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace PhpMcp\Server\Exception;
+namespace Mcp\Server\Exception;
 
 use PhpMcp\Schema\JsonRpc\Error as JsonRpcError;
 
@@ -22,7 +22,7 @@ class ProtocolException extends McpServerException
             id: $id,
             code: $code,
             message: $this->getMessage(),
-            data: $this->getData()
+            data: $this->getData(),
         );
     }
 }

@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace PhpMcp\Server\Contracts;
+namespace Mcp\Server\Contracts;
 
-use PhpMcp\Server\Context;
-use PhpMcp\Server\Elements\RegisteredTool;
-use PhpMcp\Server\Exception\ValidationException;
+use Mcp\Server\Context;
+use Mcp\Server\Elements\RegisteredTool;
+use Mcp\Server\Exception\ValidationException;
 
 interface ToolExecutorInterface
 {

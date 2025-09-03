@@ -2,17 +2,16 @@
 
 declare(strict_types=1);
 
-namespace PhpMcp\Server\Defaults;
+namespace Mcp\Server\Defaults;
 
-use PhpMcp\Server\Contracts\CompletionProviderInterface;
-use PhpMcp\Server\Contracts\SessionInterface;
+use Mcp\Server\Contracts\CompletionProviderInterface;
+use Mcp\Server\Contracts\SessionInterface;
 
 final readonly class ListCompletionProvider implements CompletionProviderInterface
 {
     public function __construct(
-        private array $values
-    ) {
-    }
+        private array $values,
+    ) {}
 
     public function getCompletions(string $currentValue, SessionInterface $session): array
     {
@@ -20,10 +19,10 @@ final readonly class ListCompletionProvider implements CompletionProviderInterfa
             return $this->values;
         }
 
-        return array_values(
-            array_filter(
+        return \array_values(
+            \array_filter(
                 $this->values,
-                static fn (string $value): bool => str_starts_with($value, $currentValue),
+                static fn(string $value): bool => \str_starts_with($value, $currentValue),
             ),
         );
     }

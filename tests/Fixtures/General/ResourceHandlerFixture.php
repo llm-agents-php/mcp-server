@@ -1,12 +1,12 @@
 <?php
 
-namespace PhpMcp\Server\Tests\Fixtures\General;
+declare(strict_types=1);
+
+namespace Mcp\Server\Tests\Fixtures\General;
 
 use PhpMcp\Schema\Content\EmbeddedResource;
 use PhpMcp\Schema\Content\TextResourceContents;
 use PhpMcp\Schema\Content\BlobResourceContents;
-use Psr\Log\LoggerInterface;
-use SplFileInfo;
 
 class ResourceHandlerFixture
 {
@@ -26,7 +26,7 @@ class ResourceHandlerFixture
 
     public function returnStringJson(string $uri): string
     {
-        return json_encode(['uri_in_json' => $uri, 'data' => 'some json string']);
+        return \json_encode(['uri_in_json' => $uri, 'data' => 'some json string']);
     }
 
     public function returnStringHtml(string $uri): string
@@ -36,7 +36,7 @@ class ResourceHandlerFixture
 
     public function returnArrayJson(string $uri): array
     {
-        return ['uri_in_array' => $uri, 'message' => 'This is JSON data from array', 'timestamp' => time()];
+        return ['uri_in_array' => $uri, 'message' => 'This is JSON data from array', 'timestamp' => \time()];
     }
 
     public function returnEmptyArray(string $uri): array
@@ -46,23 +46,23 @@ class ResourceHandlerFixture
 
     public function returnStream(string $uri) // Returns a stream resource
     {
-        $stream = fopen('php://memory', 'r+');
-        fwrite($stream, "Streamed content for {$uri}");
-        rewind($stream);
+        $stream = \fopen('php://memory', 'r+');
+        \fwrite($stream, "Streamed content for {$uri}");
+        \rewind($stream);
         return $stream;
     }
 
-    public function returnSplFileInfo(string $uri): SplFileInfo
+    public function returnSplFileInfo(string $uri): \SplFileInfo
     {
-        self::$unlinkableSplFile = tempnam(sys_get_temp_dir(), 'res_fixture_spl_');
-        file_put_contents(self::$unlinkableSplFile, "Content from SplFileInfo for {$uri}");
-        return new SplFileInfo(self::$unlinkableSplFile);
+        self::$unlinkableSplFile = \tempnam(\sys_get_temp_dir(), 'res_fixture_spl_');
+        \file_put_contents(self::$unlinkableSplFile, "Content from SplFileInfo for {$uri}");
+        return new \SplFileInfo(self::$unlinkableSplFile);
     }
 
     public function returnEmbeddedResource(string $uri): EmbeddedResource
     {
         return EmbeddedResource::make(
-            TextResourceContents::make($uri, 'application/vnd.custom-embedded', 'Direct EmbeddedResource content')
+            TextResourceContents::make($uri, 'application/vnd.custom-embedded', 'Direct EmbeddedResource content'),
         );
     }
 
@@ -73,12 +73,12 @@ class ResourceHandlerFixture
 
     public function returnBlobResourceContents(string $uri): BlobResourceContents
     {
-        return BlobResourceContents::make($uri, 'application/custom-blob-contents', base64_encode('blobbycontents'));
+        return BlobResourceContents::make($uri, 'application/custom-blob-contents', \base64_encode('blobbycontents'));
     }
 
     public function returnArrayForBlobSchema(string $uri): array
     {
-        return ['blob' => base64_encode("Blob for {$uri} via array"), 'mimeType' => 'application/x-custom-blob-array'];
+        return ['blob' => \base64_encode("Blob for {$uri} via array"), 'mimeType' => 'application/x-custom-blob-array'];
     }
 
     public function returnArrayForTextSchema(string $uri): array
@@ -90,7 +90,7 @@ class ResourceHandlerFixture
     {
         return [
             TextResourceContents::make($uri . "_part1", 'text/plain', 'Part 1 of many RC'),
-            BlobResourceContents::make($uri . "_part2", 'image/png', base64_encode('pngdata')),
+            BlobResourceContents::make($uri . "_part2", 'image/png', \base64_encode('pngdata')),
         ];
     }
 
@@ -98,7 +98,7 @@ class ResourceHandlerFixture
     {
         return [
             EmbeddedResource::make(TextResourceContents::make($uri . "_emb1", 'text/xml', '<doc1/>')),
-            EmbeddedResource::make(BlobResourceContents::make($uri . "_emb2", 'font/woff2', base64_encode('fontdata'))),
+            EmbeddedResource::make(BlobResourceContents::make($uri . "_emb2", 'font/woff2', \base64_encode('fontdata'))),
         ];
     }
 

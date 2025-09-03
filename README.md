@@ -53,8 +53,8 @@ Create `src/CalculatorElements.php`:
 
 namespace App;
 
-use PhpMcp\Server\Attributes\McpTool;
-use PhpMcp\Server\Attributes\Schema;
+use Mcp\Server\Attributes\McpTool;
+use Mcp\Server\Attributes\Schema;
 
 class CalculatorElements
 {
@@ -99,8 +99,8 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/vendor/autoload.php';
 
-use PhpMcp\Server\Server;
-use PhpMcp\Server\Transports\StdioServerTransport;
+use Mcp\Server\Server;
+use Mcp\Server\Transports\StdioServerTransport;
 
 try {
     // Build server configuration
@@ -197,7 +197,7 @@ The PHP MCP Server uses a modern, decoupled architecture:
 ### Basic Configuration
 
 ```php
-use PhpMcp\Server\Server;
+use Mcp\Server\Server;
 use PhpMcp\Schema\ServerCapabilities;
 
 $server = Server::make()
@@ -260,7 +260,7 @@ Use PHP 8 attributes to mark methods or invokable classes as MCP elements. The s
 scanning.
 
 ```php
-use PhpMcp\Server\Attributes\{McpTool, McpResource, McpResourceTemplate, McpPrompt};
+use Mcp\Server\Attributes\{McpTool, McpResource, McpResourceTemplate, McpPrompt};
 
 class UserManager
 {
@@ -447,7 +447,7 @@ The server core is transport-agnostic. Choose a transport based on your deployme
 **Best for**: Direct client execution, command-line tools, simple deployments
 
 ```php
-use PhpMcp\Server\Transports\StdioServerTransport;
+use Mcp\Server\Transports\StdioServerTransport;
 
 $server = Server::make()
     ->withServerInfo('Stdio Server', '1.0.0')
@@ -489,7 +489,7 @@ $server->listen($transport);
 **Best for**: Legacy applications requiring backwards compatibility
 
 ```php
-use PhpMcp\Server\Transports\HttpServerTransport;
+use Mcp\Server\Transports\HttpServerTransport;
 
 $server = Server::make()
     ->withServerInfo('HTTP Server', '1.0.0')
@@ -530,7 +530,7 @@ $server->listen($transport);
 **Best for**: Production deployments, remote MCP servers, multiple clients, resumable connections
 
 ```php
-use PhpMcp\Server\Transports\StreamableHttpServerTransport;
+use Mcp\Server\Transports\StreamableHttpServerTransport;
 
 $server = Server::make()
     ->withServerInfo('Streamable Server', '1.0.0')
@@ -615,7 +615,7 @@ is used as-is.
 ### Parameter-Level Schema Attributes
 
 ```php
-use PhpMcp\Server\Attributes\{McpTool, Schema};
+use Mcp\Server\Attributes\{McpTool, Schema};
 
 #[McpTool(name: 'validate_user')]
 public function validateUser(
@@ -816,9 +816,9 @@ The `#[CompletionProvider]` attribute supports three types of completion sources
 For complex completion logic, implement the `CompletionProviderInterface`:
 
 ```php
-use PhpMcp\Server\Contracts\CompletionProviderInterface;
-use PhpMcp\Server\Contracts\SessionInterface;
-use PhpMcp\Server\Attributes\{McpResourceTemplate, CompletionProvider};
+use Mcp\Server\Contracts\CompletionProviderInterface;
+use Mcp\Server\Contracts\SessionInterface;
+use Mcp\Server\Attributes\{McpResourceTemplate, CompletionProvider};
 
 class UserIdCompletionProvider implements CompletionProviderInterface
 {
@@ -866,7 +866,7 @@ class DocumentService
 For static completion lists, use the `values` parameter:
 
 ```php
-use PhpMcp\Server\Attributes\{McpPrompt, CompletionProvider};
+use Mcp\Server\Attributes\{McpPrompt, CompletionProvider};
 
 class ContentService
 {
@@ -989,7 +989,7 @@ class DatabaseService
 }
 
 // Option 1: Use the basic container and manually add dependencies
-$basicContainer = new \PhpMcp\Server\Defaults\BasicContainer();
+$basicContainer = new \Mcp\Server\Defaults\BasicContainer();
 $basicContainer->set(\PDO::class, new \PDO('sqlite::memory:'));
 
 // Option 2: Use any PSR-11 compatible container (PHP-DI, Laravel, etc.)
@@ -1030,9 +1030,9 @@ For production deployments using `StreamableHttpServerTransport`, you can implem
 providing a custom event store:
 
 ```php
-use PhpMcp\Server\Contracts\EventStoreInterface;
-use PhpMcp\Server\Defaults\InMemoryEventStore;
-use PhpMcp\Server\Transports\StreamableHttpServerTransport;
+use Mcp\Server\Contracts\EventStoreInterface;
+use Mcp\Server\Defaults\InMemoryEventStore;
+use Mcp\Server\Transports\StreamableHttpServerTransport;
 
 // Use the built-in in-memory event store (for development/testing)
 $eventStore = new InMemoryEventStore();
@@ -1073,7 +1073,7 @@ $transport = new StreamableHttpServerTransport(
 Implement custom session storage by creating a class that implements `SessionHandlerInterface`:
 
 ```php
-use PhpMcp\Server\Contracts\SessionHandlerInterface;
+use Mcp\Server\Contracts\SessionHandlerInterface;
 
 class DatabaseSessionHandler implements SessionHandlerInterface
 {

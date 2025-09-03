@@ -2,9 +2,8 @@
 
 declare(strict_types=1);
 
-namespace PhpMcp\Server\Routes;
+namespace Mcp\Server\Routes;
 
-use JsonException;
 use PhpMcp\Schema\JsonRpc\Request;
 use PhpMcp\Schema\JsonRpc\Notification;
 use PhpMcp\Schema\JsonRpc\Result;
@@ -12,28 +11,23 @@ use PhpMcp\Schema\Request\GetPromptRequest;
 use PhpMcp\Schema\Request\ListPromptsRequest;
 use PhpMcp\Schema\Result\GetPromptResult;
 use PhpMcp\Schema\Result\ListPromptsResult;
-use PhpMcp\Server\Configuration;
-use PhpMcp\Server\Context;
-use PhpMcp\Server\Contracts\RouteInterface;
-use PhpMcp\Server\Exception\McpServerException;
-use PhpMcp\Server\Registry;
-use PhpMcp\Server\RequestMethod;
-use Psr\Container\ContainerInterface;
+use Mcp\Server\Context;
+use Mcp\Server\Contracts\RouteInterface;
+use Mcp\Server\Exception\McpServerException;
+use Mcp\Server\Helpers\PaginationHelper;
+use Mcp\Server\Registry;
+use Mcp\Server\RequestMethod;
 use Psr\Log\LoggerInterface;
-use Throwable;
+use Psr\Log\NullLogger;
 
 final readonly class PromptRoute implements RouteInterface
 {
-    private ContainerInterface $container;
-    private LoggerInterface $logger;
-
     public function __construct(
         private Registry $registry,
-        private Configuration $configuration,
-    ) {
-        $this->container = $this->configuration->container;
-        $this->logger = $this->configuration->logger;
-    }
+        private LoggerInterface $logger = new NullLogger(),
+        private PaginationHelper $paginationHelper = new PaginationHelper(),
+        private int $paginationLimit = 50,
+    ) {}
 
     public function getMethods(): array
     {
@@ -61,13 +55,14 @@ final readonly class PromptRoute implements RouteInterface
 
     private function handlePromptsList(ListPromptsRequest $request): ListPromptsResult
     {
-        $limit = $this->configuration->paginationLimit;
-        $offset = $this->decodeCursor($request->cursor);
         $allItems = $this->registry->getPrompts();
-        $pagedItems = array_slice($allItems, $offset, $limit);
-        $nextCursor = $this->encodeNextCursor($offset, count($pagedItems), count($allItems), $limit);
+        $pagination = $this->paginationHelper->paginate(
+            $allItems,
+            $request->cursor,
+            $this->paginationLimit,
+        );
 
-        return new ListPromptsResult(array_values($pagedItems), $nextCursor);
+        return new ListPromptsResult($pagination['items'], $pagination['nextCursor']);
     }
 
     private function handlePromptGet(GetPromptRequest $request, Context $context): GetPromptResult
@@ -83,7 +78,7 @@ final readonly class PromptRoute implements RouteInterface
         $arguments = (array) $arguments;
 
         foreach ($registeredPrompt->schema->arguments as $argDef) {
-            if ($argDef->required && !array_key_exists($argDef->name, $arguments)) {
+            if ($argDef->required && !\array_key_exists($argDef->name, $arguments)) {
                 throw McpServerException::invalidParams(
                     "Missing required argument '{$argDef->name}' for prompt '{$promptName}'.",
                 );
@@ -91,52 +86,14 @@ final readonly class PromptRoute implements RouteInterface
         }
 
         try {
-            $result = $registeredPrompt->get($this->container, $arguments, $context);
+            $result = $registeredPrompt->get($arguments, $context);
 
             return new GetPromptResult($result, $registeredPrompt->schema->description);
-        } catch (JsonException $e) {
-            $this->logger->warning(
-                'Failed to JSON encode prompt messages.',
-                ['exception' => $e, 'promptName' => $promptName],
-            );
-            throw McpServerException::internalError("Failed to serialize prompt messages for '{$promptName}'.", $e);
         } catch (McpServerException $e) {
             throw $e;
-        } catch (Throwable $e) {
+        } catch (\Throwable $e) {
             $this->logger->error('Prompt generation failed.', ['promptName' => $promptName, 'exception' => $e]);
             throw McpServerException::promptGenerationFailed($promptName, $e);
         }
-    }
-
-    private function decodeCursor(?string $cursor): int
-    {
-        if ($cursor === null) {
-            return 0;
-        }
-
-        $decoded = base64_decode($cursor, true);
-        if ($decoded === false) {
-            $this->logger->warning('Received invalid pagination cursor (not base64)', ['cursor' => $cursor]);
-
-            return 0;
-        }
-
-        if (preg_match('/^offset=(\d+)$/', $decoded, $matches)) {
-            return (int) $matches[1];
-        }
-
-        $this->logger->warning('Received invalid pagination cursor format', ['cursor' => $decoded]);
-
-        return 0;
-    }
-
-    private function encodeNextCursor(int $currentOffset, int $returnedCount, int $totalCount, int $limit): ?string
-    {
-        $nextOffset = $currentOffset + $returnedCount;
-        if ($returnedCount > 0 && $nextOffset < $totalCount) {
-            return base64_encode("offset={$nextOffset}");
-        }
-
-        return null;
     }
 }

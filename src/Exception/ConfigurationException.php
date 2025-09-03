@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace PhpMcp\Server\Exception;
+namespace Mcp\Server\Exception;
 
 /**
  * Exception related to invalid server configuration.

@@ -2,10 +2,18 @@
 
 declare(strict_types=1);
 
-namespace PhpMcp\Server\Exception;
+namespace Mcp\Server\Exception;
 
 final class ValidationException extends \Exception
 {
+    /**
+     * @param list<array{pointer: string, keyword: string, message: string}> $errors Array of validation errors, empty if valid.
+     */
+    public function __construct(public readonly array $errors, ?\Throwable $previous = null)
+    {
+        parent::__construct(message: 'Validation errors', code: 422, previous: $previous);
+    }
+
     public static function invalidSchemaDefinition(\Throwable $previous): self
     {
         return new self(
@@ -42,14 +50,6 @@ final class ValidationException extends \Exception
         );
     }
 
-    /**
-     * @param list<array{pointer: string, keyword: string, message: string}> $errors Array of validation errors, empty if valid.
-     */
-    public function __construct(public readonly array $errors, ?\Throwable $previous = null)
-    {
-        parent::__construct(message: 'Validation errors', code: 422, previous: $previous);
-    }
-
     public function buildMessage(string $toolName): string
     {
         $errorMessages = [];
@@ -60,12 +60,12 @@ final class ValidationException extends \Exception
             $errorMessages[] = ($pointer !== '/' && $pointer !== '' ? "Property '{$pointer}': " : '') . $message;
         }
 
-        $summaryMessage = sprintf(
+        $summaryMessage = \sprintf(
             "Invalid parameters for tool '{$toolName}': %s",
-            implode('; ', array_slice($errorMessages, 0, 3)),
+            \implode('; ', \array_slice($errorMessages, 0, 3)),
         );
 
-        if (count($errorMessages) > 3) {
+        if (\count($errorMessages) > 3) {
             $summaryMessage .= '; ...and more errors.';
         }
 

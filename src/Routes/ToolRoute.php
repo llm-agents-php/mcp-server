@@ -2,9 +2,8 @@
 
 declare(strict_types=1);
 
-namespace PhpMcp\Server\Routes;
+namespace Mcp\Server\Routes;
 
-use JsonException;
 use PhpMcp\Schema\JsonRpc\Request;
 use PhpMcp\Schema\JsonRpc\Notification;
 use PhpMcp\Schema\JsonRpc\Result;
@@ -13,27 +12,30 @@ use PhpMcp\Schema\Request\ListToolsRequest;
 use PhpMcp\Schema\Result\CallToolResult;
 use PhpMcp\Schema\Result\ListToolsResult;
 use PhpMcp\Schema\Content\TextContent;
-use PhpMcp\Server\Configuration;
-use PhpMcp\Server\Context;
-use PhpMcp\Server\Contracts\RouteInterface;
-use PhpMcp\Server\Contracts\ToolExecutorInterface;
-use PhpMcp\Server\Exception\McpServerException;
-use PhpMcp\Server\Exception\ValidationException;
-use PhpMcp\Server\Registry;
-use PhpMcp\Server\RequestMethod;
+use Mcp\Server\Context;
+use Mcp\Server\Contracts\RouteInterface;
+use Mcp\Server\Contracts\ToolExecutorInterface;
+use Mcp\Server\Defaults\ToolExecutor;
+use Mcp\Server\Exception\McpServerException;
+use Mcp\Server\Exception\ValidationException;
+use Mcp\Server\Helpers\PaginationHelper;
+use Mcp\Server\Registry;
+use Mcp\Server\RequestMethod;
 use Psr\Log\LoggerInterface;
-use Throwable;
+use Psr\Log\NullLogger;
 
 final readonly class ToolRoute implements RouteInterface
 {
-    private LoggerInterface $logger;
+    private ToolExecutorInterface $toolExecutor;
 
     public function __construct(
         private Registry $registry,
-        private ToolExecutorInterface $toolExecutor,
-        private Configuration $configuration,
+        ?ToolExecutorInterface $toolExecutor = null,
+        private LoggerInterface $logger = new NullLogger(),
+        private PaginationHelper $paginationHelper = new PaginationHelper(),
+        private int $paginationLimit = 50,
     ) {
-        $this->logger = $this->configuration->logger;
+        $this->toolExecutor = $toolExecutor ?: new ToolExecutor($this->logger);
     }
 
     public function getMethods(): array
@@ -59,13 +61,14 @@ final readonly class ToolRoute implements RouteInterface
 
     private function handleToolList(ListToolsRequest $request): ListToolsResult
     {
-        $limit = $this->configuration->paginationLimit;
-        $offset = $this->decodeCursor($request->cursor);
         $allItems = $this->registry->getTools();
-        $pagedItems = array_slice($allItems, $offset, $limit);
-        $nextCursor = $this->encodeNextCursor($offset, count($pagedItems), count($allItems), $limit);
+        $pagination = $this->paginationHelper->paginate(
+            $allItems,
+            $request->cursor,
+            $this->paginationLimit,
+        );
 
-        return new ListToolsResult(array_values($pagedItems), $nextCursor);
+        return new ListToolsResult($pagination['items'], $pagination['nextCursor']);
     }
 
     private function handleToolCall(CallToolRequest $request, Context $context): CallToolResult
@@ -87,48 +90,11 @@ final readonly class ToolRoute implements RouteInterface
                 $e->buildMessage($toolName),
                 data: ['validation_errors' => $e->errors],
             );
-        } catch (JsonException $e) {
-            $this->logger->warning('Failed to JSON encode tool result.', ['tool' => $toolName, 'exception' => $e]);
-            $errorMessage = "Failed to serialize tool result: {$e->getMessage()}";
-
-            return new CallToolResult([new TextContent($errorMessage)], true);
-        } catch (Throwable $toolError) {
+        } catch (\Throwable $toolError) {
             $this->logger->error('Tool execution failed.', ['tool' => $toolName, 'exception' => $toolError]);
             $errorMessage = "Tool execution failed: {$toolError->getMessage()}";
 
             return new CallToolResult([new TextContent($errorMessage)], true);
         }
-    }
-
-    private function decodeCursor(?string $cursor): int
-    {
-        if ($cursor === null) {
-            return 0;
-        }
-
-        $decoded = base64_decode($cursor, true);
-        if ($decoded === false) {
-            $this->logger->warning('Received invalid pagination cursor (not base64)', ['cursor' => $cursor]);
-
-            return 0;
-        }
-
-        if (preg_match('/^offset=(\d+)$/', $decoded, $matches)) {
-            return (int) $matches[1];
-        }
-
-        $this->logger->warning('Received invalid pagination cursor format', ['cursor' => $decoded]);
-
-        return 0;
-    }
-
-    private function encodeNextCursor(int $currentOffset, int $returnedCount, int $totalCount, int $limit): ?string
-    {
-        $nextOffset = $currentOffset + $returnedCount;
-        if ($returnedCount > 0 && $nextOffset < $totalCount) {
-            return base64_encode("offset={$nextOffset}");
-        }
-
-        return null;
     }
 }

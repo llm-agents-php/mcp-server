@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace PhpMcp\Server\Contracts;
+namespace Mcp\Server\Contracts;
 
 use Evenement\EventEmitterInterface;
-use PhpMcp\Server\Exception\TransportException;
+use Mcp\Server\Exception\TransportException;
 use PhpMcp\Schema\JsonRpc\Message;
 use React\Promise\PromiseInterface;
 

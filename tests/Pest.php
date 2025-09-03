@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 use React\EventLoop\Loop;
 use React\EventLoop\LoopInterface;
 use React\EventLoop\TimerInterface;
@@ -22,11 +24,11 @@ function delay($time, ?LoopInterface $loop = null)
 
     /** @var TimerInterface $timer */
     $timer = null;
-    return new Promise(function ($resolve) use ($loop, $time, &$timer) {
-        $timer = $loop->addTimer($time, function () use ($resolve) {
+    return new Promise(static function ($resolve) use ($loop, $time, &$timer): void {
+        $timer = $loop->addTimer($time, static function () use ($resolve): void {
             $resolve(null);
         });
-    }, function () use (&$timer, $loop) {
+    }, static function () use (&$timer, $loop): void {
         $loop->cancelTimer($timer);
         $timer = null;
 
@@ -38,7 +40,7 @@ function timeout(PromiseInterface $promise, $time, ?LoopInterface $loop = null)
 {
     $canceller = null;
     if (\method_exists($promise, 'cancel')) {
-        $canceller = function () use (&$promise) {
+        $canceller = static function () use (&$promise): void {
             $promise->cancel();
             $promise = null;
         };
@@ -48,15 +50,15 @@ function timeout(PromiseInterface $promise, $time, ?LoopInterface $loop = null)
         $loop = Loop::get();
     }
 
-    return new Promise(function ($resolve, $reject) use ($loop, $time, $promise) {
+    return new Promise(static function ($resolve, $reject) use ($loop, $time, $promise): void {
         $timer = null;
-        $promise = $promise->then(function ($v) use (&$timer, $loop, $resolve) {
+        $promise = $promise->then(static function ($v) use (&$timer, $loop, $resolve): void {
             if ($timer) {
                 $loop->cancelTimer($timer);
             }
             $timer = false;
             $resolve($v);
-        }, function ($v) use (&$timer, $loop, $reject) {
+        }, static function ($v) use (&$timer, $loop, $reject): void {
             if ($timer) {
                 $loop->cancelTimer($timer);
             }
@@ -69,7 +71,7 @@ function timeout(PromiseInterface $promise, $time, ?LoopInterface $loop = null)
         }
 
         // start timeout timer which will cancel the input promise
-        $timer = $loop->addTimer($time, function () use ($time, &$promise, $reject) {
+        $timer = $loop->addTimer($time, static function () use ($time, &$promise, $reject): void {
             $reject(new \RuntimeException('Timed out after ' . $time . ' seconds'));
 
             if (\method_exists($promise, 'cancel')) {
@@ -84,10 +86,10 @@ function findFreePort()
 {
     $server = new SocketServer('127.0.0.1:0');
     $address = $server->getAddress();
-    $port = $address ? parse_url($address, PHP_URL_PORT) : null;
+    $port = $address ? \parse_url($address, PHP_URL_PORT) : null;
     $server->close();
     if (!$port) {
         throw new \RuntimeException("Could not find a free port for testing.");
     }
-    return (int)$port;
+    return (int) $port;
 }

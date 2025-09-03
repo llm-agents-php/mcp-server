@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace PhpMcp\Server\Tests\Fixtures\General;
+namespace Mcp\Server\Tests\Fixtures\General;
 
 use PhpMcp\Schema\Content\TextContent;
-use PhpMcp\Server\Context;
+use Mcp\Server\Context;
 
 class RequestAttributeChecker
 {
