@@ -30,9 +30,10 @@ use function React\Promise\reject;
  * Implementation of the STDIO server transport using ReactPHP Process and Streams.
  * Listens on STDIN, writes to STDOUT, and emits events for the Protocol.
  */
-final class StdioServerTransport extends EventEmitter implements ServerTransportInterface,
-                                                                 LoggerAwareInterface,
-                                                                 LoopAwareInterface
+final class StdioServerTransport extends EventEmitter implements
+    ServerTransportInterface,
+    LoggerAwareInterface,
+    LoopAwareInterface
 {
     private const string CLIENT_ID = 'stdio';
 

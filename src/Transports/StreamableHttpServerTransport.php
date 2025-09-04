@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Mcp\Server\Transports;
 
-use Evenement\EventEmitter;
 use Evenement\EventEmitterInterface;
 use Mcp\Server\Contracts\EventStoreInterface;
 use Mcp\Server\Contracts\HttpServerInterface;
@@ -30,7 +29,7 @@ use React\Stream\ThroughStream;
 use function React\Promise\resolve;
 use function React\Promise\reject;
 
-final class StreamableHttpServerTransport extends EventEmitter implements ServerTransportInterface
+final class StreamableHttpServerTransport implements ServerTransportInterface
 {
     /**
      * Stores Deferred objects for POST requests awaiting a direct JSON response.
@@ -214,6 +213,36 @@ final class StreamableHttpServerTransport extends EventEmitter implements Server
         $this->pendingRequests = [];
     }
 
+    public function on($event, callable $listener)
+    {
+        return $this->httpServer->on($event, $listener);
+    }
+
+    public function once($event, callable $listener)
+    {
+        return $this->httpServer->once($event, $listener);
+    }
+
+    public function removeListener($event, callable $listener)
+    {
+        return $this->httpServer->removeListener($event, $listener);
+    }
+
+    public function removeAllListeners($event = null)
+    {
+        return $this->httpServer->removeAllListeners($event);
+    }
+
+    public function listeners($event = null)
+    {
+        return $this->httpServer->listeners($event);
+    }
+
+    public function emit($event, array $arguments = [])
+    {
+        return $this->httpServer->emit($event, $arguments);
+    }
+
     /**
      * @throws RandomException
      */
@@ -363,7 +392,7 @@ final class StreamableHttpServerTransport extends EventEmitter implements Server
 
         if ($this->stateless) {
             $sessionId = $this->generateId();
-            $this->httpServer->emit('client_connected', [$sessionId]);
+            $this->emit('client_connected', [$sessionId]);
         } else {
             if ($isInitializeRequest) {
                 if ($request->hasHeader('Mcp-Session-Id')) {
@@ -382,7 +411,7 @@ final class StreamableHttpServerTransport extends EventEmitter implements Server
                 }
 
                 $sessionId = $this->generateId();
-                $this->httpServer->emit('client_connected', [$sessionId]);
+                $this->emit('client_connected', [$sessionId]);
             } else {
                 $sessionId = $request->getHeaderLine('Mcp-Session-Id');
 
@@ -536,7 +565,7 @@ final class StreamableHttpServerTransport extends EventEmitter implements Server
             $this->getStream = null;
         }
 
-        $this->httpServer->emit('client_disconnected', [$sessionId, 'Session terminated by DELETE request']);
+        $this->emit('client_disconnected', [$sessionId, 'Session terminated by DELETE request']);
 
         return resolve(new HttpResponse(204));
     }

@@ -18,9 +18,9 @@ final readonly class Dispatcher
 
     public function __construct(
         private LoggerInterface $logger,
-        DispatcherRouter $router,
+        DispatcherRoutesFactoryInterface $routesFactory,
     ) {
-        $this->routes = $router->getRoutes();
+        $this->routes = $routesFactory->create();
     }
 
     /**

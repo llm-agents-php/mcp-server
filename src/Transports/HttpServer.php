@@ -27,6 +27,7 @@ final class HttpServer extends EventEmitter implements HttpServerInterface
      * @param string $mcpPath URL prefix for MCP endpoints (e.g., 'mcp').
      * @param array|null $sslContext Optional SSL context options for React SocketServer (for HTTPS).
      * @param array<callable(\Psr\Http\Message\ServerRequestInterface, callable): (\Psr\Http\Message\ResponseInterface|\React\Promise\PromiseInterface)> $middleware Middleware to be applied to the HTTP server.
+     * @param bool $runLoop Whether to run the event loop after starting the listener. (If external loop is used, set to false.)
      */
     public function __construct(
         private readonly LoopInterface $loop,
@@ -36,6 +37,7 @@ final class HttpServer extends EventEmitter implements HttpServerInterface
         private readonly ?array $sslContext = null,
         private readonly array $middleware = [],
         private readonly LoggerInterface $logger = new NullLogger(),
+        private readonly bool $runLoop = true,
     ) {
         $this->listenAddress = "{$host}:{$port}";
         $this->protocol = $this->sslContext !== [] ? 'https' : 'http';
@@ -90,6 +92,10 @@ final class HttpServer extends EventEmitter implements HttpServerInterface
             $this->listening = true;
             $this->closing = false;
             $this->emit('ready');
+
+            if ($this->runLoop) {
+                $this->loop->run();
+            }
         } catch (\Throwable $e) {
             $this->logger->error("Failed to start listener on {$this->listenAddress}", ['exception' => $e]);
             throw new TransportException(
@@ -119,6 +125,10 @@ final class HttpServer extends EventEmitter implements HttpServerInterface
     {
         if ($this->closing) {
             return;
+        }
+
+        if ($this->runLoop) {
+            $this->loop->stop();
         }
 
         $this->closing = true;

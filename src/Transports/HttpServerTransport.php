@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Mcp\Server\Transports;
 
-use Evenement\EventEmitter;
 use Evenement\EventEmitterInterface;
 use Mcp\Server\Contracts\HttpServerInterface;
 use Mcp\Server\Contracts\ServerTransportInterface;
@@ -25,10 +24,10 @@ use React\Stream\WritableStreamInterface;
 use function React\Promise\resolve;
 use function React\Promise\reject;
 
-final class HttpServerTransport extends EventEmitter implements ServerTransportInterface
+final class HttpServerTransport implements ServerTransportInterface
 {
-    private string $ssePath;
-    private string $messagePath;
+    private readonly string $ssePath;
+    private readonly string $messagePath;
 
     /** @var array<string, ThroughStream> sessionId => SSE Stream */
     private array $activeSseStreams = [];
@@ -95,6 +94,36 @@ final class HttpServerTransport extends EventEmitter implements ServerTransportI
         }
     }
 
+    public function on($event, callable $listener)
+    {
+        return $this->httpServer->on($event, $listener);
+    }
+
+    public function once($event, callable $listener)
+    {
+        return $this->httpServer->once($event, $listener);
+    }
+
+    public function removeListener($event, callable $listener)
+    {
+        return $this->httpServer->removeListener($event, $listener);
+    }
+
+    public function removeAllListeners($event = null)
+    {
+        return $this->httpServer->removeAllListeners($event);
+    }
+
+    public function listeners($event = null)
+    {
+        return $this->httpServer->listeners($event);
+    }
+
+    public function emit($event, array $arguments = [])
+    {
+        return $this->httpServer->emit($event, $arguments);
+    }
+
     /**
      * @throws RandomException
      */
@@ -142,11 +171,11 @@ final class HttpServerTransport extends EventEmitter implements ServerTransportI
         $sseStream->on('error', function (\Throwable $error) use ($sessionId): void {
             $this->logger->warning('SSE stream error', ['sessionId' => $sessionId, 'error' => $error->getMessage()]);
             unset($this->activeSseStreams[$sessionId]);
-            $this->httpServer->emit(
+            $this->emit(
                 'error',
                 [new TransportException("SSE Stream Error: {$error->getMessage()}", 0, $error), $sessionId],
             );
-            $this->httpServer->emit('client_disconnected', [$sessionId, 'SSE stream error']);
+            $this->emit('client_disconnected', [$sessionId, 'SSE stream error']);
         });
 
         $this->activeSseStreams[$sessionId] = $sseStream;
@@ -246,7 +275,7 @@ final class HttpServerTransport extends EventEmitter implements ServerTransportI
             'request' => $request,
         ];
 
-        $this->httpServer->emit('message', [$message, $sessionId, $context]);
+        $this->emit('message', [$message, $sessionId, $context]);
 
         return new Response(202, ['Content-Type' => 'text/plain'], 'Accepted');
     }

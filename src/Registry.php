@@ -7,7 +7,6 @@ namespace Mcp\Server;
 use Evenement\EventEmitterInterface;
 use Evenement\EventEmitterTrait;
 use Mcp\Server\Contracts\HandlerInterface;
-use Mcp\Server\Defaults\CallableHandler;
 use PhpMcp\Schema\Prompt;
 use PhpMcp\Schema\Resource;
 use PhpMcp\Schema\ResourceTemplate;
@@ -34,15 +33,13 @@ class Registry implements EventEmitterInterface
     /** @var array<string, RegisteredResourceTemplate> */
     private array $resourceTemplates = [];
 
-    private bool $notificationsEnabled = true;
-
     public function __construct(
         protected LoggerInterface $logger,
     ) {}
 
     public function registerTool(
         Tool $tool,
-        HandlerInterface|callable|array|string $handler,
+        HandlerInterface $handler,
         bool $isManual = false,
     ): void {
         $toolName = $tool->name;
@@ -56,16 +53,12 @@ class Registry implements EventEmitterInterface
             return;
         }
 
-        if (!$handler instanceof HandlerInterface) {
-            $handler = new CallableHandler($handler);
-        }
-
         $this->tools[$toolName] = new RegisteredTool($tool, $handler, $isManual);
     }
 
     public function registerResource(
         Resource $resource,
-        HandlerInterface|callable|array|string $handler,
+        HandlerInterface $handler,
         bool $isManual = false,
     ): void {
         $uri = $resource->uri;
@@ -79,16 +72,12 @@ class Registry implements EventEmitterInterface
             return;
         }
 
-        if (!$handler instanceof HandlerInterface) {
-            $handler = new CallableHandler($handler);
-        }
-
         $this->resources[$uri] = new RegisteredResource($resource, $handler, $isManual);
     }
 
     public function registerResourceTemplate(
         ResourceTemplate $template,
-        HandlerInterface|callable|array|string $handler,
+        HandlerInterface $handler,
         array $completionProviders = [],
         bool $isManual = false,
     ): void {
@@ -103,10 +92,6 @@ class Registry implements EventEmitterInterface
             return;
         }
 
-        if (!$handler instanceof HandlerInterface) {
-            $handler = new CallableHandler($handler);
-        }
-
         $this->resourceTemplates[$uriTemplate] = new RegisteredResourceTemplate(
             $template,
             $handler,
@@ -117,7 +102,7 @@ class Registry implements EventEmitterInterface
 
     public function registerPrompt(
         Prompt $prompt,
-        HandlerInterface|callable|array|string $handler,
+        HandlerInterface $handler,
         array $completionProviders = [],
         bool $isManual = false,
     ): void {
@@ -132,21 +117,7 @@ class Registry implements EventEmitterInterface
             return;
         }
 
-        if (!$handler instanceof HandlerInterface) {
-            $handler = new CallableHandler($handler);
-        }
-
         $this->prompts[$promptName] = new RegisteredPrompt($prompt, $handler, $isManual, $completionProviders);
-    }
-
-    public function enableNotifications(): void
-    {
-        $this->notificationsEnabled = true;
-    }
-
-    public function disableNotifications(): void
-    {
-        $this->notificationsEnabled = false;
     }
 
     /**

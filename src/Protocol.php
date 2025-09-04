@@ -200,7 +200,11 @@ final class Protocol
         return $this->transport
             ->sendMessage($notification, $sessionId, [])
             ->then(static fn() => resolve(null))
-            ->catch(static fn(\Throwable $e) => reject(new McpServerException('Failed to send notification: ' . $e->getMessage(), previous: $e)));
+            ->catch(
+                static fn(\Throwable $e) => reject(
+                    new McpServerException('Failed to send notification: ' . $e->getMessage(), previous: $e),
+                ),
+            );
     }
 
     /**

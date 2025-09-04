@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace Mcp\Server;
 
-use Mcp\Server\Contracts\LoggerAwareInterface;
-use Mcp\Server\Contracts\LoopAwareInterface;
 use Mcp\Server\Contracts\ServerTransportInterface;
 use Mcp\Server\Session\SessionManager;
+use Psr\Log\LoggerInterface;
+use Psr\Log\NullLogger;
 
 /**
  * Core MCP Server instance.
@@ -18,29 +18,15 @@ use Mcp\Server\Session\SessionManager;
  *
  * Instances should be created via the ServerBuilder.
  */
-class Server
+final class Server
 {
-    protected bool $discoveryRan = false;
     protected bool $isListening = false;
 
-    /**
-     * @param Configuration $configuration Core configuration and dependencies.
-     * @param Registry $registry Holds registered MCP element definitions.
-     * @param Protocol $protocol Handles MCP requests and responses.
-     * @internal Use ServerBuilder::make()->...->build().
-     *
-     */
     public function __construct(
-        protected readonly Configuration $configuration,
-        protected readonly Registry $registry,
         protected readonly Protocol $protocol,
         protected readonly SessionManager $sessionManager,
+        protected readonly LoggerInterface $logger = new NullLogger(),
     ) {}
-
-    public static function make(): ServerBuilder
-    {
-        return new ServerBuilder();
-    }
 
     /**
      * Binds the server's MCP logic to the provided transport and starts the transport's listener,
@@ -54,114 +40,44 @@ class Server
      * @throws \LogicException If called after already listening.
      * @throws \Throwable If transport->listen() fails immediately.
      */
-    public function listen(ServerTransportInterface $transport, bool $runLoop = true): void
-    {
+    public function listen(
+        ServerTransportInterface $transport,
+    ): void {
         if ($this->isListening) {
             throw new \LogicException('Server is already listening via a transport.');
         }
 
-        $this->warnIfNoElements();
-
-        if ($transport instanceof LoggerAwareInterface) {
-            $transport->setLogger($this->configuration->logger);
-        }
-        if ($transport instanceof LoopAwareInterface) {
-            $transport->setLoop($this->configuration->loop);
-        }
-
-        $protocol = $this->getProtocol();
-
-        $closeHandlerCallback = function (?string $reason = null) use ($protocol): void {
+        $transport->once('close', function (?string $reason = null): void {
             $this->isListening = false;
-            $this->configuration->logger->info('Transport closed.', ['reason' => $reason ?? 'N/A']);
-            $protocol->unbindTransport();
-            $this->configuration->loop->stop();
-        };
+            $this->logger->info('Transport closed.', ['reason' => $reason ?? 'N/A']);
+            $this->protocol->unbindTransport();
+        });
 
-        $transport->once('close', $closeHandlerCallback);
-
-        $protocol->bindTransport($transport);
+        $this->protocol->bindTransport($transport);
 
         try {
-            $transport->listen();
-
             $this->isListening = true;
-
-            if ($runLoop) {
-                $this->sessionManager->startGcTimer();
-
-                $this->configuration->loop->run();
-
-                $this->endListen($transport);
-            }
+            $this->sessionManager->startGcTimer();
+            $transport->listen();
         } catch (\Throwable $e) {
-            $this->configuration->logger->critical(
+            $this->logger->critical(
                 'Failed to start listening or event loop crashed.',
                 ['exception' => $e->getMessage()],
             );
+
             $this->endListen($transport);
             throw $e;
+        } finally {
+            $this->sessionManager->stopGcTimer();
         }
     }
 
     public function endListen(ServerTransportInterface $transport): void
     {
-        $protocol = $this->getProtocol();
-
-        $protocol->unbindTransport();
-
-        $this->sessionManager->stopGcTimer();
-
         $transport->removeAllListeners('close');
         $transport->close();
 
         $this->isListening = false;
-        $this->configuration->logger->info("Server '{$this->configuration->serverInfo->name}' listener shut down.");
-    }
-
-    /**
-     * Gets the Configuration instance associated with this server.
-     */
-    public function getConfiguration(): Configuration
-    {
-        return $this->configuration;
-    }
-
-    /**
-     * Gets the Registry instance associated with this server.
-     */
-    public function getRegistry(): Registry
-    {
-        return $this->registry;
-    }
-
-    /**
-     * Gets the Protocol instance associated with this server.
-     */
-    public function getProtocol(): Protocol
-    {
-        return $this->protocol;
-    }
-
-    public function getSessionManager(): SessionManager
-    {
-        return $this->sessionManager;
-    }
-
-    /**
-     * Warns if no MCP elements are registered and discovery has not been run.
-     */
-    protected function warnIfNoElements(): void
-    {
-        if (!$this->registry->hasElements() && !$this->discoveryRan) {
-            $this->configuration->logger->warning(
-                'Starting listener, but no MCP elements are registered and discovery has not been run. ' .
-                'Call $server->discover(...) at least once to find and cache elements before listen().',
-            );
-        } elseif (!$this->registry->hasElements() && $this->discoveryRan) {
-            $this->configuration->logger->warning(
-                'Starting listener, but no MCP elements were found after discovery/cache load.',
-            );
-        }
+        $this->logger->info("Server listener shut down.");
     }
 }

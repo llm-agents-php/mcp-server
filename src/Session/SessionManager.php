@@ -9,7 +9,6 @@ use Evenement\EventEmitterTrait;
 use Mcp\Server\Contracts\SessionHandlerInterface;
 use Mcp\Server\Contracts\SessionInterface;
 use Psr\Log\LoggerInterface;
-use React\EventLoop\Loop;
 use React\EventLoop\LoopInterface;
 use React\EventLoop\TimerInterface;
 
@@ -18,17 +17,14 @@ final class SessionManager implements EventEmitterInterface
     use EventEmitterTrait;
 
     private ?TimerInterface $gcTimer = null;
-    private readonly LoopInterface $loop;
 
     public function __construct(
         private readonly SessionHandlerInterface $handler,
         private readonly LoggerInterface $logger,
-        ?LoopInterface $loop = null,
+        private readonly LoopInterface $loop,
         private readonly int $ttl = 3600,
         private readonly int|float $gcInterval = 300,
-    ) {
-        $this->loop = $loop ?: Loop::get();
-    }
+    ) {}
 
     /**
      * Start the garbage collection timer
