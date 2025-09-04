@@ -1,6 +1,8 @@
 <?php
 
-namespace PhpMcp\Server\Tests\Unit\Utils;
+declare(strict_types=1);
+
+namespace Mcp\Server\Tests\Unit\Utils;
 
 use phpDocumentor\Reflection\DocBlock;
 use phpDocumentor\Reflection\DocBlock\Tags\Deprecated;
@@ -8,41 +10,40 @@ use phpDocumentor\Reflection\DocBlock\Tags\Param;
 use phpDocumentor\Reflection\DocBlock\Tags\Return_;
 use phpDocumentor\Reflection\DocBlock\Tags\See;
 use phpDocumentor\Reflection\DocBlock\Tags\Throws;
-use PhpMcp\Server\Utils\DocBlockParser;
-use PhpMcp\Server\Tests\Fixtures\General\DocBlockTestFixture;
-use ReflectionMethod;
+use Mcp\Server\Utils\DocBlockParser;
+use Mcp\Server\Tests\Fixtures\General\DocBlockTestFixture;
 
-beforeEach(function () {
+beforeEach(function (): void {
     $this->parser = new DocBlockParser();
 });
 
-test('getSummary returns correct summary', function () {
-    $method = new ReflectionMethod(DocBlockTestFixture::class, 'methodWithSummaryOnly');
+test('getSummary returns correct summary', function (): void {
+    $method = new \ReflectionMethod(DocBlockTestFixture::class, 'methodWithSummaryOnly');
     $docComment = $method->getDocComment() ?: null;
     $docBlock = $this->parser->parseDocBlock($docComment);
     expect($this->parser->getSummary($docBlock))->toBe('Simple summary line.');
 
-    $method2 = new ReflectionMethod(DocBlockTestFixture::class, 'methodWithSummaryAndDescription');
+    $method2 = new \ReflectionMethod(DocBlockTestFixture::class, 'methodWithSummaryAndDescription');
     $docComment2 = $method2->getDocComment() ?: null;
     $docBlock2 = $this->parser->parseDocBlock($docComment2);
     expect($this->parser->getSummary($docBlock2))->toBe('Summary line here.');
 });
 
-test('getDescription returns correct description', function () {
-    $method = new ReflectionMethod(DocBlockTestFixture::class, 'methodWithSummaryAndDescription');
+test('getDescription returns correct description', function (): void {
+    $method = new \ReflectionMethod(DocBlockTestFixture::class, 'methodWithSummaryAndDescription');
     $docComment = $method->getDocComment() ?: null;
     $docBlock = $this->parser->parseDocBlock($docComment);
     $expectedDesc = "Summary line here.\n\nThis is a longer description spanning\nmultiple lines.\nIt might contain *markdown* or `code`.";
     expect($this->parser->getDescription($docBlock))->toBe($expectedDesc);
 
-    $method2 = new ReflectionMethod(DocBlockTestFixture::class, 'methodWithSummaryOnly');
+    $method2 = new \ReflectionMethod(DocBlockTestFixture::class, 'methodWithSummaryOnly');
     $docComment2 = $method2->getDocComment() ?: null;
     $docBlock2 = $this->parser->parseDocBlock($docComment2);
     expect($this->parser->getDescription($docBlock2))->toBe('Simple summary line.');
 });
 
-test('getParamTags returns structured param info', function () {
-    $method = new ReflectionMethod(DocBlockTestFixture::class, 'methodWithParams');
+test('getParamTags returns structured param info', function (): void {
+    $method = new \ReflectionMethod(DocBlockTestFixture::class, 'methodWithParams');
     $docComment = $method->getDocComment() ?: null;
     $docBlock = $this->parser->parseDocBlock($docComment);
     $params = $this->parser->getParamTags($docBlock);
@@ -81,8 +82,8 @@ test('getParamTags returns structured param info', function () {
     expect($this->parser->getParamDescription($params['$param6']))->toBe('Object param.');
 });
 
-test('getReturnTag returns structured return info', function () {
-    $method = new ReflectionMethod(DocBlockTestFixture::class, 'methodWithReturn');
+test('getReturnTag returns structured return info', function (): void {
+    $method = new \ReflectionMethod(DocBlockTestFixture::class, 'methodWithReturn');
     $docComment = $method->getDocComment() ?: null;
     $docBlock = $this->parser->parseDocBlock($docComment);
     $returnTag = $this->parser->getReturnTag($docBlock);
@@ -91,14 +92,14 @@ test('getReturnTag returns structured return info', function () {
     expect($this->parser->getReturnTypeString($returnTag))->toBe('string');
     expect($this->parser->getReturnDescription($returnTag))->toBe('The result of the operation.');
 
-    $method2 = new ReflectionMethod(DocBlockTestFixture::class, 'methodWithSummaryOnly');
+    $method2 = new \ReflectionMethod(DocBlockTestFixture::class, 'methodWithSummaryOnly');
     $docComment2 = $method2->getDocComment() ?: null;
     $docBlock2 = $this->parser->parseDocBlock($docComment2);
     expect($this->parser->getReturnTag($docBlock2))->toBeNull();
 });
 
-test('getTagsByName returns specific tags', function () {
-    $method = new ReflectionMethod(DocBlockTestFixture::class, 'methodWithMultipleTags');
+test('getTagsByName returns specific tags', function (): void {
+    $method = new \ReflectionMethod(DocBlockTestFixture::class, 'methodWithMultipleTags');
     $docComment = $method->getDocComment() ?: null;
     $docBlock = $this->parser->parseDocBlock($docComment);
 
@@ -124,8 +125,8 @@ test('getTagsByName returns specific tags', function () {
     expect($nonExistentTags)->toBeArray()->toBeEmpty();
 });
 
-test('handles method with no docblock gracefully', function () {
-    $method = new ReflectionMethod(DocBlockTestFixture::class, 'methodWithNoDocBlock');
+test('handles method with no docblock gracefully', function (): void {
+    $method = new \ReflectionMethod(DocBlockTestFixture::class, 'methodWithNoDocBlock');
     $docComment = $method->getDocComment() ?: null;
     $docBlock = $this->parser->parseDocBlock($docComment);
 

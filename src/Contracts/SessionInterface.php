@@ -2,11 +2,9 @@
 
 declare(strict_types=1);
 
-namespace PhpMcp\Server\Contracts;
+namespace Mcp\Server\Contracts;
 
-use JsonSerializable;
-
-interface SessionInterface extends JsonSerializable
+interface SessionInterface extends \JsonSerializable
 {
     /**
      * Get the session ID.
@@ -83,7 +81,6 @@ interface SessionInterface extends JsonSerializable
     /**
      * Get the session handler instance.
      *
-     * @return SessionHandlerInterface
      */
     public function getHandler(): SessionHandlerInterface;
 }

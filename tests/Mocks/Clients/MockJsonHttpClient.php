@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace PhpMcp\Server\Tests\Mocks\Clients;
+namespace Mcp\Server\Tests\Mocks\Clients;
 
 use Psr\Http\Message\ResponseInterface;
 use React\Http\Browser;
@@ -34,7 +34,7 @@ class MockJsonHttpClient
         }
         $headers += $additionalHeaders;
 
-        $body = json_encode($payload);
+        $body = \json_encode($payload);
 
         return $this->browser->post($this->baseUrl, $headers, $body)
             ->then(function (ResponseInterface $response) use ($method) {
@@ -61,7 +61,7 @@ class MockJsonHttpClient
                 }
 
                 try {
-                    $decoded = json_decode($bodyContent, true, 512, JSON_THROW_ON_ERROR);
+                    $decoded = \json_decode($bodyContent, true, 512, JSON_THROW_ON_ERROR);
                     return ['statusCode' => $statusCode, 'body' => $decoded, 'headers' => $response->getHeaders()];
                 } catch (\JsonException $e) {
                     throw new \RuntimeException("Failed to decode JSON response body: {$bodyContent} Error: {$e->getMessage()}", $statusCode, $e);
@@ -75,10 +75,10 @@ class MockJsonHttpClient
         if ($this->sessionId) {
             $headers['Mcp-Session-Id'] = $this->sessionId;
         }
-        $body = json_encode($batchRequestObjects);
+        $body = \json_encode($batchRequestObjects);
 
         return $this->browser->post($this->baseUrl, $headers, $body)
-            ->then(function (ResponseInterface $response) {
+            ->then(static function (ResponseInterface $response) {
                 $bodyContent = (string) $response->getBody()->getContents();
                 $statusCode = $response->getStatusCode();
                 if ($statusCode === 202) {
@@ -89,7 +89,7 @@ class MockJsonHttpClient
                 }
 
                 try {
-                    $decoded = json_decode($bodyContent, true, 512, JSON_THROW_ON_ERROR);
+                    $decoded = \json_decode($bodyContent, true, 512, JSON_THROW_ON_ERROR);
                     return ['statusCode' => $statusCode, 'body' => $decoded, 'headers' => $response->getHeaders()];
                 } catch (\JsonException $e) {
                     throw new \RuntimeException("Failed to decode JSON response body: {$bodyContent} Error: {$e->getMessage()}", $statusCode, $e);
@@ -105,7 +105,7 @@ class MockJsonHttpClient
         }
 
         return $this->browser->delete($this->baseUrl, $headers)
-            ->then(function (ResponseInterface $response) {
+            ->then(static function (ResponseInterface $response) {
                 $bodyContent = (string) $response->getBody()->getContents();
                 $statusCode = $response->getStatusCode();
                 return ['statusCode' => $statusCode, 'body' => $bodyContent, 'headers' => $response->getHeaders()];

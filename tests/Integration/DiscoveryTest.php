@@ -1,24 +1,26 @@
 <?php
 
-use PhpMcp\Server\Defaults\EnumCompletionProvider;
-use PhpMcp\Server\Defaults\ListCompletionProvider;
-use PhpMcp\Server\Elements\RegisteredPrompt;
-use PhpMcp\Server\Elements\RegisteredResource;
-use PhpMcp\Server\Elements\RegisteredResourceTemplate;
-use PhpMcp\Server\Elements\RegisteredTool;
-use PhpMcp\Server\Registry;
-use PhpMcp\Server\Tests\Fixtures\Discovery\DiscoverableToolHandler;
-use PhpMcp\Server\Tests\Fixtures\Discovery\InvocablePromptFixture;
-use PhpMcp\Server\Tests\Fixtures\Discovery\InvocableResourceFixture;
-use PhpMcp\Server\Tests\Fixtures\Discovery\InvocableResourceTemplateFixture;
-use PhpMcp\Server\Tests\Fixtures\Discovery\InvocableToolFixture;
-use PhpMcp\Server\Utils\Discoverer;
-use PhpMcp\Server\Utils\DocBlockParser;
-use PhpMcp\Server\Utils\SchemaGenerator;
-use PhpMcp\Server\Tests\Fixtures\General\CompletionProviderFixture;
+declare(strict_types=1);
+
+use Mcp\Server\Defaults\EnumCompletionProvider;
+use Mcp\Server\Defaults\ListCompletionProvider;
+use Mcp\Server\Elements\RegisteredPrompt;
+use Mcp\Server\Elements\RegisteredResource;
+use Mcp\Server\Elements\RegisteredResourceTemplate;
+use Mcp\Server\Elements\RegisteredTool;
+use Mcp\Server\Registry;
+use Mcp\Server\Tests\Fixtures\Discovery\DiscoverableToolHandler;
+use Mcp\Server\Tests\Fixtures\Discovery\InvocablePromptFixture;
+use Mcp\Server\Tests\Fixtures\Discovery\InvocableResourceFixture;
+use Mcp\Server\Tests\Fixtures\Discovery\InvocableResourceTemplateFixture;
+use Mcp\Server\Tests\Fixtures\Discovery\InvocableToolFixture;
+use Mcp\Server\Utils\Discoverer;
+use Mcp\Server\Utils\DocBlockParser;
+use Mcp\Server\Utils\SchemaGenerator;
+use Mcp\Server\Tests\Fixtures\General\CompletionProviderFixture;
 use Psr\Log\NullLogger;
 
-beforeEach(function () {
+beforeEach(function (): void {
     $logger = new NullLogger();
     $this->registry = new Registry($logger);
 
@@ -26,10 +28,10 @@ beforeEach(function () {
     $schemaGenerator = new SchemaGenerator($docBlockParser);
     $this->discoverer = new Discoverer($this->registry, $logger, $docBlockParser, $schemaGenerator);
 
-    $this->fixtureBasePath = realpath(__DIR__ . '/../Fixtures');
+    $this->fixtureBasePath = \realpath(__DIR__ . '/../Fixtures');
 });
 
-it('discovers all element types correctly from fixture files', function () {
+it('discovers all element types correctly from fixture files', function (): void {
     $scanDir = 'Discovery';
 
     $this->discoverer->discover($this->fixtureBasePath, [$scanDir]);
@@ -50,7 +52,7 @@ it('discovers all element types correctly from fixture files', function () {
         ->and($repeatActionTool->isManual)->toBeFalse()
         ->and($repeatActionTool->schema->description)->toBe('A tool with more complex parameters and inferred name/description.')
         ->and($repeatActionTool->schema->annotations->readOnlyHint)->toBeTrue();
-    expect(array_keys($repeatActionTool->schema->inputSchema['properties'] ?? []))->toEqual(['count', 'loudly', 'mode']);
+    expect(\array_keys($repeatActionTool->schema->inputSchema['properties'] ?? []))->toEqual(['count', 'loudly', 'mode']);
 
     $invokableCalcTool = $this->registry->getTool('InvokableCalculator');
     expect($invokableCalcTool)->toBeInstanceOf(RegisteredTool::class)
@@ -116,7 +118,7 @@ it('discovers all element types correctly from fixture files', function () {
         ->and($invokableUserTemplate->handler)->toBe([InvocableResourceTemplateFixture::class, '__invoke']);
 });
 
-it('does not discover elements from excluded directories', function () {
+it('does not discover elements from excluded directories', function (): void {
     $this->discoverer->discover($this->fixtureBasePath, ['Discovery']);
 
     expect($this->registry->getTool('hidden_subdir_tool'))->not->toBeNull();
@@ -127,12 +129,12 @@ it('does not discover elements from excluded directories', function () {
     expect($this->registry->getTool('hidden_subdir_tool'))->toBeNull();
 });
 
-it('handles empty directories or directories with no PHP files', function () {
+it('handles empty directories or directories with no PHP files', function (): void {
     $this->discoverer->discover($this->fixtureBasePath, ['EmptyDir']);
     expect($this->registry->getTools())->toBeEmpty();
 });
 
-it('correctly infers names and descriptions from methods/classes if not set in attribute', function () {
+it('correctly infers names and descriptions from methods/classes if not set in attribute', function (): void {
     $this->discoverer->discover($this->fixtureBasePath, ['Discovery']);
 
     $repeatActionTool = $this->registry->getTool('repeatAction');
@@ -148,7 +150,7 @@ it('correctly infers names and descriptions from methods/classes if not set in a
     expect($invokableCalc->schema->description)->toBe('An invokable calculator tool.');
 });
 
-it('discovers enhanced completion providers with values and enum attributes', function () {
+it('discovers enhanced completion providers with values and enum attributes', function (): void {
     $this->discoverer->discover($this->fixtureBasePath, ['Discovery']);
 
     $contentPrompt = $this->registry->getPrompt('content_creator');

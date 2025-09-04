@@ -1,28 +1,30 @@
 <?php
 
-uses(\PhpMcp\Server\Tests\TestCase::class);
+declare(strict_types=1);
 
-use PhpMcp\Server\Utils\DocBlockParser;
-use PhpMcp\Server\Utils\SchemaGenerator;
-use PhpMcp\Server\Tests\Fixtures\Utils\SchemaGeneratorFixture;
+uses(\Mcp\Server\Tests\TestCase::class);
 
-beforeEach(function () {
+use Mcp\Server\Utils\DocBlockParser;
+use Mcp\Server\Utils\SchemaGenerator;
+use Mcp\Server\Tests\Fixtures\Utils\SchemaGeneratorFixture;
+
+beforeEach(function (): void {
     $docBlockParser = new DocBlockParser();
     $this->schemaGenerator = new SchemaGenerator($docBlockParser);
 });
 
-it('generates an empty properties object for a method with no parameters', function () {
+it('generates an empty properties object for a method with no parameters', function (): void {
     $method = new ReflectionMethod(SchemaGeneratorFixture::class, 'noParams');
     $schema = $this->schemaGenerator->generate($method);
 
     expect($schema)->toEqual([
         'type' => 'object',
-        'properties' => new stdClass()
+        'properties' => new stdClass(),
     ]);
     expect($schema)->not->toHaveKey('required');
 });
 
-it('infers basic types from PHP type hints when no DocBlocks or Schema attributes are present', function () {
+it('infers basic types from PHP type hints when no DocBlocks or Schema attributes are present', function (): void {
     $method = new ReflectionMethod(SchemaGeneratorFixture::class, 'typeHintsOnly');
     $schema = $this->schemaGenerator->generate($method);
 
@@ -35,7 +37,7 @@ it('infers basic types from PHP type hints when no DocBlocks or Schema attribute
     expect($schema['required'])->toEqualCanonicalizing(['name', 'age', 'active', 'tags']);
 });
 
-it('infers types and descriptions from DocBlock @param tags when no PHP type hints are present', function () {
+it('infers types and descriptions from DocBlock @param tags when no PHP type hints are present', function (): void {
     $method = new ReflectionMethod(SchemaGeneratorFixture::class, 'docBlockOnly');
     $schema = $this->schemaGenerator->generate($method);
 
@@ -47,7 +49,7 @@ it('infers types and descriptions from DocBlock @param tags when no PHP type hin
     expect($schema['required'])->toEqualCanonicalizing(['username', 'count', 'enabled', 'data']);
 });
 
-it('uses PHP type hints for type and DocBlock @param tags for descriptions when both are present', function () {
+it('uses PHP type hints for type and DocBlock @param tags for descriptions when both are present', function (): void {
     $method = new ReflectionMethod(SchemaGeneratorFixture::class, 'typeHintsWithDocBlock');
     $schema = $this->schemaGenerator->generate($method);
 
@@ -58,17 +60,17 @@ it('uses PHP type hints for type and DocBlock @param tags for descriptions when 
     expect($schema['required'])->toEqualCanonicalizing(['email', 'score', 'verified']);
 });
 
-it('ignores Context parameter for schema', function () {
+it('ignores Context parameter for schema', function (): void {
     $method = new ReflectionMethod(SchemaGeneratorFixture::class, 'contextParameter');
     $schema = $this->schemaGenerator->generate($method);
 
     expect($schema)->toEqual([
         'type' => 'object',
-        'properties' => new stdClass()
+        'properties' => new stdClass(),
     ]);
 });
 
-it('uses the complete schema definition provided by a method-level #[Schema(definition: ...)] attribute', function () {
+it('uses the complete schema definition provided by a method-level #[Schema(definition: ...)] attribute', function (): void {
     $method = new ReflectionMethod(SchemaGeneratorFixture::class, 'methodLevelCompleteDefinition');
     $schema = $this->schemaGenerator->generate($method);
 
@@ -79,19 +81,19 @@ it('uses the complete schema definition provided by a method-level #[Schema(defi
         'properties' => [
             'field' => ['type' => 'string', 'enum' => ['name', 'date', 'status']],
             'operator' => ['type' => 'string', 'enum' => ['eq', 'gt', 'lt', 'contains']],
-            'value' => ['description' => 'Value to filter by, type depends on field and operator']
+            'value' => ['description' => 'Value to filter by, type depends on field and operator'],
         ],
         'required' => ['field', 'operator', 'value'],
         'if' => [
-            'properties' => ['field' => ['const' => 'date']]
+            'properties' => ['field' => ['const' => 'date']],
         ],
         'then' => [
-            'properties' => ['value' => ['type' => 'string', 'format' => 'date']]
-        ]
+            'properties' => ['value' => ['type' => 'string', 'format' => 'date']],
+        ],
     ]);
 });
 
-it('generates schema from a method-level #[Schema] attribute defining properties for each parameter', function () {
+it('generates schema from a method-level #[Schema] attribute defining properties for each parameter', function (): void {
     $method = new ReflectionMethod(SchemaGeneratorFixture::class, 'methodLevelWithProperties');
     $schema = $this->schemaGenerator->generate($method);
 
@@ -104,7 +106,7 @@ it('generates schema from a method-level #[Schema] attribute defining properties
     expect($schema['required'])->toEqualCanonicalizing(['age', 'username', 'email']);
 });
 
-it('generates schema for a single array argument defined by a method-level #[Schema] attribute', function () {
+it('generates schema for a single array argument defined by a method-level #[Schema] attribute', function (): void {
     $method = new ReflectionMethod(SchemaGeneratorFixture::class, 'methodLevelArrayArgument');
     $schema = $this->schemaGenerator->generate($method);
 
@@ -116,16 +118,16 @@ it('generates schema for a single array argument defined by a method-level #[Sch
             'type' => 'object',
             'properties' => [
                 'id' => ['type' => 'integer'],
-                'data' => ['type' => 'object', 'additionalProperties' => true]
+                'data' => ['type' => 'object', 'additionalProperties' => true],
             ],
-            'required' => ['id', 'data']
-        ]
+            'required' => ['id', 'data'],
+        ],
     ]);
 
     expect($schema['required'])->toEqual(['profiles']);
 });
 
-it('generates schema from individual parameter-level #[Schema] attributes', function () {
+it('generates schema from individual parameter-level #[Schema] attributes', function (): void {
     $method = new ReflectionMethod(SchemaGeneratorFixture::class, 'parameterLevelOnly');
     $schema = $this->schemaGenerator->generate($method);
 
@@ -136,16 +138,16 @@ it('generates schema from individual parameter-level #[Schema] attributes', func
         'type' => 'object',
         'properties' => [
             'type' => ['type' => 'string', 'enum' => ['sms', 'email', 'push']],
-            'deviceToken' => ['type' => 'string', 'description' => 'Required if type is push']
+            'deviceToken' => ['type' => 'string', 'description' => 'Required if type is push'],
         ],
         'required' => ['type'],
-        'default' => null
+        'default' => null,
     ]);
 
     expect($schema['required'])->toEqualCanonicalizing(['recipientId', 'messageBody']);
 });
 
-it('applies string constraints from parameter-level #[Schema] attributes', function () {
+it('applies string constraints from parameter-level #[Schema] attributes', function (): void {
     $method = new ReflectionMethod(SchemaGeneratorFixture::class, 'parameterStringConstraints');
     $schema = $this->schemaGenerator->generate($method);
 
@@ -156,7 +158,7 @@ it('applies string constraints from parameter-level #[Schema] attributes', funct
     expect($schema['required'])->toEqualCanonicalizing(['email', 'password', 'regularString']);
 });
 
-it('applies numeric constraints from parameter-level #[Schema] attributes', function () {
+it('applies numeric constraints from parameter-level #[Schema] attributes', function (): void {
     $method = new ReflectionMethod(SchemaGeneratorFixture::class, 'parameterNumericConstraints');
     $schema = $this->schemaGenerator->generate($method);
 
@@ -167,7 +169,7 @@ it('applies numeric constraints from parameter-level #[Schema] attributes', func
     expect($schema['required'])->toEqualCanonicalizing(['age', 'rating', 'count']);
 });
 
-it('applies array constraints (minItems, uniqueItems, items schema) from parameter-level #[Schema]', function () {
+it('applies array constraints (minItems, uniqueItems, items schema) from parameter-level #[Schema]', function (): void {
     $method = new ReflectionMethod(SchemaGeneratorFixture::class, 'parameterArrayConstraints');
     $schema = $this->schemaGenerator->generate($method);
 
@@ -177,7 +179,7 @@ it('applies array constraints (minItems, uniqueItems, items schema) from paramet
     expect($schema['required'])->toEqualCanonicalizing(['tags', 'scores']);
 });
 
-it('merges method-level and parameter-level #[Schema] attributes, with parameter-level taking precedence', function () {
+it('merges method-level and parameter-level #[Schema] attributes, with parameter-level taking precedence', function (): void {
     $method = new ReflectionMethod(SchemaGeneratorFixture::class, 'methodAndParameterLevel');
     $schema = $this->schemaGenerator->generate($method);
 
@@ -190,7 +192,7 @@ it('merges method-level and parameter-level #[Schema] attributes, with parameter
     expect($schema['required'])->toEqualCanonicalizing(['settingKey', 'newValue']);
 });
 
-it('combines PHP type hints, DocBlock descriptions, and parameter-level #[Schema] constraints', function () {
+it('combines PHP type hints, DocBlock descriptions, and parameter-level #[Schema] constraints', function (): void {
     $method = new ReflectionMethod(SchemaGeneratorFixture::class, 'typeHintDocBlockAndParameterSchema');
     $schema = $this->schemaGenerator->generate($method);
 
@@ -200,7 +202,7 @@ it('combines PHP type hints, DocBlock descriptions, and parameter-level #[Schema
     expect($schema['required'])->toEqualCanonicalizing(['username', 'priority']);
 });
 
-it('generates correct schema for backed and unit enum parameters, inferring from type hints', function () {
+it('generates correct schema for backed and unit enum parameters, inferring from type hints', function (): void {
     $method = new ReflectionMethod(SchemaGeneratorFixture::class, 'enumParameters');
     $schema = $this->schemaGenerator->generate($method);
 
@@ -213,7 +215,7 @@ it('generates correct schema for backed and unit enum parameters, inferring from
     expect($schema['required'])->toEqualCanonicalizing(['stringEnum', 'intEnum', 'unitEnum']);
 });
 
-it('correctly generates schemas for various array type declarations (generic, typed, shape)', function () {
+it('correctly generates schemas for various array type declarations (generic, typed, shape)', function (): void {
     $method = new ReflectionMethod(SchemaGeneratorFixture::class, 'arrayTypeScenarios');
     $schema = $this->schemaGenerator->generate($method);
 
@@ -231,7 +233,7 @@ it('correctly generates schemas for various array type declarations (generic, ty
     expect($schema['required'])->toEqualCanonicalizing(['genericArray', 'stringArray', 'intArray', 'mixedMap', 'objectLikeArray', 'nestedObjectArray']);
 });
 
-it('handles nullable type hints and optional parameters with default values correctly', function () {
+it('handles nullable type hints and optional parameters with default values correctly', function (): void {
     $method = new ReflectionMethod(SchemaGeneratorFixture::class, 'nullableAndOptional');
     $schema = $this->schemaGenerator->generate($method);
 
@@ -244,7 +246,7 @@ it('handles nullable type hints and optional parameters with default values corr
     expect($schema['required'])->toEqualCanonicalizing(['nullableString']);
 });
 
-it('generates schema for PHP union types, sorting types alphabetically', function () {
+it('generates schema for PHP union types, sorting types alphabetically', function (): void {
     $method = new ReflectionMethod(SchemaGeneratorFixture::class, 'unionTypes');
     $schema = $this->schemaGenerator->generate($method);
 
@@ -254,7 +256,7 @@ it('generates schema for PHP union types, sorting types alphabetically', functio
     expect($schema['required'])->toEqualCanonicalizing(['stringOrInt', 'multiUnion']);
 });
 
-it('represents variadic string parameters as an array of strings', function () {
+it('represents variadic string parameters as an array of strings', function (): void {
     $method = new ReflectionMethod(SchemaGeneratorFixture::class, 'variadicStrings');
     $schema = $this->schemaGenerator->generate($method);
 
@@ -263,7 +265,7 @@ it('represents variadic string parameters as an array of strings', function () {
     // Variadic is optional
 });
 
-it('applies item constraints from parameter-level #[Schema] to variadic parameters', function () {
+it('applies item constraints from parameter-level #[Schema] to variadic parameters', function (): void {
     $method = new ReflectionMethod(SchemaGeneratorFixture::class, 'variadicWithConstraints');
     $schema = $this->schemaGenerator->generate($method);
 
@@ -271,7 +273,7 @@ it('applies item constraints from parameter-level #[Schema] to variadic paramete
     expect($schema)->not->toHaveKey('required');
 });
 
-it('handles mixed type hints, omitting explicit type in schema and using defaults', function () {
+it('handles mixed type hints, omitting explicit type in schema and using defaults', function (): void {
     $method = new ReflectionMethod(SchemaGeneratorFixture::class, 'mixedTypes');
     $schema = $this->schemaGenerator->generate($method);
 
@@ -281,7 +283,7 @@ it('handles mixed type hints, omitting explicit type in schema and using default
     expect($schema['required'])->toEqualCanonicalizing(['anyValue']);
 });
 
-it('generates schema for complex nested object and array structures defined in parameter-level #[Schema]', function () {
+it('generates schema for complex nested object and array structures defined in parameter-level #[Schema]', function (): void {
     $method = new ReflectionMethod(SchemaGeneratorFixture::class, 'complexNestedSchema');
     $schema = $this->schemaGenerator->generate($method);
 
@@ -293,9 +295,9 @@ it('generates schema for complex nested object and array structures defined in p
                 'properties' => [
                     'id' => ['type' => 'string', 'pattern' => '^CUS-[0-9]{6}$'],
                     'name' => ['type' => 'string', 'minLength' => 2],
-                    'email' => ['type' => 'string', 'format' => 'email']
+                    'email' => ['type' => 'string', 'format' => 'email'],
                 ],
-                'required' => ['id', 'name']
+                'required' => ['id', 'name'],
             ],
             'items' => [
                 'type' => 'array',
@@ -305,23 +307,23 @@ it('generates schema for complex nested object and array structures defined in p
                     'properties' => [
                         'product_id' => ['type' => 'string', 'pattern' => '^PRD-[0-9]{4}$'],
                         'quantity' => ['type' => 'integer', 'minimum' => 1],
-                        'price' => ['type' => 'number', 'minimum' => 0]
+                        'price' => ['type' => 'number', 'minimum' => 0],
                     ],
-                    'required' => ['product_id', 'quantity', 'price']
-                ]
+                    'required' => ['product_id', 'quantity', 'price'],
+                ],
             ],
             'metadata' => [
                 'type' => 'object',
-                'additionalProperties' => true
-            ]
+                'additionalProperties' => true,
+            ],
         ],
-        'required' => ['customer', 'items']
+        'required' => ['customer', 'items'],
     ]);
 
     expect($schema['required'])->toEqual(['order']);
 });
 
-it('demonstrates type precedence: parameter #[Schema] overrides DocBlock, which overrides PHP type hint', function () {
+it('demonstrates type precedence: parameter #[Schema] overrides DocBlock, which overrides PHP type hint', function (): void {
     $method = new ReflectionMethod(SchemaGeneratorFixture::class, 'typePrecedenceTest');
     $schema = $this->schemaGenerator->generate($method);
 
@@ -337,7 +339,7 @@ it('demonstrates type precedence: parameter #[Schema] overrides DocBlock, which 
     expect($schema['required'])->toEqualCanonicalizing(['numericString', 'stringWithConstraints', 'arrayWithItems']);
 });
 
-it('generates an empty properties object for a method with no parameters even if a method-level #[Schema] is present', function () {
+it('generates an empty properties object for a method with no parameters even if a method-level #[Schema] is present', function (): void {
     $method = new ReflectionMethod(SchemaGeneratorFixture::class, 'noParamsWithSchema');
     $schema = $this->schemaGenerator->generate($method);
 
@@ -346,7 +348,7 @@ it('generates an empty properties object for a method with no parameters even if
     expect($schema)->not->toHaveKey('required');
 });
 
-it('infers parameter type as "any" (omits type) if only constraints are given in #[Schema] without type hint or DocBlock type', function () {
+it('infers parameter type as "any" (omits type) if only constraints are given in #[Schema] without type hint or DocBlock type', function (): void {
     $method = new ReflectionMethod(SchemaGeneratorFixture::class, 'parameterSchemaInferredType');
     $schema = $this->schemaGenerator->generate($method);
 
@@ -355,14 +357,14 @@ it('infers parameter type as "any" (omits type) if only constraints are given in
     expect($schema['required'])->toEqual(['inferredParam']);
 });
 
-it('uses raw parameter-level schema definition as-is', function () {
+it('uses raw parameter-level schema definition as-is', function (): void {
     $method = new ReflectionMethod(SchemaGeneratorFixture::class, 'parameterWithRawDefinition');
     $schema = $this->schemaGenerator->generate($method);
 
     expect($schema['properties']['custom'])->toEqual([
         'description' => 'Custom-defined schema',
         'type' => 'string',
-        'format' => 'uuid'
+        'format' => 'uuid',
     ]);
 
     expect($schema['required'])->toEqual(['custom']);

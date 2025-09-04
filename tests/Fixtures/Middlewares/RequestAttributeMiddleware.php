@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace PhpMcp\Server\Tests\Fixtures\Middlewares;
+namespace Mcp\Server\Tests\Fixtures\Middlewares;
 
 use Psr\Http\Message\ServerRequestInterface;
 

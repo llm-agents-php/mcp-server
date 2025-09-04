@@ -1,6 +1,8 @@
 <?php
 
-namespace PhpMcp\Server\Tests;
+declare(strict_types=1);
+
+namespace Mcp\Server\Tests;
 
 use PHPUnit\Framework\TestCase as BaseTestCase;
 

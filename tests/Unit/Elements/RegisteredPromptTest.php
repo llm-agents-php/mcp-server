@@ -1,27 +1,27 @@
 <?php
 
-namespace PhpMcp\Server\Tests\Unit\Elements;
+declare(strict_types=1);
 
-use Mockery;
+namespace Mcp\Server\Tests\Unit\Elements;
+
 use PhpMcp\Schema\Prompt as PromptSchema;
 use PhpMcp\Schema\PromptArgument;
-use PhpMcp\Server\Context;
-use PhpMcp\Server\Contracts\SessionInterface;
-use PhpMcp\Server\Elements\RegisteredPrompt;
+use Mcp\Server\Context;
+use Mcp\Server\Contracts\SessionInterface;
+use Mcp\Server\Elements\RegisteredPrompt;
 use PhpMcp\Schema\Content\PromptMessage;
 use PhpMcp\Schema\Enum\Role;
 use PhpMcp\Schema\Content\TextContent;
 use PhpMcp\Schema\Content\ImageContent;
 use PhpMcp\Schema\Content\AudioContent;
 use PhpMcp\Schema\Content\EmbeddedResource;
-use PhpMcp\Server\Tests\Fixtures\Enums\StatusEnum;
-use PhpMcp\Server\Tests\Fixtures\General\PromptHandlerFixture;
-use PhpMcp\Server\Tests\Fixtures\General\CompletionProviderFixture;
-use PhpMcp\Server\Tests\Unit\Attributes\TestEnum;
+use Mcp\Server\Tests\Fixtures\Enums\StatusEnum;
+use Mcp\Server\Tests\Fixtures\General\PromptHandlerFixture;
+use Mcp\Server\Tests\Fixtures\General\CompletionProviderFixture;
 use Psr\Container\ContainerInterface;
 
-beforeEach(function () {
-    $this->container = Mockery::mock(ContainerInterface::class);
+beforeEach(function (): void {
+    $this->container = \Mockery::mock(ContainerInterface::class);
     $this->container->shouldReceive('get')
         ->with(PromptHandlerFixture::class)
         ->andReturn(new PromptHandlerFixture())
@@ -30,19 +30,19 @@ beforeEach(function () {
     $this->promptSchema = PromptSchema::make(
         'test-greeting-prompt',
         'Generates a greeting.',
-        [PromptArgument::make('name', 'The name to greet.', true)]
+        [PromptArgument::make('name', 'The name to greet.', true)],
     );
 
-    $this->context = new Context(Mockery::mock(SessionInterface::class));
+    $this->context = new Context(\Mockery::mock(SessionInterface::class));
 });
 
-it('constructs correctly with schema, handler, and completion providers', function () {
+it('constructs correctly with schema, handler, and completion providers', function (): void {
     $providers = ['name' => CompletionProviderFixture::class];
     $prompt = RegisteredPrompt::make(
         $this->promptSchema,
         [PromptHandlerFixture::class, 'promptWithArgumentCompletion'],
         false,
-        $providers
+        $providers,
     );
 
     expect($prompt->schema)->toBe($this->promptSchema);
@@ -53,13 +53,13 @@ it('constructs correctly with schema, handler, and completion providers', functi
     expect($prompt->completionProviders)->not->toHaveKey('nonExistentArg');
 });
 
-it('can be made as a manual registration', function () {
+it('can be made as a manual registration', function (): void {
     $manualPrompt = RegisteredPrompt::make($this->promptSchema, [PromptHandlerFixture::class, 'generateSimpleGreeting'], true);
     expect($manualPrompt->isManual)->toBeTrue();
 });
 
-it('calls handler with prepared arguments via get()', function () {
-    $handlerMock = Mockery::mock(PromptHandlerFixture::class);
+it('calls handler with prepared arguments via get()', function (): void {
+    $handlerMock = \Mockery::mock(PromptHandlerFixture::class);
     $handlerMock->shouldReceive('generateSimpleGreeting')
         ->with('Alice', 'warm')
         ->once()
@@ -72,7 +72,7 @@ it('calls handler with prepared arguments via get()', function () {
     expect($messages[0]->content->text)->toBe('Warm greeting for Alice.');
 });
 
-it('formats single PromptMessage object from handler', function () {
+it('formats single PromptMessage object from handler', function (): void {
     $prompt = RegisteredPrompt::make($this->promptSchema, [PromptHandlerFixture::class, 'returnSinglePromptMessageObject']);
     $messages = $prompt->get($this->container, [], $this->context);
     expect($messages)->toBeArray()->toHaveCount(1);
@@ -80,7 +80,7 @@ it('formats single PromptMessage object from handler', function () {
     expect($messages[0]->content->text)->toBe("Single PromptMessage object.");
 });
 
-it('formats array of PromptMessage objects from handler as is', function () {
+it('formats array of PromptMessage objects from handler as is', function (): void {
     $prompt = RegisteredPrompt::make($this->promptSchema, [PromptHandlerFixture::class, 'returnArrayOfPromptMessageObjects']);
     $messages = $prompt->get($this->container, [], $this->context);
     expect($messages)->toBeArray()->toHaveCount(2);
@@ -88,13 +88,13 @@ it('formats array of PromptMessage objects from handler as is', function () {
     expect($messages[1]->content)->toBeInstanceOf(ImageContent::class);
 });
 
-it('formats empty array from handler as empty array', function () {
+it('formats empty array from handler as empty array', function (): void {
     $prompt = RegisteredPrompt::make($this->promptSchema, [PromptHandlerFixture::class, 'returnEmptyArrayForPrompt']);
     $messages = $prompt->get($this->container, [], $this->context);
     expect($messages)->toBeArray()->toBeEmpty();
 });
 
-it('formats simple user/assistant map from handler', function () {
+it('formats simple user/assistant map from handler', function (): void {
     $prompt = RegisteredPrompt::make($this->promptSchema, [PromptHandlerFixture::class, 'returnSimpleUserAssistantMap']);
     $messages = $prompt->get($this->container, [], $this->context);
     expect($messages)->toHaveCount(2);
@@ -104,7 +104,7 @@ it('formats simple user/assistant map from handler', function () {
     expect($messages[1]->content->text)->toBe("And this is the assistant's reply.");
 });
 
-it('formats user/assistant map with Content objects', function () {
+it('formats user/assistant map with Content objects', function (): void {
     $prompt = RegisteredPrompt::make($this->promptSchema, [PromptHandlerFixture::class, 'returnUserAssistantMapWithContentObjects']);
     $messages = $prompt->get($this->container, [], $this->context);
     expect($messages[0]->role)->toBe(Role::User);
@@ -113,7 +113,7 @@ it('formats user/assistant map with Content objects', function () {
     expect($messages[1]->content)->toBeInstanceOf(ImageContent::class)->data->toBe("asst_img_data");
 });
 
-it('formats user/assistant map with mixed content (string and Content object)', function () {
+it('formats user/assistant map with mixed content (string and Content object)', function (): void {
     $prompt = RegisteredPrompt::make($this->promptSchema, [PromptHandlerFixture::class, 'returnUserAssistantMapWithMixedContent']);
     $messages = $prompt->get($this->container, [], $this->context);
     expect($messages[0]->role)->toBe(Role::User);
@@ -122,7 +122,7 @@ it('formats user/assistant map with mixed content (string and Content object)', 
     expect($messages[1]->content)->toBeInstanceOf(AudioContent::class)->data->toBe("aud_data");
 });
 
-it('formats user/assistant map with array content', function () {
+it('formats user/assistant map with array content', function (): void {
     $prompt = RegisteredPrompt::make($this->promptSchema, [PromptHandlerFixture::class, 'returnUserAssistantMapWithArrayContent']);
     $messages = $prompt->get($this->container, [], $this->context);
     expect($messages[0]->role)->toBe(Role::User);
@@ -131,7 +131,7 @@ it('formats user/assistant map with array content', function () {
     expect($messages[1]->content)->toBeInstanceOf(ImageContent::class)->data->toBe("asst_arr_img_data");
 });
 
-it('formats list of raw message arrays with various content types', function () {
+it('formats list of raw message arrays with various content types', function (): void {
     $prompt = RegisteredPrompt::make($this->promptSchema, [PromptHandlerFixture::class, 'returnListOfRawMessageArrays']);
     $messages = $prompt->get($this->container, [], $this->context);
     expect($messages)->toHaveCount(6);
@@ -140,12 +140,12 @@ it('formats list of raw message arrays with various content types', function () 
     expect($messages[2]->content)->toBeInstanceOf(ImageContent::class)->data->toBe("raw_img_data");
     expect($messages[3]->content)->toBeInstanceOf(AudioContent::class)->data->toBe("raw_aud_data");
     expect($messages[4]->content)->toBeInstanceOf(EmbeddedResource::class);
-    expect($messages[4]->content->resource->blob)->toBe(base64_encode('pdf-data'));
+    expect($messages[4]->content->resource->blob)->toBe(\base64_encode('pdf-data'));
     expect($messages[5]->content)->toBeInstanceOf(EmbeddedResource::class);
     expect($messages[5]->content->resource->text)->toBe('{"theme":"dark"}');
 });
 
-it('formats list of raw message arrays with scalar or array content (becoming JSON TextContent)', function () {
+it('formats list of raw message arrays with scalar or array content (becoming JSON TextContent)', function (): void {
     $prompt = RegisteredPrompt::make($this->promptSchema, [PromptHandlerFixture::class, 'returnListOfRawMessageArraysWithScalars']);
     $messages = $prompt->get($this->container, [], $this->context);
     expect($messages)->toHaveCount(5);
@@ -153,10 +153,10 @@ it('formats list of raw message arrays with scalar or array content (becoming JS
     expect($messages[1]->content->text)->toBe("true");
     expect($messages[2]->content->text)->toBe("(null)");
     expect($messages[3]->content->text)->toBe("3.14");
-    expect($messages[4]->content->text)->toBe(json_encode(['key' => 'value'], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE));
+    expect($messages[4]->content->text)->toBe(\json_encode(['key' => 'value'], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE));
 });
 
-it('formats mixed array of PromptMessage objects and raw message arrays', function () {
+it('formats mixed array of PromptMessage objects and raw message arrays', function (): void {
     $prompt = RegisteredPrompt::make($this->promptSchema, [PromptHandlerFixture::class, 'returnMixedArrayOfPromptMessagesAndRaw']);
     $messages = $prompt->get($this->container, [], $this->context);
     expect($messages)->toHaveCount(4);
@@ -175,13 +175,13 @@ dataset('prompt_format_errors', [
     'invalid_resource_content_in_array' => ['promptReturnsArrayWithInvalidResourceContent', "/Invalid resource at index 0: Must contain 'text' or 'blob'./"],
 ]);
 
-it('throws RuntimeException for invalid prompt result formats', function (string|callable $handlerMethodOrCallable, string $expectedErrorPattern) {
-    $methodName = is_string($handlerMethodOrCallable) ? $handlerMethodOrCallable : 'customReturn';
+it('throws RuntimeException for invalid prompt result formats', function (string|callable $handlerMethodOrCallable, string $expectedErrorPattern): void {
+    $methodName = \is_string($handlerMethodOrCallable) ? $handlerMethodOrCallable : 'customReturn';
     $prompt = RegisteredPrompt::make($this->promptSchema, [PromptHandlerFixture::class, $methodName]);
 
-    if (is_callable($handlerMethodOrCallable)) {
+    if (\is_callable($handlerMethodOrCallable)) {
         $this->container->shouldReceive('get')->with(PromptHandlerFixture::class)->andReturn(
-            Mockery::mock(PromptHandlerFixture::class, [$methodName => $handlerMethodOrCallable()])
+            \Mockery::mock(PromptHandlerFixture::class, [$methodName => $handlerMethodOrCallable()]),
         );
     }
 
@@ -195,25 +195,25 @@ it('throws RuntimeException for invalid prompt result formats', function (string
 })->with('prompt_format_errors');
 
 
-it('propagates exceptions from handler during get()', function () {
+it('propagates exceptions from handler during get()', function (): void {
     $prompt = RegisteredPrompt::make($this->promptSchema, [PromptHandlerFixture::class, 'promptHandlerThrows']);
     $prompt->get($this->container, [], $this->context);
 })->throws(\LogicException::class, "Prompt generation failed inside handler.");
 
 
-it('can be serialized to array and deserialized with completion providers', function () {
+it('can be serialized to array and deserialized with completion providers', static function (): void {
     $schema = PromptSchema::make(
         'serialize-prompt',
         'Test SerDe',
-        [PromptArgument::make('arg1', required: true), PromptArgument::make('arg2', 'description for arg2')]
+        [PromptArgument::make('arg1', required: true), PromptArgument::make('arg2', 'description for arg2')],
     );
     $providers = ['arg1' => CompletionProviderFixture::class];
-    $serializedProviders = ['arg1' => serialize(CompletionProviderFixture::class)];
+    $serializedProviders = ['arg1' => \serialize(CompletionProviderFixture::class)];
     $original = RegisteredPrompt::make(
         $schema,
         [PromptHandlerFixture::class, 'generateSimpleGreeting'],
         true,
-        $providers
+        $providers,
     );
 
     $array = $original->toArray();
@@ -231,54 +231,54 @@ it('can be serialized to array and deserialized with completion providers', func
     expect($rehydrated->completionProviders)->toEqual($providers);
 });
 
-it('fromArray returns false on failure for prompt', function () {
+it('fromArray returns false on failure for prompt', static function (): void {
     $badData = ['schema' => ['name' => 'fail']];
     expect(RegisteredPrompt::fromArray($badData))->toBeFalse();
 });
 
-it('can be serialized with ListCompletionProvider instances', function () {
+it('can be serialized with ListCompletionProvider instances', static function (): void {
     $schema = PromptSchema::make(
         'list-prompt',
         'Test list completion',
-        [PromptArgument::make('status')]
+        [PromptArgument::make('status')],
     );
-    $listProvider = new \PhpMcp\Server\Defaults\ListCompletionProvider(['draft', 'published', 'archived']);
+    $listProvider = new \Mcp\Server\Defaults\ListCompletionProvider(['draft', 'published', 'archived']);
     $providers = ['status' => $listProvider];
 
     $original = RegisteredPrompt::make(
         $schema,
         [PromptHandlerFixture::class, 'generateSimpleGreeting'],
         true,
-        $providers
+        $providers,
     );
 
     $array = $original->toArray();
     expect($array['completionProviders']['status'])->toBeString(); // Serialized instance
 
     $rehydrated = RegisteredPrompt::fromArray($array);
-    expect($rehydrated->completionProviders['status'])->toBeInstanceOf(\PhpMcp\Server\Defaults\ListCompletionProvider::class);
+    expect($rehydrated->completionProviders['status'])->toBeInstanceOf(\Mcp\Server\Defaults\ListCompletionProvider::class);
 });
 
-it('can be serialized with EnumCompletionProvider instances', function () {
+it('can be serialized with EnumCompletionProvider instances', static function (): void {
     $schema = PromptSchema::make(
         'enum-prompt',
         'Test enum completion',
-        [PromptArgument::make('priority')]
+        [PromptArgument::make('priority')],
     );
 
-    $enumProvider = new \PhpMcp\Server\Defaults\EnumCompletionProvider(StatusEnum::class);
+    $enumProvider = new \Mcp\Server\Defaults\EnumCompletionProvider(StatusEnum::class);
     $providers = ['priority' => $enumProvider];
 
     $original = RegisteredPrompt::make(
         $schema,
         [PromptHandlerFixture::class, 'generateSimpleGreeting'],
         true,
-        $providers
+        $providers,
     );
 
     $array = $original->toArray();
     expect($array['completionProviders']['priority'])->toBeString(); // Serialized instance
 
     $rehydrated = RegisteredPrompt::fromArray($array);
-    expect($rehydrated->completionProviders['priority'])->toBeInstanceOf(\PhpMcp\Server\Defaults\EnumCompletionProvider::class);
+    expect($rehydrated->completionProviders['priority'])->toBeInstanceOf(\Mcp\Server\Defaults\EnumCompletionProvider::class);
 });

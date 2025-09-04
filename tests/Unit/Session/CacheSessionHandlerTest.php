@@ -1,13 +1,14 @@
 <?php
 
-namespace PhpMcp\Server\Tests\Unit\Session;
+declare(strict_types=1);
 
-use Mockery;
+namespace Mcp\Server\Tests\Unit\Session;
+
 use Mockery\MockInterface;
-use PhpMcp\Server\Session\CacheSessionHandler;
-use PhpMcp\Server\Contracts\SessionHandlerInterface;
+use Mcp\Server\Session\CacheSessionHandler;
+use Mcp\Server\Contracts\SessionHandlerInterface;
 use Psr\SimpleCache\CacheInterface;
-use PhpMcp\Server\Tests\Mocks\Clock\FixedClock;
+use Mcp\Server\Tests\Mocks\Clock\FixedClock;
 
 const SESSION_ID_CACHE_1 = 'cache-session-id-1';
 const SESSION_ID_CACHE_2 = 'cache-session-id-2';
@@ -18,36 +19,36 @@ const SESSION_DATA_CACHE_3 = '{"id":"cs3","data":"simple string data"}';
 const DEFAULT_TTL_CACHE = 3600;
 const SESSION_INDEX_KEY_CACHE = 'mcp_session_index';
 
-beforeEach(function () {
+beforeEach(function (): void {
     $this->fixedClock = new FixedClock();
     /** @var MockInterface&CacheInterface $cache */
-    $this->cache = Mockery::mock(CacheInterface::class);
+    $this->cache = \Mockery::mock(CacheInterface::class);
 
     $this->cache->shouldReceive('get')->with(SESSION_INDEX_KEY_CACHE, [])->andReturn([])->byDefault();
-    $this->cache->shouldReceive('set')->with(SESSION_INDEX_KEY_CACHE, Mockery::any())->andReturn(true)->byDefault();
+    $this->cache->shouldReceive('set')->with(SESSION_INDEX_KEY_CACHE, \Mockery::any())->andReturn(true)->byDefault();
 
     $this->handler = new CacheSessionHandler($this->cache, DEFAULT_TTL_CACHE, $this->fixedClock);
 });
 
-it('implements SessionHandlerInterface', function () {
+it('implements SessionHandlerInterface', function (): void {
     expect($this->handler)->toBeInstanceOf(SessionHandlerInterface::class);
 });
 
-it('constructs with default TTL and SystemClock if no clock provided', function () {
-    $cacheMock = Mockery::mock(CacheInterface::class);
+it('constructs with default TTL and SystemClock if no clock provided', static function (): void {
+    $cacheMock = \Mockery::mock(CacheInterface::class);
     $cacheMock->shouldReceive('get')->with(SESSION_INDEX_KEY_CACHE, [])->andReturn([])->byDefault();
     $handler = new CacheSessionHandler($cacheMock);
 
     expect($handler->ttl)->toBe(DEFAULT_TTL_CACHE);
     $reflection = new \ReflectionClass($handler);
     $clockProp = $reflection->getProperty('clock');
-    expect($clockProp->getValue($handler))->toBeInstanceOf(\PhpMcp\Server\Defaults\SystemClock::class);
+    expect($clockProp->getValue($handler))->toBeInstanceOf(\Mcp\Server\Defaults\SystemClock::class);
 });
 
-it('constructs with a custom TTL and injected clock', function () {
+it('constructs with a custom TTL and injected clock', static function (): void {
     $customTtl = 7200;
     $clock = new FixedClock();
-    $cacheMock = Mockery::mock(CacheInterface::class);
+    $cacheMock = \Mockery::mock(CacheInterface::class);
     $cacheMock->shouldReceive('get')->with(SESSION_INDEX_KEY_CACHE, [])->andReturn([])->byDefault();
     $handler = new CacheSessionHandler($cacheMock, $customTtl, $clock);
     expect($handler->ttl)->toBe($customTtl);
@@ -57,17 +58,17 @@ it('constructs with a custom TTL and injected clock', function () {
     expect($clockProp->getValue($handler))->toBe($clock);
 });
 
-it('loads session index from cache on construction', function () {
+it('loads session index from cache on construction', function (): void {
     $initialTimestamp = $this->fixedClock->now()->modify('-100 seconds')->getTimestamp();
     $initialIndex = [SESSION_ID_CACHE_1 => $initialTimestamp];
 
-    $cacheMock = Mockery::mock(CacheInterface::class);
+    $cacheMock = \Mockery::mock(CacheInterface::class);
     $cacheMock->shouldReceive('get')->with(SESSION_INDEX_KEY_CACHE, [])->once()->andReturn($initialIndex);
 
     new CacheSessionHandler($cacheMock, DEFAULT_TTL_CACHE, $this->fixedClock);
 });
 
-it('reads session data from cache', function () {
+it('reads session data from cache', function (): void {
     $sessionIndex = [SESSION_ID_CACHE_1 => $this->fixedClock->now()->modify('-100 seconds')->getTimestamp()];
     $this->cache->shouldReceive('get')->with(SESSION_INDEX_KEY_CACHE, [])->once()->andReturn($sessionIndex);
     $this->cache->shouldReceive('get')->with(SESSION_ID_CACHE_1, false)->once()->andReturn(SESSION_DATA_CACHE_1);
@@ -77,13 +78,13 @@ it('reads session data from cache', function () {
     expect($readData)->toBe(SESSION_DATA_CACHE_1);
 });
 
-it('returns false when reading non-existent session (cache get returns default)', function () {
+it('returns false when reading non-existent session (cache get returns default)', function (): void {
     $this->cache->shouldReceive('get')->with('non-existent-id', false)->once()->andReturn(false);
     $readData = $this->handler->read('non-existent-id');
     expect($readData)->toBeFalse();
 });
 
-it('writes session data to cache with correct key and TTL, and updates session index', function () {
+it('writes session data to cache with correct key and TTL, and updates session index', function (): void {
     $expectedTimestamp = $this->fixedClock->now()->getTimestamp(); // 15:00:00
 
     $this->cache->shouldReceive('set')
@@ -97,7 +98,7 @@ it('writes session data to cache with correct key and TTL, and updates session i
     expect($writeResult)->toBeTrue();
 });
 
-it('updates timestamp in session index for existing session on write', function () {
+it('updates timestamp in session index for existing session on write', function (): void {
     $initialWriteTime = $this->fixedClock->now()->modify('-60 seconds')->getTimestamp(); // 14:59:00
     $this->cache->shouldReceive('get')->with(SESSION_INDEX_KEY_CACHE, [])->andReturn([SESSION_ID_CACHE_1 => $initialWriteTime]);
     $handler = new CacheSessionHandler($this->cache, DEFAULT_TTL_CACHE, $this->fixedClock);
@@ -115,8 +116,8 @@ it('updates timestamp in session index for existing session on write', function 
     $handler->write(SESSION_ID_CACHE_1, SESSION_DATA_CACHE_1);
 });
 
-it('returns false if cache set for session data fails', function () {
-    $this->cache->shouldReceive('set')->with(SESSION_INDEX_KEY_CACHE, Mockery::any())->andReturn(true);
+it('returns false if cache set for session data fails', function (): void {
+    $this->cache->shouldReceive('set')->with(SESSION_INDEX_KEY_CACHE, \Mockery::any())->andReturn(true);
     $this->cache->shouldReceive('set')->with(SESSION_ID_CACHE_1, SESSION_DATA_CACHE_1)
         ->once()->andReturn(false);
 
@@ -124,7 +125,7 @@ it('returns false if cache set for session data fails', function () {
     expect($writeResult)->toBeFalse();
 });
 
-it('destroys session by removing from cache and updating index', function () {
+it('destroys session by removing from cache and updating index', function (): void {
     $initialTimestamp = $this->fixedClock->now()->getTimestamp();
     $initialIndex = [SESSION_ID_CACHE_1 => $initialTimestamp, SESSION_ID_CACHE_2 => $initialTimestamp];
     $this->cache->shouldReceive('get')->with(SESSION_INDEX_KEY_CACHE, [])->andReturn($initialIndex);
@@ -138,7 +139,7 @@ it('destroys session by removing from cache and updating index', function () {
     $handler->destroy(SESSION_ID_CACHE_1);
 });
 
-it('destroy returns true if session ID not in index (cache delete still called)', function () {
+it('destroy returns true if session ID not in index (cache delete still called)', function (): void {
     $this->cache->shouldReceive('get')->with(SESSION_INDEX_KEY_CACHE, [])->andReturn([]); // Empty index
     $handler = new CacheSessionHandler($this->cache, DEFAULT_TTL_CACHE);
 
@@ -149,18 +150,18 @@ it('destroy returns true if session ID not in index (cache delete still called)'
     expect($destroyResult)->toBeTrue();
 });
 
-it('destroy returns false if cache delete for session data fails', function () {
-    $this->cache->shouldReceive('get')->with(SESSION_INDEX_KEY_CACHE, [])->andReturn([SESSION_ID_CACHE_1 => time()]);
+it('destroy returns false if cache delete for session data fails', function (): void {
+    $this->cache->shouldReceive('get')->with(SESSION_INDEX_KEY_CACHE, [])->andReturn([SESSION_ID_CACHE_1 => \time()]);
     $handler = new CacheSessionHandler($this->cache, DEFAULT_TTL_CACHE);
 
-    $this->cache->shouldReceive('set')->with(SESSION_INDEX_KEY_CACHE, Mockery::any())->andReturn(true); // Index update
+    $this->cache->shouldReceive('set')->with(SESSION_INDEX_KEY_CACHE, \Mockery::any())->andReturn(true); // Index update
     $this->cache->shouldReceive('delete')->with(SESSION_ID_CACHE_1)->once()->andReturn(false); // Data delete fails
 
     $destroyResult = $handler->destroy(SESSION_ID_CACHE_1);
     expect($destroyResult)->toBeFalse();
 });
 
-it('garbage collects only sessions older than maxLifetime from cache and index', function () {
+it('garbage collects only sessions older than maxLifetime from cache and index', function (): void {
     $maxLifetime = 120;
 
     $initialIndex = [
@@ -185,7 +186,7 @@ it('garbage collects only sessions older than maxLifetime from cache and index',
         ->and($deletedSessionIds)->toContain(SESSION_ID_CACHE_3);
 });
 
-it('garbage collection respects maxLifetime precisely for cache handler', function () {
+it('garbage collection respects maxLifetime precisely for cache handler', function (): void {
     $maxLifetime = 60;
 
     $sessionTimestamp = $this->fixedClock->now()->modify("-{$maxLifetime} seconds")->getTimestamp();
@@ -209,7 +210,7 @@ it('garbage collection respects maxLifetime precisely for cache handler', functi
 });
 
 
-it('garbage collection handles an empty session index', function () {
+it('garbage collection handles an empty session index', function (): void {
     $this->cache->shouldReceive('get')->with(SESSION_INDEX_KEY_CACHE, [])->andReturn([]);
     $handler = new CacheSessionHandler($this->cache, DEFAULT_TTL_CACHE);
 
@@ -220,7 +221,7 @@ it('garbage collection handles an empty session index', function () {
     expect($deletedSessions)->toBeArray()->toBeEmpty();
 });
 
-it('garbage collection continues updating index even if a cache delete fails', function () {
+it('garbage collection continues updating index even if a cache delete fails', function (): void {
     $maxLifetime = 60;
 
     $initialIndex = [

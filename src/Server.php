@@ -2,14 +2,12 @@
 
 declare(strict_types=1);
 
-namespace PhpMcp\Server;
+namespace Mcp\Server;
 
-use LogicException;
-use PhpMcp\Server\Contracts\LoggerAwareInterface;
-use PhpMcp\Server\Contracts\LoopAwareInterface;
-use PhpMcp\Server\Contracts\ServerTransportInterface;
-use PhpMcp\Server\Session\SessionManager;
-use Throwable;
+use Mcp\Server\Contracts\LoggerAwareInterface;
+use Mcp\Server\Contracts\LoopAwareInterface;
+use Mcp\Server\Contracts\ServerTransportInterface;
+use Mcp\Server\Session\SessionManager;
 
 /**
  * Core MCP Server instance.
@@ -23,7 +21,6 @@ use Throwable;
 class Server
 {
     protected bool $discoveryRan = false;
-
     protected bool $isListening = false;
 
     /**
@@ -38,8 +35,7 @@ class Server
         protected readonly Registry $registry,
         protected readonly Protocol $protocol,
         protected readonly SessionManager $sessionManager,
-    ) {
-    }
+    ) {}
 
     public static function make(): ServerBuilder
     {
@@ -55,13 +51,13 @@ class Server
      *
      * @param ServerTransportInterface $transport The transport to listen with.
      *
-     * @throws LogicException If called after already listening.
-     * @throws Throwable If transport->listen() fails immediately.
+     * @throws \LogicException If called after already listening.
+     * @throws \Throwable If transport->listen() fails immediately.
      */
     public function listen(ServerTransportInterface $transport, bool $runLoop = true): void
     {
         if ($this->isListening) {
-            throw new LogicException('Server is already listening via a transport.');
+            throw new \LogicException('Server is already listening via a transport.');
         }
 
         $this->warnIfNoElements();
@@ -75,7 +71,7 @@ class Server
 
         $protocol = $this->getProtocol();
 
-        $closeHandlerCallback = function (?string $reason = null) use ($protocol) {
+        $closeHandlerCallback = function (?string $reason = null) use ($protocol): void {
             $this->isListening = false;
             $this->configuration->logger->info('Transport closed.', ['reason' => $reason ?? 'N/A']);
             $protocol->unbindTransport();
@@ -98,7 +94,7 @@ class Server
 
                 $this->endListen($transport);
             }
-        } catch (Throwable $e) {
+        } catch (\Throwable $e) {
             $this->configuration->logger->critical(
                 'Failed to start listening or event loop crashed.',
                 ['exception' => $e->getMessage()],
@@ -121,23 +117,6 @@ class Server
 
         $this->isListening = false;
         $this->configuration->logger->info("Server '{$this->configuration->serverInfo->name}' listener shut down.");
-    }
-
-    /**
-     * Warns if no MCP elements are registered and discovery has not been run.
-     */
-    protected function warnIfNoElements(): void
-    {
-        if (!$this->registry->hasElements() && !$this->discoveryRan) {
-            $this->configuration->logger->warning(
-                'Starting listener, but no MCP elements are registered and discovery has not been run. ' .
-                'Call $server->discover(...) at least once to find and cache elements before listen().',
-            );
-        } elseif (!$this->registry->hasElements() && $this->discoveryRan) {
-            $this->configuration->logger->warning(
-                'Starting listener, but no MCP elements were found after discovery/cache load.',
-            );
-        }
     }
 
     /**
@@ -167,5 +146,22 @@ class Server
     public function getSessionManager(): SessionManager
     {
         return $this->sessionManager;
+    }
+
+    /**
+     * Warns if no MCP elements are registered and discovery has not been run.
+     */
+    protected function warnIfNoElements(): void
+    {
+        if (!$this->registry->hasElements() && !$this->discoveryRan) {
+            $this->configuration->logger->warning(
+                'Starting listener, but no MCP elements are registered and discovery has not been run. ' .
+                'Call $server->discover(...) at least once to find and cache elements before listen().',
+            );
+        } elseif (!$this->registry->hasElements() && $this->discoveryRan) {
+            $this->configuration->logger->warning(
+                'Starting listener, but no MCP elements were found after discovery/cache load.',
+            );
+        }
     }
 }

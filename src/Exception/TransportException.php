@@ -2,8 +2,9 @@
 
 declare(strict_types=1);
 
-namespace PhpMcp\Server\Exception;
+namespace Mcp\Server\Exception;
 
+use PhpMcp\Schema\Constants;
 use PhpMcp\Schema\JsonRpc\Error as JsonRpcError;
 
 /**
@@ -17,9 +18,9 @@ class TransportException extends McpServerException
         return new JsonRpcError(
             jsonrpc: '2.0',
             id: $id,
-            code: JsonRpcError::CODE_INTERNAL_ERROR,
+            code: Constants::INTERNAL_ERROR,
             message: 'Transport layer error: ' . $this->getMessage(),
-            data: null
+            data: null,
         );
     }
 }

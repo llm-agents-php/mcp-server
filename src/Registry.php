@@ -2,18 +2,20 @@
 
 declare(strict_types=1);
 
-namespace PhpMcp\Server;
+namespace Mcp\Server;
 
 use Evenement\EventEmitterInterface;
 use Evenement\EventEmitterTrait;
+use Mcp\Server\Contracts\HandlerInterface;
+use Mcp\Server\Defaults\CallableHandler;
 use PhpMcp\Schema\Prompt;
 use PhpMcp\Schema\Resource;
 use PhpMcp\Schema\ResourceTemplate;
 use PhpMcp\Schema\Tool;
-use PhpMcp\Server\Elements\RegisteredPrompt;
-use PhpMcp\Server\Elements\RegisteredResource;
-use PhpMcp\Server\Elements\RegisteredResourceTemplate;
-use PhpMcp\Server\Elements\RegisteredTool;
+use Mcp\Server\Elements\RegisteredPrompt;
+use Mcp\Server\Elements\RegisteredResource;
+use Mcp\Server\Elements\RegisteredResourceTemplate;
+use Mcp\Server\Elements\RegisteredTool;
 use Psr\Log\LoggerInterface;
 
 class Registry implements EventEmitterInterface
@@ -36,11 +38,13 @@ class Registry implements EventEmitterInterface
 
     public function __construct(
         protected LoggerInterface $logger,
-    ) {
-    }
+    ) {}
 
-    public function registerTool(Tool $tool, callable|array|string $handler, bool $isManual = false): void
-    {
+    public function registerTool(
+        Tool $tool,
+        HandlerInterface|callable|array|string $handler,
+        bool $isManual = false,
+    ): void {
         $toolName = $tool->name;
         $existing = $this->tools[$toolName] ?? null;
 
@@ -52,11 +56,18 @@ class Registry implements EventEmitterInterface
             return;
         }
 
-        $this->tools[$toolName] = RegisteredTool::make($tool, $handler, $isManual);
+        if (!$handler instanceof HandlerInterface) {
+            $handler = new CallableHandler($handler);
+        }
+
+        $this->tools[$toolName] = new RegisteredTool($tool, $handler, $isManual);
     }
 
-    public function registerResource(Resource $resource, callable|array|string $handler, bool $isManual = false): void
-    {
+    public function registerResource(
+        Resource $resource,
+        HandlerInterface|callable|array|string $handler,
+        bool $isManual = false,
+    ): void {
         $uri = $resource->uri;
         $existing = $this->resources[$uri] ?? null;
 
@@ -68,12 +79,16 @@ class Registry implements EventEmitterInterface
             return;
         }
 
-        $this->resources[$uri] = RegisteredResource::make($resource, $handler, $isManual);
+        if (!$handler instanceof HandlerInterface) {
+            $handler = new CallableHandler($handler);
+        }
+
+        $this->resources[$uri] = new RegisteredResource($resource, $handler, $isManual);
     }
 
     public function registerResourceTemplate(
         ResourceTemplate $template,
-        callable|array|string $handler,
+        HandlerInterface|callable|array|string $handler,
         array $completionProviders = [],
         bool $isManual = false,
     ): void {
@@ -88,7 +103,11 @@ class Registry implements EventEmitterInterface
             return;
         }
 
-        $this->resourceTemplates[$uriTemplate] = RegisteredResourceTemplate::make(
+        if (!$handler instanceof HandlerInterface) {
+            $handler = new CallableHandler($handler);
+        }
+
+        $this->resourceTemplates[$uriTemplate] = new RegisteredResourceTemplate(
             $template,
             $handler,
             $isManual,
@@ -98,7 +117,7 @@ class Registry implements EventEmitterInterface
 
     public function registerPrompt(
         Prompt $prompt,
-        callable|array|string $handler,
+        HandlerInterface|callable|array|string $handler,
         array $completionProviders = [],
         bool $isManual = false,
     ): void {
@@ -113,7 +132,11 @@ class Registry implements EventEmitterInterface
             return;
         }
 
-        $this->prompts[$promptName] = RegisteredPrompt::make($prompt, $handler, $isManual, $completionProviders);
+        if (!$handler instanceof HandlerInterface) {
+            $handler = new CallableHandler($handler);
+        }
+
+        $this->prompts[$promptName] = new RegisteredPrompt($prompt, $handler, $isManual, $completionProviders);
     }
 
     public function enableNotifications(): void
@@ -126,7 +149,9 @@ class Registry implements EventEmitterInterface
         $this->notificationsEnabled = false;
     }
 
-    /** Checks if any elements (manual or discovered) are currently registered. */
+    /**
+     * Checks if any elements (manual or discovered) are currently registered.
+     */
     public function hasElements(): bool
     {
         return !empty($this->tools)
@@ -135,13 +160,11 @@ class Registry implements EventEmitterInterface
             || !empty($this->resourceTemplates);
     }
 
-    /** @return RegisteredTool|null */
     public function getTool(string $name): ?RegisteredTool
     {
         return $this->tools[$name] ?? null;
     }
 
-    /** @return RegisteredResource|RegisteredResourceTemplate|null */
     public function getResource(
         string $uri,
         bool $includeTemplates = true,
@@ -166,39 +189,45 @@ class Registry implements EventEmitterInterface
         return null;
     }
 
-    /** @return RegisteredResourceTemplate|null */
     public function getResourceTemplate(string $uriTemplate): ?RegisteredResourceTemplate
     {
         return $this->resourceTemplates[$uriTemplate] ?? null;
     }
 
-    /** @return RegisteredPrompt|null */
     public function getPrompt(string $name): ?RegisteredPrompt
     {
         return $this->prompts[$name] ?? null;
     }
 
-    /** @return array<string, Tool> */
+    /**
+     * @return array<string, Tool>
+     */
     public function getTools(): array
     {
-        return array_map(fn ($tool) => $tool->schema, $this->tools);
+        return \array_map(static fn($tool) => $tool->schema, $this->tools);
     }
 
-    /** @return array<string, Resource> */
+    /**
+     * @return array<string, Resource>
+     */
     public function getResources(): array
     {
-        return array_map(fn ($resource) => $resource->schema, $this->resources);
+        return \array_map(static fn($resource) => $resource->schema, $this->resources);
     }
 
-    /** @return array<string, Prompt> */
+    /**
+     * @return array<string, Prompt>
+     */
     public function getPrompts(): array
     {
-        return array_map(fn ($prompt) => $prompt->schema, $this->prompts);
+        return \array_map(static fn($prompt) => $prompt->schema, $this->prompts);
     }
 
-    /** @return array<string, ResourceTemplate> */
+    /**
+     * @return array<string, ResourceTemplate>
+     */
     public function getResourceTemplates(): array
     {
-        return array_map(fn ($template) => $template->schema, $this->resourceTemplates);
+        return \array_map(static fn($template) => $template->schema, $this->resourceTemplates);
     }
 }

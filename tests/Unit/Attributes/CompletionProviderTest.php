@@ -2,15 +2,13 @@
 
 declare(strict_types=1);
 
-namespace PhpMcp\Server\Tests\Unit\Attributes;
+namespace Mcp\Server\Tests\Unit\Attributes;
 
-use PhpMcp\Server\Attributes\CompletionProvider;
-use PhpMcp\Server\Tests\Fixtures\General\CompletionProviderFixture;
-use PhpMcp\Server\Defaults\ListCompletionProvider;
-use PhpMcp\Server\Defaults\EnumCompletionProvider;
-use PhpMcp\Server\Tests\Fixtures\Enums\StatusEnum;
+use Mcp\Server\Attributes\CompletionProvider;
+use Mcp\Server\Tests\Fixtures\General\CompletionProviderFixture;
+use Mcp\Server\Tests\Fixtures\Enums\StatusEnum;
 
-it('can be constructed with provider class', function () {
+it('can be constructed with provider class', static function (): void {
     $attribute = new CompletionProvider(provider: CompletionProviderFixture::class);
 
     expect($attribute->provider)->toBe(CompletionProviderFixture::class);
@@ -18,7 +16,7 @@ it('can be constructed with provider class', function () {
     expect($attribute->enum)->toBeNull();
 });
 
-it('can be constructed with provider instance', function () {
+it('can be constructed with provider instance', static function (): void {
     $instance = new CompletionProviderFixture();
     $attribute = new CompletionProvider(provider: $instance);
 
@@ -27,7 +25,7 @@ it('can be constructed with provider instance', function () {
     expect($attribute->enum)->toBeNull();
 });
 
-it('can be constructed with values array', function () {
+it('can be constructed with values array', static function (): void {
     $values = ['draft', 'published', 'archived'];
     $attribute = new CompletionProvider(values: $values);
 
@@ -36,7 +34,7 @@ it('can be constructed with values array', function () {
     expect($attribute->enum)->toBeNull();
 });
 
-it('can be constructed with enum class', function () {
+it('can be constructed with enum class', static function (): void {
     $attribute = new CompletionProvider(enum: StatusEnum::class);
 
     expect($attribute->provider)->toBeNull();
@@ -44,21 +42,21 @@ it('can be constructed with enum class', function () {
     expect($attribute->enum)->toBe(StatusEnum::class);
 });
 
-it('throws exception when no parameters provided', function () {
+it('throws exception when no parameters provided', static function (): void {
     new CompletionProvider();
 })->throws(\InvalidArgumentException::class, 'Only one of provider, values, or enum can be set');
 
-it('throws exception when multiple parameters provided', function () {
-    new CompletionProvider(
-        provider: CompletionProviderFixture::class,
-        values: ['test']
-    );
-})->throws(\InvalidArgumentException::class, 'Only one of provider, values, or enum can be set');
-
-it('throws exception when all parameters provided', function () {
+it('throws exception when multiple parameters provided', static function (): void {
     new CompletionProvider(
         provider: CompletionProviderFixture::class,
         values: ['test'],
-        enum: StatusEnum::class
+    );
+})->throws(\InvalidArgumentException::class, 'Only one of provider, values, or enum can be set');
+
+it('throws exception when all parameters provided', static function (): void {
+    new CompletionProvider(
+        provider: CompletionProviderFixture::class,
+        values: ['test'],
+        enum: StatusEnum::class,
     );
 })->throws(\InvalidArgumentException::class, 'Only one of provider, values, or enum can be set');

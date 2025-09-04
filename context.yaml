@@ -13,7 +13,6 @@ documents:
     outputPath: docs/recent-changes.md
     sources:
       - type: git_diff
-        description: Recent Git Changes
         commit: unstaged
         filePattern: "*.php"
         notPath:
@@ -24,7 +23,6 @@ documents:
     outputPath: source-codes.md
     sources:
       - type: file
-        description: Recent Git Changes
         sourcePaths:
           - src
         notPath:
@@ -39,10 +37,18 @@ documents:
     outputPath: src/dispatcher.md
     sources:
       - type: file
-        description: Recent Git Changes
         sourcePaths:
           - src/Dispatcher.php
           - src/DispatcherRouter.php
           - src/Routes
           - src/Contracts/RouteInterface.php
+
+  - description: Resources
+    outputPath: src/resources.md
+    sources:
+      - type: file
+        sourcePaths:
+          - src/Elements
+
+
 

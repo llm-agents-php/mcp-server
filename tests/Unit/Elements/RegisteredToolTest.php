@@ -1,58 +1,56 @@
 <?php
 
-namespace PhpMcp\Server\Tests\Unit\Elements;
+declare(strict_types=1);
 
-use InvalidArgumentException;
-use Mockery;
+namespace Mcp\Server\Tests\Unit\Elements;
+
 use Mockery\Adapter\Phpunit\MockeryPHPUnitIntegration;
 use PhpMcp\Schema\Tool;
-use PhpMcp\Server\Context;
-use PhpMcp\Server\Contracts\SessionInterface;
-use PhpMcp\Server\Elements\RegisteredTool;
+use Mcp\Server\Context;
+use Mcp\Server\Contracts\SessionInterface;
+use Mcp\Server\Elements\RegisteredTool;
 use PhpMcp\Schema\Content\TextContent;
 use PhpMcp\Schema\Content\ImageContent;
-use PhpMcp\Server\Tests\Fixtures\General\ToolHandlerFixture;
+use Mcp\Server\Tests\Fixtures\General\ToolHandlerFixture;
 use Psr\Container\ContainerInterface;
-use JsonException;
-use PhpMcp\Server\Exception\McpServerException;
 
 uses(MockeryPHPUnitIntegration::class);
 
-beforeEach(function () {
-    $this->container = Mockery::mock(ContainerInterface::class);
+beforeEach(function (): void {
+    $this->container = \Mockery::mock(ContainerInterface::class);
     $this->handlerInstance = new ToolHandlerFixture();
     $this->container->shouldReceive('get')->with(ToolHandlerFixture::class)
         ->andReturn($this->handlerInstance)->byDefault();
 
     $this->toolSchema = Tool::make(
         name: 'test-tool',
-        inputSchema: ['type' => 'object', 'properties' => ['name' => ['type' => 'string']]]
+        inputSchema: ['type' => 'object', 'properties' => ['name' => ['type' => 'string']]],
     );
 
     $this->registeredTool = RegisteredTool::make(
         $this->toolSchema,
-        [ToolHandlerFixture::class, 'greet']
+        [ToolHandlerFixture::class, 'greet'],
     );
-    $this->context = new Context(Mockery::mock(SessionInterface::class));
+    $this->context = new Context(\Mockery::mock(SessionInterface::class));
 });
 
-it('constructs correctly and exposes schema', function () {
+it('constructs correctly and exposes schema', function (): void {
     expect($this->registeredTool->schema)->toBe($this->toolSchema);
     expect($this->registeredTool->handler)->toBe([ToolHandlerFixture::class, 'greet']);
     expect($this->registeredTool->isManual)->toBeFalse();
 });
 
-it('can be made as a manual registration', function () {
+it('can be made as a manual registration', function (): void {
     $manualTool = RegisteredTool::make($this->toolSchema, [ToolHandlerFixture::class, 'greet'], true);
     expect($manualTool->isManual)->toBeTrue();
 });
 
-it('calls the handler with prepared arguments', function () {
+it('calls the handler with prepared arguments', function (): void {
     $tool = RegisteredTool::make(
         Tool::make('sum-tool', ['type' => 'object', 'properties' => ['a' => ['type' => 'integer'], 'b' => ['type' => 'integer']]]),
-        [ToolHandlerFixture::class, 'sum']
+        [ToolHandlerFixture::class, 'sum'],
     );
-    $mockHandler = Mockery::mock(ToolHandlerFixture::class);
+    $mockHandler = \Mockery::mock(ToolHandlerFixture::class);
     $mockHandler->shouldReceive('sum')->with(5, 10)->once()->andReturn(15);
     $this->container->shouldReceive('get')->with(ToolHandlerFixture::class)->andReturn($mockHandler);
 
@@ -62,17 +60,17 @@ it('calls the handler with prepared arguments', function () {
     expect($resultContents[0])->toBeInstanceOf(TextContent::class)->text->toBe('15');
 });
 
-it('calls handler with no arguments if tool takes none and none provided', function () {
+it('calls handler with no arguments if tool takes none and none provided', function (): void {
     $tool = RegisteredTool::make(
         Tool::make('no-args-tool', ['type' => 'object', 'properties' => []]),
-        [ToolHandlerFixture::class, 'noParamsTool']
+        [ToolHandlerFixture::class, 'noParamsTool'],
     );
-    $mockHandler = Mockery::mock(ToolHandlerFixture::class);
+    $mockHandler = \Mockery::mock(ToolHandlerFixture::class);
     $mockHandler->shouldReceive('noParamsTool')->withNoArgs()->once()->andReturn(['status' => 'done']);
     $this->container->shouldReceive('get')->with(ToolHandlerFixture::class)->andReturn($mockHandler);
 
     $resultContents = $tool->call($this->container, [], $this->context);
-    expect($resultContents[0])->toBeInstanceOf(TextContent::class)->text->toBe(json_encode(['status' => 'done'], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE));
+    expect($resultContents[0])->toBeInstanceOf(TextContent::class)->text->toBe(\json_encode(['status' => 'done'], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE));
 });
 
 
@@ -83,14 +81,14 @@ dataset('tool_handler_return_values', [
     'boolean_true'  => ['returnBooleanTrue', "true"],
     'boolean_false' => ['returnBooleanFalse', "false"],
     'null'          => ['returnNull', "(null)"],
-    'array_to_json' => ['returnArray', json_encode(['message' => 'Array result', 'data' => [1, 2, 3]], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE)],
-    'object_to_json' => ['returnStdClass', json_encode((object)['property' => "value"], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE)],
+    'array_to_json' => ['returnArray', \json_encode(['message' => 'Array result', 'data' => [1, 2, 3]], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE)],
+    'object_to_json' => ['returnStdClass', \json_encode((object) ['property' => "value"], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE)],
 ]);
 
-it('formats various scalar and simple object/array handler results into TextContent', function (string $handlerMethod, string $expectedText) {
+it('formats various scalar and simple object/array handler results into TextContent', function (string $handlerMethod, string $expectedText): void {
     $tool = RegisteredTool::make(
         Tool::make('format-test-tool', ['type' => 'object', 'properties' => []]),
-        [ToolHandlerFixture::class, $handlerMethod]
+        [ToolHandlerFixture::class, $handlerMethod],
     );
 
     $resultContents = $tool->call($this->container, [], $this->context);
@@ -99,10 +97,10 @@ it('formats various scalar and simple object/array handler results into TextCont
     expect($resultContents[0])->toBeInstanceOf(TextContent::class)->text->toBe($expectedText);
 })->with('tool_handler_return_values');
 
-it('returns single Content object from handler as array with one Content object', function () {
+it('returns single Content object from handler as array with one Content object', function (): void {
     $tool = RegisteredTool::make(
         Tool::make('content-test-tool', ['type' => 'object', 'properties' => []]),
-        [ToolHandlerFixture::class, 'returnTextContent']
+        [ToolHandlerFixture::class, 'returnTextContent'],
     );
     $resultContents = $tool->call($this->container, [], $this->context);
 
@@ -110,10 +108,10 @@ it('returns single Content object from handler as array with one Content object'
     expect($resultContents[0])->toBeInstanceOf(TextContent::class)->text->toBe("Pre-formatted TextContent.");
 });
 
-it('returns array of Content objects from handler as is', function () {
+it('returns array of Content objects from handler as is', function (): void {
     $tool = RegisteredTool::make(
         Tool::make('content-array-tool', ['type' => 'object', 'properties' => []]),
-        [ToolHandlerFixture::class, 'returnArrayOfContent']
+        [ToolHandlerFixture::class, 'returnArrayOfContent'],
     );
     $resultContents = $tool->call($this->container, [], $this->context);
 
@@ -122,10 +120,10 @@ it('returns array of Content objects from handler as is', function () {
     expect($resultContents[1])->toBeInstanceOf(ImageContent::class)->data->toBe("imgdata");
 });
 
-it('formats mixed array from handler into array of Content objects', function () {
+it('formats mixed array from handler into array of Content objects', function (): void {
     $tool = RegisteredTool::make(
         Tool::make('mixed-array-tool', ['type' => 'object', 'properties' => []]),
-        [ToolHandlerFixture::class, 'returnMixedArray']
+        [ToolHandlerFixture::class, 'returnMixedArray'],
     );
     $resultContents = $tool->call($this->container, [], $this->context);
 
@@ -136,15 +134,15 @@ it('formats mixed array from handler into array of Content objects', function ()
     expect($resultContents[2])->toBeInstanceOf(TextContent::class)->text->toBe("123");
     expect($resultContents[3])->toBeInstanceOf(TextContent::class)->text->toBe("true");
     expect($resultContents[4])->toBeInstanceOf(TextContent::class)->text->toBe("(null)");
-    expect($resultContents[5])->toBeInstanceOf(TextContent::class)->text->toBe(json_encode(['nested_key' => 'nested_value', 'sub_array' => [4, 5]], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE));
+    expect($resultContents[5])->toBeInstanceOf(TextContent::class)->text->toBe(\json_encode(['nested_key' => 'nested_value', 'sub_array' => [4, 5]], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE));
     expect($resultContents[6])->toBeInstanceOf(ImageContent::class)->data->toBe("img_data_mixed"); // Original ImageContent is preserved
-    expect($resultContents[7])->toBeInstanceOf(TextContent::class)->text->toBe(json_encode((object)['obj_prop' => 'obj_val'], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE));
+    expect($resultContents[7])->toBeInstanceOf(TextContent::class)->text->toBe(\json_encode((object) ['obj_prop' => 'obj_val'], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE));
 });
 
-it('formats empty array from handler into TextContent with "[]"', function () {
+it('formats empty array from handler into TextContent with "[]"', function (): void {
     $tool = RegisteredTool::make(
         Tool::make('empty-array-tool', ['type' => 'object', 'properties' => []]),
-        [ToolHandlerFixture::class, 'returnEmptyArray']
+        [ToolHandlerFixture::class, 'returnEmptyArray'],
     );
     $resultContents = $tool->call($this->container, [], $this->context);
 
@@ -152,21 +150,21 @@ it('formats empty array from handler into TextContent with "[]"', function () {
     expect($resultContents[0])->toBeInstanceOf(TextContent::class)->text->toBe('[]');
 });
 
-it('throws JsonException during formatResult if handler returns unencodable value', function () {
+it('throws JsonException during formatResult if handler returns unencodable value', function (): void {
     $tool = RegisteredTool::make(
         Tool::make('unencodable-tool', ['type' => 'object', 'properties' => []]),
-        [ToolHandlerFixture::class, 'toolUnencodableResult']
+        [ToolHandlerFixture::class, 'toolUnencodableResult'],
     );
     $tool->call($this->container, [], $this->context);
-})->throws(JsonException::class);
+})->throws(\JsonException::class);
 
-it('re-throws exceptions from handler execution wrapped in McpServerException from handle()', function () {
+it('re-throws exceptions from handler execution wrapped in McpServerException from handle()', function (): void {
     $tool = RegisteredTool::make(
         Tool::make('exception-tool', ['type' => 'object', 'properties' => []]),
-        [ToolHandlerFixture::class, 'toolThatThrows']
+        [ToolHandlerFixture::class, 'toolThatThrows'],
     );
 
     $this->container->shouldReceive('get')->with(ToolHandlerFixture::class)->once()->andReturn(new ToolHandlerFixture());
 
     $tool->call($this->container, [], $this->context);
-})->throws(InvalidArgumentException::class, "Something went wrong in the tool.");
+})->throws(\InvalidArgumentException::class, "Something went wrong in the tool.");

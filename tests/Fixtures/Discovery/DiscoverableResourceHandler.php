@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace PhpMcp\Server\Tests\Fixtures\Discovery;
+namespace Mcp\Server\Tests\Fixtures\Discovery;
 
 use PhpMcp\Schema\Annotations;
-use PhpMcp\Server\Attributes\McpResource;
+use Mcp\Server\Attributes\McpResource;
 
 class DiscoverableResourceHandler
 {
@@ -18,7 +18,7 @@ class DiscoverableResourceHandler
         name: "app_version",
         description: "The current version of the application.",
         mimeType: "text/plain",
-        size: 10
+        size: 10,
     )]
     public function getAppVersion(): string
     {
@@ -29,14 +29,12 @@ class DiscoverableResourceHandler
         uri: "config://settings/ui",
         name: "ui_settings_discovered",
         mimeType: "application/json",
-        annotations: new Annotations(priority: 0.5)
+        annotations: new Annotations(priority: 0.5),
     )]
     public function getUiSettings(): array
     {
         return ["theme" => "dark", "fontSize" => 14];
     }
 
-    public function someOtherMethod(): void
-    {
-    }
+    public function someOtherMethod(): void {}
 }

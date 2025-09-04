@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace PhpMcp\Server\Session;
+namespace Mcp\Server\Session;
 
-use PhpMcp\Server\Contracts\SessionHandlerInterface;
-use PhpMcp\Server\Defaults\SystemClock;
+use Mcp\Server\Contracts\SessionHandlerInterface;
+use Mcp\Server\Defaults\SystemClock;
 use Psr\Clock\ClockInterface;
 
 final class ArraySessionHandler implements SessionHandlerInterface
@@ -18,8 +18,7 @@ final class ArraySessionHandler implements SessionHandlerInterface
     public function __construct(
         public readonly int $ttl = 3600,
         private readonly ClockInterface $clock = new SystemClock(),
-    ) {
-    }
+    ) {}
 
     public function read(string $id): string|false
     {

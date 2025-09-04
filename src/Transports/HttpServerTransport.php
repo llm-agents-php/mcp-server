@@ -2,163 +2,112 @@
 
 declare(strict_types=1);
 
-namespace PhpMcp\Server\Transports;
+namespace Mcp\Server\Transports;
 
-use Evenement\EventEmitterTrait;
-use PhpMcp\Server\Contracts\LoggerAwareInterface;
-use PhpMcp\Server\Contracts\LoopAwareInterface;
-use PhpMcp\Server\Contracts\ServerTransportInterface;
-use PhpMcp\Server\Exception\TransportException;
+use Evenement\EventEmitter;
+use Evenement\EventEmitterInterface;
+use Mcp\Server\Contracts\HttpServerInterface;
+use Mcp\Server\Contracts\ServerTransportInterface;
+use Mcp\Server\Exception\TransportException;
 use PhpMcp\Schema\JsonRpc\Message;
 use PhpMcp\Schema\JsonRpc\Error;
 use PhpMcp\Schema\JsonRpc\Parser;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
-use React\EventLoop\Loop;
-use React\EventLoop\LoopInterface;
-use React\Http\HttpServer;
+use Random\RandomException;
 use React\Http\Message\Response;
 use React\Promise\Deferred;
 use React\Promise\PromiseInterface;
-use React\Socket\SocketServer;
 use React\Stream\ThroughStream;
 use React\Stream\WritableStreamInterface;
-use Throwable;
 
 use function React\Promise\resolve;
 use function React\Promise\reject;
 
-/**
- * Implementation of the HTTP+SSE server transport using ReactPHP components.
- *
- * Listens for HTTP connections, manages SSE streams, and emits events.
- */
-class HttpServerTransport implements ServerTransportInterface, LoggerAwareInterface, LoopAwareInterface
+final class HttpServerTransport extends EventEmitter implements ServerTransportInterface
 {
-    use EventEmitterTrait;
-
-    protected LoggerInterface $logger;
-
-    protected LoopInterface $loop;
-
-    protected ?SocketServer $socket = null;
-
-    protected ?HttpServer $http = null;
+    private string $ssePath;
+    private string $messagePath;
 
     /** @var array<string, ThroughStream> sessionId => SSE Stream */
     private array $activeSseStreams = [];
 
-    protected bool $listening = false;
-
-    protected bool $closing = false;
-
-    protected string $ssePath;
-
-    protected string $messagePath;
-
-    /**
-     * @param string $host Host to bind to (e.g., '127.0.0.1', '0.0.0.0').
-     * @param int $port Port to listen on (e.g., 8080).
-     * @param string $mcpPathPrefix URL prefix for MCP endpoints (e.g., 'mcp').
-     * @param array|null $sslContext Optional SSL context options for React SocketServer (for HTTPS).
-     * @param array<callable(\Psr\Http\Message\ServerRequestInterface, callable): (\Psr\Http\Message\ResponseInterface|\React\Promise\PromiseInterface)> $middlewares Middlewares to be applied to the HTTP server.
-     */
     public function __construct(
-        private readonly string $host = '127.0.0.1',
-        private readonly int $port = 8080,
-        private readonly string $mcpPathPrefix = 'mcp',
-        private readonly ?array $sslContext = null,
-        private readonly array $middlewares = [],
+        private readonly HttpServerInterface $httpServer,
+        private readonly LoggerInterface $logger = new NullLogger(),
     ) {
-        $this->logger = new NullLogger();
-        $this->loop = Loop::get();
-        $this->ssePath = '/' . trim($mcpPathPrefix, '/') . '/sse';
-        $this->messagePath = '/' . trim($mcpPathPrefix, '/') . '/message';
-
-        foreach ($this->middlewares as $mw) {
-            if (!is_callable($mw)) {
-                throw new \InvalidArgumentException('All provided middlewares must be callable.');
-            }
-        }
+        $this->ssePath = '/' . \trim($httpServer->mcpPath(), '/') . '/sse';
+        $this->messagePath = '/' . \trim($httpServer->mcpPath(), '/') . '/message';
     }
 
-    public function setLogger(LoggerInterface $logger): void
-    {
-        $this->logger = $logger;
-    }
-
-    public function setLoop(LoopInterface $loop): void
-    {
-        $this->loop = $loop;
-    }
-
-    protected function generateId(): string
-    {
-        return bin2hex(random_bytes(16)); // 32 hex characters
-    }
-
-    /**
-     * Starts the HTTP server listener.
-     *
-     * @throws TransportException If port binding fails.
-     */
     public function listen(): void
     {
-        if ($this->listening) {
-            throw new TransportException('Http transport is already listening.');
-        }
-        if ($this->closing) {
-            throw new TransportException('Cannot listen, transport is closing/closed.');
+        $this->httpServer->listen(
+            onRequest: $this->createRequestHandler(...),
+            onClose: $this->close(...),
+        );
+    }
+
+    public function sendMessage(Message $message, string $sessionId, array $context = []): PromiseInterface
+    {
+        if (!isset($this->activeSseStreams[$sessionId])) {
+            return reject(new TransportException("Cannot send message: Client '{$sessionId}' not connected via SSE."));
         }
 
-        $listenAddress = "{$this->host}:{$this->port}";
-        $protocol = $this->sslContext ? 'https' : 'http';
-
-        try {
-            $this->socket = new SocketServer(
-                $listenAddress,
-                $this->sslContext ?? [],
-                $this->loop,
+        $stream = $this->activeSseStreams[$sessionId];
+        if (!$stream->isWritable()) {
+            return reject(
+                new TransportException("Cannot send message: SSE stream for client '{$sessionId}' is not writable."),
             );
+        }
 
-            $handlers = array_merge($this->middlewares, [$this->createRequestHandler()]);
-            $this->http = new HttpServer($this->loop, ...$handlers);
-            $this->http->listen($this->socket);
+        $json = \json_encode($message, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
 
-            $this->socket->on('error', function (Throwable $error) {
-                $this->logger->error('Socket server error.', ['error' => $error->getMessage()]);
-                $this->emit(
-                    'error',
-                    [new TransportException("Socket server error: {$error->getMessage()}", 0, $error)],
-                );
-                $this->close();
+        if ($json === '') {
+            return resolve(null);
+        }
+
+        $deferred = new Deferred();
+        $written = $this->sendSseEvent($stream, 'message', $json);
+
+        if ($written) {
+            $deferred->resolve(null);
+        } else {
+            $this->logger->debug('SSE stream buffer full, waiting for drain.', ['sessionId' => $sessionId]);
+            $stream->once('drain', function () use ($deferred, $sessionId): void {
+                $this->logger->debug('SSE stream drained.', ['sessionId' => $sessionId]);
+                $deferred->resolve(null);
             });
+        }
 
-            $this->logger->info("Server is up and listening on {$protocol}://{$listenAddress} 🚀");
-            $this->logger->info("SSE Endpoint: {$protocol}://{$listenAddress}{$this->ssePath}");
-            $this->logger->info("Message Endpoint: {$protocol}://{$listenAddress}{$this->messagePath}");
+        return $deferred->promise();
+    }
 
-            $this->listening = true;
-            $this->closing = false;
-            $this->emit('ready');
-        } catch (Throwable $e) {
-            $this->logger->error("Failed to start listener on {$listenAddress}", ['exception' => $e]);
-            throw new TransportException(
-                "Failed to start HTTP listener on {$listenAddress}: {$e->getMessage()}",
-                0,
-                $e,
-            );
+    public function close(): void
+    {
+        $activeStreams = $this->activeSseStreams;
+        $this->activeSseStreams = [];
+        foreach ($activeStreams as $sessionId => $stream) {
+            $this->logger->debug('Closing active SSE stream', ['sessionId' => $sessionId]);
+            unset($this->activeSseStreams[$sessionId]);
+            $stream->close();
         }
     }
 
-    /** Creates the main request handling callback for ReactPHP HttpServer */
-    protected function createRequestHandler(): callable
+    /**
+     * @throws RandomException
+     */
+    private function generateId(): string
+    {
+        return \bin2hex(\random_bytes(16)); // 32 hex characters
+    }
+
+    private function createRequestHandler(): callable
     {
         return function (ServerRequestInterface $request) {
             $path = $request->getUri()->getPath();
             $method = $request->getMethod();
-            $this->logger->debug('Received request', ['method' => $method, 'path' => $path]);
 
             if ($method === 'GET' && $path === $this->ssePath) {
                 return $this->handleSseRequest($request);
@@ -174,56 +123,61 @@ class HttpServerTransport implements ServerTransportInterface, LoggerAwareInterf
         };
     }
 
-    /** Handles a new SSE connection request */
-    protected function handleSseRequest(ServerRequestInterface $request): Response
+    /**
+     * Handles a new SSE connection request
+     */
+    private function handleSseRequest(ServerRequestInterface $request): Response
     {
         $sessionId = $this->generateId();
         $this->logger->info('New SSE connection', ['sessionId' => $sessionId]);
 
         $sseStream = new ThroughStream();
 
-        $sseStream->on('close', function () use ($sessionId) {
+        $sseStream->on('close', function () use ($sessionId): void {
             $this->logger->info('SSE stream closed', ['sessionId' => $sessionId]);
             unset($this->activeSseStreams[$sessionId]);
-            $this->emit('client_disconnected', [$sessionId, 'SSE stream closed']);
+            $this->httpServer->emit('client_disconnected', [$sessionId, 'SSE stream closed']);
         });
 
-        $sseStream->on('error', function (Throwable $error) use ($sessionId) {
+        $sseStream->on('error', function (\Throwable $error) use ($sessionId): void {
             $this->logger->warning('SSE stream error', ['sessionId' => $sessionId, 'error' => $error->getMessage()]);
             unset($this->activeSseStreams[$sessionId]);
-            $this->emit(
+            $this->httpServer->emit(
                 'error',
                 [new TransportException("SSE Stream Error: {$error->getMessage()}", 0, $error), $sessionId],
             );
-            $this->emit('client_disconnected', [$sessionId, 'SSE stream error']);
+            $this->httpServer->emit('client_disconnected', [$sessionId, 'SSE stream error']);
         });
 
         $this->activeSseStreams[$sessionId] = $sseStream;
 
-        $this->loop->futureTick(function () use ($sessionId, $request, $sseStream) {
-            if (!isset($this->activeSseStreams[$sessionId]) || !$sseStream->isWritable()) {
-                $this->logger->warning(
-                    'Cannot send initial endpoint event, stream closed/invalid early.',
-                    ['sessionId' => $sessionId],
-                );
+        $this->httpServer->onTick(
+            function (EventEmitterInterface $events) use ($sessionId, $request, $sseStream): void {
+                if (!isset($this->activeSseStreams[$sessionId]) || !$sseStream->isWritable()) {
+                    $this->logger->warning(
+                        'Cannot send initial endpoint event, stream closed/invalid early.',
+                        ['sessionId' => $sessionId],
+                    );
 
-                return;
-            }
+                    return;
+                }
 
-            try {
-                $baseUri = $request->getUri()->withPath($this->messagePath)->withQuery('')->withFragment('');
-                $postEndpointWithId = (string) $baseUri->withQuery("clientId={$sessionId}");
-                $this->sendSseEvent($sseStream, 'endpoint', $postEndpointWithId, "init-{$sessionId}");
+                try {
+                    $baseUri = $request->getUri()->withPath($this->messagePath)->withQuery('')->withFragment('');
+                    $postEndpointWithId = (string) $baseUri->withQuery("clientId={$sessionId}");
+                    $this->sendSseEvent($sseStream, 'endpoint', $postEndpointWithId, "init-{$sessionId}");
 
-                $this->emit('client_connected', [$sessionId]);
-            } catch (Throwable $e) {
-                $this->logger->error(
-                    'Error sending initial endpoint event',
-                    ['sessionId' => $sessionId, 'exception' => $e],
-                );
-                $sseStream->close();
-            }
-        });
+                    $events->emit('client_connected', [$sessionId]);
+                } catch (\Throwable $e) {
+                    $this->logger->error(
+                        'Error sending initial endpoint event',
+                        ['sessionId' => $sessionId, 'exception' => $e],
+                    );
+
+                    $sseStream->close();
+                }
+            },
+        );
 
         return new Response(
             200,
@@ -238,18 +192,20 @@ class HttpServerTransport implements ServerTransportInterface, LoggerAwareInterf
         );
     }
 
-    /** Handles incoming POST requests with messages */
-    protected function handleMessagePostRequest(ServerRequestInterface $request): Response
+    /**
+     * Handles incoming POST requests with messages
+     */
+    private function handleMessagePostRequest(ServerRequestInterface $request): Response
     {
         $queryParams = $request->getQueryParams();
         $sessionId = $queryParams['clientId'] ?? null;
         $jsonEncodeFlags = JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE;
 
-        if (!$sessionId || !is_string($sessionId)) {
+        if (!$sessionId || !\is_string($sessionId)) {
             $this->logger->warning('Received POST without valid clientId query parameter.');
             $error = Error::forInvalidRequest('Missing or invalid clientId query parameter');
 
-            return new Response(400, ['Content-Type' => 'application/json'], json_encode($error, $jsonEncodeFlags));
+            return new Response(400, ['Content-Type' => 'application/json'], \json_encode($error, $jsonEncodeFlags));
         }
 
         if (!isset($this->activeSseStreams[$sessionId])) {
@@ -257,13 +213,13 @@ class HttpServerTransport implements ServerTransportInterface, LoggerAwareInterf
 
             $error = Error::forInvalidRequest('Session ID not found or disconnected');
 
-            return new Response(404, ['Content-Type' => 'application/json'], json_encode($error, $jsonEncodeFlags));
+            return new Response(404, ['Content-Type' => 'application/json'], \json_encode($error, $jsonEncodeFlags));
         }
 
-        if (!str_contains(strtolower($request->getHeaderLine('Content-Type')), 'application/json')) {
+        if (!\str_contains(\strtolower($request->getHeaderLine('Content-Type')), 'application/json')) {
             $error = Error::forInvalidRequest('Content-Type must be application/json');
 
-            return new Response(415, ['Content-Type' => 'application/json'], json_encode($error, $jsonEncodeFlags));
+            return new Response(415, ['Content-Type' => 'application/json'], \json_encode($error, $jsonEncodeFlags));
         }
 
         $body = $request->getBody()->getContents();
@@ -273,67 +229,31 @@ class HttpServerTransport implements ServerTransportInterface, LoggerAwareInterf
 
             $error = Error::forInvalidRequest('Empty request body');
 
-            return new Response(400, ['Content-Type' => 'application/json'], json_encode($error, $jsonEncodeFlags));
+            return new Response(400, ['Content-Type' => 'application/json'], \json_encode($error, $jsonEncodeFlags));
         }
 
         try {
             $message = Parser::parse($body);
-        } catch (Throwable $e) {
+        } catch (\Throwable $e) {
             $this->logger->error('Error parsing message', ['sessionId' => $sessionId, 'exception' => $e]);
 
             $error = Error::forParseError('Invalid JSON-RPC message: ' . $e->getMessage());
 
-            return new Response(400, ['Content-Type' => 'application/json'], json_encode($error, $jsonEncodeFlags));
+            return new Response(400, ['Content-Type' => 'application/json'], \json_encode($error, $jsonEncodeFlags));
         }
 
         $context = [
             'request' => $request,
         ];
-        $this->emit('message', [$message, $sessionId, $context]);
+
+        $this->httpServer->emit('message', [$message, $sessionId, $context]);
 
         return new Response(202, ['Content-Type' => 'text/plain'], 'Accepted');
     }
 
-
     /**
-     * Sends a raw JSON-RPC message frame to a specific client via SSE.
+     * Helper to format and write an SSE event
      */
-    public function sendMessage(Message $message, string $sessionId, array $context = []): PromiseInterface
-    {
-        if (!isset($this->activeSseStreams[$sessionId])) {
-            return reject(new TransportException("Cannot send message: Client '{$sessionId}' not connected via SSE."));
-        }
-
-        $stream = $this->activeSseStreams[$sessionId];
-        if (!$stream->isWritable()) {
-            return reject(
-                new TransportException("Cannot send message: SSE stream for client '{$sessionId}' is not writable."),
-            );
-        }
-
-        $json = json_encode($message, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
-
-        if ($json === '') {
-            return resolve(null);
-        }
-
-        $deferred = new Deferred();
-        $written = $this->sendSseEvent($stream, 'message', $json);
-
-        if ($written) {
-            $deferred->resolve(null);
-        } else {
-            $this->logger->debug('SSE stream buffer full, waiting for drain.', ['sessionId' => $sessionId]);
-            $stream->once('drain', function () use ($deferred, $sessionId) {
-                $this->logger->debug('SSE stream drained.', ['sessionId' => $sessionId]);
-                $deferred->resolve(null);
-            });
-        }
-
-        return $deferred->promise();
-    }
-
-    /** Helper to format and write an SSE event */
     private function sendSseEvent(
         WritableStreamInterface $stream,
         string $event,
@@ -349,7 +269,7 @@ class HttpServerTransport implements ServerTransportInterface, LoggerAwareInterf
             $frame .= "id: {$id}\n";
         }
 
-        $lines = explode("\n", $data);
+        $lines = \explode("\n", $data);
         foreach ($lines as $line) {
             $frame .= "data: {$line}\n";
         }
@@ -358,34 +278,5 @@ class HttpServerTransport implements ServerTransportInterface, LoggerAwareInterf
         $this->logger->debug('Sending SSE event', ['event' => $event, 'frame' => $frame]);
 
         return $stream->write($frame);
-    }
-
-    /**
-     * Stops the HTTP server and closes all connections.
-     */
-    public function close(): void
-    {
-        if ($this->closing) {
-            return;
-        }
-        $this->closing = true;
-        $this->listening = false;
-        $this->logger->info('Closing transport...');
-
-        if ($this->socket) {
-            $this->socket->close();
-            $this->socket = null;
-        }
-
-        $activeStreams = $this->activeSseStreams;
-        $this->activeSseStreams = [];
-        foreach ($activeStreams as $sessionId => $stream) {
-            $this->logger->debug('Closing active SSE stream', ['sessionId' => $sessionId]);
-            unset($this->activeSseStreams[$sessionId]);
-            $stream->close();
-        }
-
-        $this->emit('close', ['HttpTransport closed.']);
-        $this->removeAllListeners();
     }
 }

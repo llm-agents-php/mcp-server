@@ -1,8 +1,10 @@
 <?php
 
-use PhpMcp\Server\Protocol;
-use PhpMcp\Server\Tests\Fixtures\General\ResourceHandlerFixture;
-use PhpMcp\Server\Tests\Mocks\Clients\MockSseClient;
+declare(strict_types=1);
+
+use Mcp\Server\Protocol;
+use Mcp\Server\Tests\Fixtures\General\ResourceHandlerFixture;
+use Mcp\Server\Tests\Mocks\Clients\MockSseClient;
 use React\ChildProcess\Process;
 use React\EventLoop\Loop;
 use React\Http\Browser;
@@ -21,29 +23,29 @@ beforeEach(function () {
     $this->loop = Loop::get();
     $this->port = findFreePort();
 
-    if (!is_file(HTTP_SERVER_SCRIPT_PATH)) {
+    if (!\is_file(HTTP_SERVER_SCRIPT_PATH)) {
         $this->markTestSkipped("Server script not found: " . HTTP_SERVER_SCRIPT_PATH);
     }
-    if (!is_executable(HTTP_SERVER_SCRIPT_PATH)) {
-        chmod(HTTP_SERVER_SCRIPT_PATH, 0755);
+    if (!\is_executable(HTTP_SERVER_SCRIPT_PATH)) {
+        \chmod(HTTP_SERVER_SCRIPT_PATH, 0755);
     }
 
     $phpPath = PHP_BINARY ?: 'php';
-    $commandPhpPath = str_contains($phpPath, ' ') ? '"' . $phpPath . '"' : $phpPath;
+    $commandPhpPath = \str_contains($phpPath, ' ') ? '"' . $phpPath . '"' : $phpPath;
     $commandArgs = [
-        escapeshellarg(HTTP_SERVER_HOST),
-        escapeshellarg((string)$this->port),
-        escapeshellarg(HTTP_MCP_PATH_PREFIX)
+        \escapeshellarg(HTTP_SERVER_HOST),
+        \escapeshellarg((string) $this->port),
+        \escapeshellarg(HTTP_MCP_PATH_PREFIX),
     ];
-    $commandScriptPath = escapeshellarg(HTTP_SERVER_SCRIPT_PATH);
-    $command = $commandPhpPath . ' ' . $commandScriptPath . ' ' . implode(' ', $commandArgs);
+    $commandScriptPath = \escapeshellarg(HTTP_SERVER_SCRIPT_PATH);
+    $command = $commandPhpPath . ' ' . $commandScriptPath . ' ' . \implode(' ', $commandArgs);
 
-    $this->process = new Process($command, getcwd() ?: null, null, []);
+    $this->process = new Process($command, \getcwd() ?: null, null, []);
     $this->process->start($this->loop);
 
     $this->processErrorOutput = '';
     if ($this->process->stderr instanceof ReadableStreamInterface) {
-        $this->process->stderr->on('data', function ($chunk) {
+        $this->process->stderr->on('data', function ($chunk): void {
             $this->processErrorOutput .= $chunk;
         });
     }
@@ -51,7 +53,7 @@ beforeEach(function () {
     return await(delay(0.2, $this->loop));
 });
 
-afterEach(function () {
+afterEach(function (): void {
     if ($this->sseClient ?? null) {
         $this->sseClient->close();
     }
@@ -77,11 +79,11 @@ afterEach(function () {
     $this->process = null;
 });
 
-afterAll(function () {
+afterAll(static function (): void {
     // Loop::stop();
 });
 
-it('starts the http server, initializes, calls a tool, and closes', function () {
+it('starts the http server, initializes, calls a tool, and closes', function (): void {
     $this->sseClient = new MockSseClient();
     $sseBaseUrl = "http://" . HTTP_SERVER_HOST . ":" . $this->port . "/" . HTTP_MCP_PATH_PREFIX . "/sse";
 
@@ -95,7 +97,7 @@ it('starts the http server, initializes, calls a tool, and closes', function () 
     await($this->sseClient->sendHttpRequest('init-http-1', 'initialize', [
         'protocolVersion' => Protocol::LATEST_PROTOCOL_VERSION,
         'clientInfo' => ['name' => 'HttpPestClient', 'version' => '1.0'],
-        'capabilities' => []
+        'capabilities' => [],
     ]));
     $initResponse = await($this->sseClient->getNextMessageResponse('init-http-1'));
 
@@ -111,7 +113,7 @@ it('starts the http server, initializes, calls a tool, and closes', function () 
     // 4. Call a tool
     await($this->sseClient->sendHttpRequest('tool-http-1', 'tools/call', [
         'name' => 'greet_http_tool',
-        'arguments' => ['name' => 'HTTP Integration User']
+        'arguments' => ['name' => 'HTTP Integration User'],
     ]));
     $toolResponse = await($this->sseClient->getNextMessageResponse('tool-http-1'));
 
@@ -124,7 +126,7 @@ it('starts the http server, initializes, calls a tool, and closes', function () 
     $this->sseClient->close();
 })->group('integration', 'http_transport');
 
-it('can handle invalid JSON from client', function () {
+it('can handle invalid JSON from client', function (): void {
     $this->sseClient = new MockSseClient();
     $sseBaseUrl = "http://" . HTTP_SERVER_HOST . ":" . $this->port . "/" . HTTP_MCP_PATH_PREFIX . "/sse";
 
@@ -140,7 +142,7 @@ it('can handle invalid JSON from client', function () {
     $postPromise = $this->sseClient->browser->post(
         $this->sseClient->endpointUrl,
         ['Content-Type' => 'application/json'],
-        $malformedJson
+        $malformedJson,
     );
 
     // 3. Expect error response
@@ -149,7 +151,7 @@ it('can handle invalid JSON from client', function () {
     } catch (ResponseException $e) {
         expect($e->getResponse()->getStatusCode())->toBe(400);
 
-        $errorResponse = json_decode($e->getResponse()->getBody(), true);
+        $errorResponse = \json_decode($e->getResponse()->getBody(), true);
         expect($errorResponse['jsonrpc'])->toBe('2.0');
         expect($errorResponse['id'])->toBe('');
         expect($errorResponse['error']['code'])->toBe(-32700);
@@ -157,7 +159,7 @@ it('can handle invalid JSON from client', function () {
     }
 })->group('integration', 'http_transport');
 
-it('can handle request for non-existent method after initialization', function () {
+it('can handle request for non-existent method after initialization', function (): void {
     $this->sseClient = new MockSseClient();
     $sseBaseUrl = "http://" . HTTP_SERVER_HOST . ":" . $this->port . "/" . HTTP_MCP_PATH_PREFIX . "/sse";
 
@@ -170,7 +172,7 @@ it('can handle request for non-existent method after initialization', function (
     await($this->sseClient->sendHttpRequest('init-http-nonexist', 'initialize', [
         'protocolVersion' => Protocol::LATEST_PROTOCOL_VERSION,
         'clientInfo' => ['name' => 'Test'],
-        'capabilities' => []
+        'capabilities' => [],
     ]));
     await($this->sseClient->getNextMessageResponse('init-http-nonexist'));
     await($this->sseClient->sendHttpNotification('notifications/initialized', ['messageQueueSupported' => true]));
@@ -186,7 +188,7 @@ it('can handle request for non-existent method after initialization', function (
     expect($errorResponse['error']['message'])->toContain("Method 'non/existentHttpTool' not found");
 })->group('integration', 'http_transport');
 
-it('can handle batch requests correctly over HTTP/SSE', function () {
+it('can handle batch requests correctly over HTTP/SSE', function (): void {
     $this->sseClient = new MockSseClient();
     $sseBaseUrl = "http://" . HTTP_SERVER_HOST . ":" . $this->port . "/" . HTTP_MCP_PATH_PREFIX . "/sse";
 
@@ -199,7 +201,7 @@ it('can handle batch requests correctly over HTTP/SSE', function () {
     await($this->sseClient->sendHttpRequest('init-batch-http', 'initialize', [
         'protocolVersion' => Protocol::LATEST_PROTOCOL_VERSION,
         'clientInfo' => ['name' => 'HttpBatchClient', 'version' => '1.0'],
-        'capabilities' => []
+        'capabilities' => [],
     ]));
     await($this->sseClient->getNextMessageResponse('init-batch-http'));
 
@@ -212,7 +214,7 @@ it('can handle batch requests correctly over HTTP/SSE', function () {
         ['jsonrpc' => '2.0', 'id' => 'batch-req-1', 'method' => 'tools/call', 'params' => ['name' => 'greet_http_tool', 'arguments' => ['name' => 'Batch Item 1']]],
         ['jsonrpc' => '2.0', 'method' => 'notifications/something'],
         ['jsonrpc' => '2.0', 'id' => 'batch-req-2', 'method' => 'tools/call', 'params' => ['name' => 'greet_http_tool', 'arguments' => ['name' => 'Batch Item 2']]],
-        ['jsonrpc' => '2.0', 'id' => 'batch-req-3', 'method' => 'nonexistent/method']
+        ['jsonrpc' => '2.0', 'id' => 'batch-req-3', 'method' => 'nonexistent/method'],
     ];
 
     await($this->sseClient->sendHttpBatchRequest($batchRequests));
@@ -222,7 +224,7 @@ it('can handle batch requests correctly over HTTP/SSE', function () {
 
     expect($batchResponseArray)->toBeArray()->toHaveCount(3);
 
-    $findResponseById = function (array $batch, $id) {
+    $findResponseById = static function (array $batch, $id) {
         foreach ($batch as $item) {
             if (isset($item['id']) && $item['id'] === $id) {
                 return $item;
@@ -243,7 +245,7 @@ it('can handle batch requests correctly over HTTP/SSE', function () {
     $this->sseClient->close();
 })->group('integration', 'http_transport');
 
-it('can handle tool list request over HTTP/SSE', function () {
+it('can handle tool list request over HTTP/SSE', function (): void {
     $this->sseClient = new MockSseClient();
     $sseBaseUrl = "http://" . HTTP_SERVER_HOST . ":" . $this->port . "/" . HTTP_MCP_PATH_PREFIX . "/sse";
     await($this->sseClient->connect($sseBaseUrl));
@@ -265,7 +267,7 @@ it('can handle tool list request over HTTP/SSE', function () {
     $this->sseClient->close();
 })->group('integration', 'http_transport');
 
-it('can read a registered resource over HTTP/SSE', function () {
+it('can read a registered resource over HTTP/SSE', function (): void {
     $this->sseClient = new MockSseClient();
     $sseBaseUrl = "http://" . HTTP_SERVER_HOST . ":" . $this->port . "/" . HTTP_MCP_PATH_PREFIX . "/sse";
     await($this->sseClient->connect($sseBaseUrl));
@@ -289,7 +291,7 @@ it('can read a registered resource over HTTP/SSE', function () {
     $this->sseClient->close();
 })->group('integration', 'http_transport');
 
-it('can get a registered prompt over HTTP/SSE', function () {
+it('can get a registered prompt over HTTP/SSE', function (): void {
     $this->sseClient = new MockSseClient();
     $sseBaseUrl = "http://" . HTTP_SERVER_HOST . ":" . $this->port . "/" . HTTP_MCP_PATH_PREFIX . "/sse";
     await($this->sseClient->connect($sseBaseUrl));
@@ -302,7 +304,7 @@ it('can get a registered prompt over HTTP/SSE', function () {
 
     await($this->sseClient->sendHttpRequest('prompt-get-http-1', 'prompts/get', [
         'name' => 'simple_http_prompt',
-        'arguments' => ['name' => 'HttpPromptUser', 'style' => 'polite']
+        'arguments' => ['name' => 'HttpPromptUser', 'style' => 'polite'],
     ]));
     $promptResponse = await($this->sseClient->getNextMessageResponse('prompt-get-http-1'));
 
@@ -315,7 +317,7 @@ it('can get a registered prompt over HTTP/SSE', function () {
     $this->sseClient->close();
 })->group('integration', 'http_transport');
 
-it('rejects subsequent requests if client does not send initialized notification', function () {
+it('rejects subsequent requests if client does not send initialized notification', function (): void {
     $this->sseClient = new MockSseClient();
     $sseBaseUrl = "http://" . HTTP_SERVER_HOST . ":" . $this->port . "/" . HTTP_MCP_PATH_PREFIX . "/sse";
     await($this->sseClient->connect($sseBaseUrl));
@@ -325,7 +327,7 @@ it('rejects subsequent requests if client does not send initialized notification
     await($this->sseClient->sendHttpRequest('init-http-no-ack', 'initialize', [
         'protocolVersion' => Protocol::LATEST_PROTOCOL_VERSION,
         'clientInfo' => ['name' => 'HttpForgetfulClient', 'version' => '1.0'],
-        'capabilities' => []
+        'capabilities' => [],
     ]));
     await($this->sseClient->getNextMessageResponse('init-http-no-ack'));
     // Client "forgets" to send notifications/initialized back
@@ -335,7 +337,7 @@ it('rejects subsequent requests if client does not send initialized notification
     // 2. Attempt to Call a tool
     await($this->sseClient->sendHttpRequest('tool-call-http-no-ack', 'tools/call', [
         'name' => 'greet_http_tool',
-        'arguments' => ['name' => 'NoAckHttpUser']
+        'arguments' => ['name' => 'NoAckHttpUser'],
     ]));
     $toolResponse = await($this->sseClient->getNextMessageResponse('tool-call-http-no-ack'));
 
@@ -346,7 +348,7 @@ it('rejects subsequent requests if client does not send initialized notification
     $this->sseClient->close();
 })->group('integration', 'http_transport');
 
-it('returns 404 for POST to /message without valid clientId in query', function () {
+it('returns 404 for POST to /message without valid clientId in query', function (): void {
     $this->sseClient = new MockSseClient();
     $sseBaseUrl = "http://" . HTTP_SERVER_HOST . ":" . $this->port . "/" . HTTP_MCP_PATH_PREFIX . "/sse";
     await($this->sseClient->connect($sseBaseUrl));
@@ -360,7 +362,7 @@ it('returns 404 for POST to /message without valid clientId in query', function 
     $postPromise = $this->sseClient->browser->post(
         $malformedEndpoint,
         ['Content-Type' => 'application/json'],
-        json_encode($payload)
+        \json_encode($payload),
     );
 
     try {
@@ -368,12 +370,12 @@ it('returns 404 for POST to /message without valid clientId in query', function 
     } catch (ResponseException $e) {
         expect($e->getResponse()->getStatusCode())->toBe(400);
         $bodyContent = (string) $e->getResponse()->getBody();
-        $errorData = json_decode($bodyContent, true);
+        $errorData = \json_decode($bodyContent, true);
         expect($errorData['error']['message'])->toContain('Missing or invalid clientId');
     }
 })->group('integration', 'http_transport');
 
-it('returns 404 for POST to /message with clientId for a disconnected SSE stream', function () {
+it('returns 404 for POST to /message with clientId for a disconnected SSE stream', function (): void {
     $this->sseClient = new MockSseClient();
     $sseBaseUrl = "http://" . HTTP_SERVER_HOST . ":" . $this->port . "/" . HTTP_MCP_PATH_PREFIX . "/sse";
 
@@ -388,19 +390,19 @@ it('returns 404 for POST to /message with clientId for a disconnected SSE stream
     $postPromise = $this->sseClient->browser->post(
         $originalEndpointUrl,
         ['Content-Type' => 'application/json'],
-        json_encode($payload)
+        \json_encode($payload),
     );
 
     try {
         await(timeout($postPromise, HTTP_PROCESS_TIMEOUT_SECONDS - 2, $this->loop));
     } catch (ResponseException $e) {
         $bodyContent = (string) $e->getResponse()->getBody();
-        $errorData = json_decode($bodyContent, true);
+        $errorData = \json_decode($bodyContent, true);
         expect($errorData['error']['message'])->toContain('Session ID not found or disconnected');
     }
 })->group('integration', 'http_transport');
 
-it('returns 404 for unknown paths', function () {
+it('returns 404 for unknown paths', function (): void {
     $browser = new Browser($this->loop);
     $unknownUrl = "http://" . HTTP_SERVER_HOST . ":" . $this->port . "/unknown/path";
 
@@ -418,7 +420,7 @@ it('returns 404 for unknown paths', function () {
     }
 })->group('integration', 'http_transport');
 
-it('executes middleware that adds headers to response', function () {
+it('executes middleware that adds headers to response', function (): void {
     $this->sseClient = new MockSseClient();
     $sseBaseUrl = "http://" . HTTP_SERVER_HOST . ":" . $this->port . "/" . HTTP_MCP_PATH_PREFIX . "/sse";
 
@@ -432,7 +434,7 @@ it('executes middleware that adds headers to response', function () {
     $this->sseClient->close();
 })->group('integration', 'http_transport', 'middleware');
 
-it('executes middleware that modifies request attributes', function () {
+it('executes middleware that modifies request attributes', function (): void {
     $this->sseClient = new MockSseClient();
     $sseBaseUrl = "http://" . HTTP_SERVER_HOST . ":" . $this->port . "/" . HTTP_MCP_PATH_PREFIX . "/sse";
 
@@ -444,7 +446,7 @@ it('executes middleware that modifies request attributes', function () {
     await($this->sseClient->sendHttpRequest('init-middleware-attr', 'initialize', [
         'protocolVersion' => Protocol::LATEST_PROTOCOL_VERSION,
         'clientInfo' => ['name' => 'MiddlewareTestClient'],
-        'capabilities' => []
+        'capabilities' => [],
     ]));
     await($this->sseClient->getNextMessageResponse('init-middleware-attr'));
     await($this->sseClient->sendHttpNotification('notifications/initialized'));
@@ -453,7 +455,7 @@ it('executes middleware that modifies request attributes', function () {
     // 3. Call tool that checks for middleware-added attribute
     await($this->sseClient->sendHttpRequest('tool-attr-check', 'tools/call', [
         'name' => 'check_request_attribute_tool',
-        'arguments' => []
+        'arguments' => [],
     ]));
     $toolResponse = await($this->sseClient->getNextMessageResponse('tool-attr-check'));
 
@@ -462,7 +464,7 @@ it('executes middleware that modifies request attributes', function () {
     $this->sseClient->close();
 })->group('integration', 'http_transport', 'middleware');
 
-it('executes middleware that can short-circuit request processing', function () {
+it('executes middleware that can short-circuit request processing', function (): void {
     $browser = new Browser($this->loop);
     $shortCircuitUrl = "http://" . HTTP_SERVER_HOST . ":" . $this->port . "/" . HTTP_MCP_PATH_PREFIX . "/short-circuit";
 
@@ -480,7 +482,7 @@ it('executes middleware that can short-circuit request processing', function () 
     }
 })->group('integration', 'http_transport', 'middleware');
 
-it('executes multiple middlewares in correct order', function () {
+it('executes multiple middlewares in correct order', function (): void {
     $this->sseClient = new MockSseClient();
     $sseBaseUrl = "http://" . HTTP_SERVER_HOST . ":" . $this->port . "/" . HTTP_MCP_PATH_PREFIX . "/sse";
 
@@ -494,7 +496,7 @@ it('executes multiple middlewares in correct order', function () {
     $this->sseClient->close();
 })->group('integration', 'http_transport', 'middleware');
 
-it('handles middleware that throws exceptions gracefully', function () {
+it('handles middleware that throws exceptions gracefully', function (): void {
     $browser = new Browser($this->loop);
     $errorUrl = "http://" . HTTP_SERVER_HOST . ":" . $this->port . "/" . HTTP_MCP_PATH_PREFIX . "/error-middleware";
 

@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace PhpMcp\Server;
+namespace Mcp\Server;
 
 use PhpMcp\Schema\JsonRpc\Request;
 use PhpMcp\Schema\JsonRpc\Notification;
 use PhpMcp\Schema\JsonRpc\Result;
-use PhpMcp\Server\Contracts\RouteInterface;
-use PhpMcp\Server\Exception\McpServerException;
+use Mcp\Server\Contracts\RouteInterface;
+use Mcp\Server\Exception\McpServerException;
 use Psr\Log\LoggerInterface;
 
 final readonly class Dispatcher

@@ -2,14 +2,17 @@
 
 declare(strict_types=1);
 
-namespace PhpMcp\Server\Tests\Fixtures\Discovery;
+namespace Mcp\Server\Tests\Fixtures\Discovery;
 
 use PhpMcp\Schema\ToolAnnotations;
-use PhpMcp\Server\Attributes\McpTool;
-use PhpMcp\Server\Tests\Fixtures\Enums\BackedStringEnum;
+use Mcp\Server\Attributes\McpTool;
+use Mcp\Server\Tests\Fixtures\Enums\BackedStringEnum;
 
 class DiscoverableToolHandler
 {
+    #[McpTool(name: "static_tool_should_be_ignored")] // On static method
+    public static function aStaticTool(): void {}
+
     /**
      * A basic discoverable tool.
      * @param string $name The name to greet.
@@ -40,18 +43,9 @@ class DiscoverableToolHandler
         return $value * 2;
     }
 
-    #[McpTool(name: "private_tool_should_be_ignored")] // On private method
-    private function aPrivateTool(): void
-    {
-    }
-
     #[McpTool(name: "protected_tool_should_be_ignored")] // On protected method
-    protected function aProtectedTool(): void
-    {
-    }
+    protected function aProtectedTool(): void {}
 
-    #[McpTool(name: "static_tool_should_be_ignored")] // On static method
-    public static function aStaticTool(): void
-    {
-    }
+    #[McpTool(name: "private_tool_should_be_ignored")] // On private method
+    private function aPrivateTool(): void {}
 }

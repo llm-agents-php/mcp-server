@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace PhpMcp\Server\Elements;
+namespace Mcp\Server\Elements;
 
 use PhpMcp\Schema\Content\AudioContent;
 use PhpMcp\Schema\Content\BlobResourceContents;
@@ -15,75 +15,92 @@ use PhpMcp\Schema\Content\TextContent;
 use PhpMcp\Schema\Content\TextResourceContents;
 use PhpMcp\Schema\Enum\Role;
 use PhpMcp\Schema\Result\CompletionCompleteResult;
-use PhpMcp\Server\Context;
-use PhpMcp\Server\Contracts\CompletionProviderInterface;
-use PhpMcp\Server\Contracts\SessionInterface;
-use Psr\Container\ContainerInterface;
-use Throwable;
+use Mcp\Server\Context;
+use Mcp\Server\Contracts\CompletionProviderInterface;
+use Mcp\Server\Contracts\HandlerInterface;
+use Mcp\Server\Contracts\SessionInterface;
 
-class RegisteredPrompt extends RegisteredElement
+final class RegisteredPrompt extends RegisteredElement
 {
+    /**
+     * @param array<string, CompletionProviderInterface> $completionProviders
+     */
     public function __construct(
         public readonly Prompt $schema,
-        callable|array|string $handler,
+        HandlerInterface $handler,
         bool $isManual = false,
         public readonly array $completionProviders = [],
     ) {
         parent::__construct($handler, $isManual);
     }
 
-    public static function make(
-        Prompt $schema,
-        callable|array|string $handler,
-        bool $isManual = false,
-        array $completionProviders = [],
-    ): self {
-        return new self($schema, $handler, $isManual, $completionProviders);
+    public static function fromArray(array $data): self|false
+    {
+        try {
+            if (!isset($data['schema']) || !isset($data['handler'])) {
+                return false;
+            }
+
+            $completionProviders = \array_map(
+                static fn(string $provider): CompletionProviderInterface => \unserialize($provider),
+                $data['completionProviders'] ?? [],
+            );
+
+            return new self(
+                Prompt::fromArray($data['schema']),
+                $data['handler'],
+                $data['isManual'] ?? false,
+                $completionProviders,
+            );
+        } catch (\Throwable) {
+            return false;
+        }
     }
 
     /**
      * Gets the prompt messages.
      *
-     * @param ContainerInterface $container
-     * @param array $arguments
      * @return PromptMessage[]
      */
-    public function get(ContainerInterface $container, array $arguments, Context $context): array
+    public function get(array $arguments, Context $context): array
     {
-        $result = $this->handle($container, $arguments, $context);
+        $result = $this->handler->handle($arguments, $context);
 
         return $this->formatResult($result);
     }
 
     public function complete(
-        ContainerInterface $container,
         string $argument,
         string $value,
         SessionInterface $session,
     ): CompletionCompleteResult {
-        $providerClassOrInstance = $this->completionProviders[$argument] ?? null;
-        if ($providerClassOrInstance === null) {
+        $provider = $this->completionProviders[$argument] ?? null;
+        if ($provider === null) {
             return new CompletionCompleteResult([]);
-        }
-
-        if (is_string($providerClassOrInstance)) {
-            if (!class_exists($providerClassOrInstance)) {
-                throw new \RuntimeException("Completion provider class '{$providerClassOrInstance}' does not exist.");
-            }
-
-            $provider = $container->get($providerClassOrInstance);
-        } else {
-            $provider = $providerClassOrInstance;
         }
 
         $completions = $provider->getCompletions($value, $session);
 
-        $total = count($completions);
+        $total = \count($completions);
         $hasMore = $total > 100;
 
-        $pagedCompletions = array_slice($completions, 0, 100);
+        $pagedCompletions = \array_slice($completions, 0, 100);
 
         return new CompletionCompleteResult($pagedCompletions, $total, $hasMore);
+    }
+
+    public function toArray(): array
+    {
+        $completionProviders = \array_map(
+            static fn(CompletionProviderInterface $provider): string => \serialize($provider),
+            $this->completionProviders,
+        );
+
+        return [
+            'schema' => $this->schema->toArray(),
+            'completionProviders' => $completionProviders,
+            ...parent::toArray(),
+        ];
     }
 
     /**
@@ -101,7 +118,7 @@ class RegisteredPrompt extends RegisteredElement
             return [$promptGenerationResult];
         }
 
-        if (!is_array($promptGenerationResult)) {
+        if (!\is_array($promptGenerationResult)) {
             throw new \RuntimeException('Prompt generator method must return an array of messages.');
         }
 
@@ -130,13 +147,13 @@ class RegisteredPrompt extends RegisteredElement
                 if ($item instanceof PromptMessage) {
                     $result[] = $item;
                 } else {
-                    $result = array_merge($result, $this->formatResult($item));
+                    $result = \array_merge($result, $this->formatResult($item));
                 }
             }
             return $result;
         }
 
-        if (!array_is_list($promptGenerationResult)) {
+        if (!\array_is_list($promptGenerationResult)) {
             if (isset($promptGenerationResult['user']) || isset($promptGenerationResult['assistant'])) {
                 $result = [];
                 if (isset($promptGenerationResult['user'])) {
@@ -178,7 +195,7 @@ class RegisteredPrompt extends RegisteredElement
     {
         $indexStr = $index !== null ? " at index {$index}" : '';
 
-        if (!is_array($message) || !array_key_exists('role', $message) || !array_key_exists('content', $message)) {
+        if (!\is_array($message) || !\array_key_exists('role', $message) || !\array_key_exists('content', $message)) {
             throw new \RuntimeException(
                 "Invalid message format{$indexStr}. Expected an array with 'role' and 'content' keys.",
             );
@@ -217,22 +234,22 @@ class RegisteredPrompt extends RegisteredElement
             );
         }
 
-        if (is_string($content)) {
+        if (\is_string($content)) {
             return TextContent::make($content);
         }
 
-        if (is_array($content) && isset($content['type'])) {
+        if (\is_array($content) && isset($content['type'])) {
             return $this->formatTypedContent($content, $index);
         }
 
-        if (is_scalar($content) || $content === null) {
-            $stringContent = $content === null ? '(null)' : (is_bool(
+        if (\is_scalar($content) || $content === null) {
+            $stringContent = $content === null ? '(null)' : (\is_bool(
                 $content,
             ) ? ($content ? 'true' : 'false') : (string) $content);
             return TextContent::make($stringContent);
         }
 
-        $jsonContent = json_encode(
+        $jsonContent = \json_encode(
             $content,
             JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR,
         );
@@ -254,13 +271,13 @@ class RegisteredPrompt extends RegisteredElement
             'image' => $this->formatImageContent($content, $indexStr),
             'audio' => $this->formatAudioContent($content, $indexStr),
             'resource' => $this->formatResourceContent($content, $indexStr),
-            default => throw new \RuntimeException("Invalid content type '{$type}'{$indexStr}.")
+            default => throw new \RuntimeException("Invalid content type '{$type}'{$indexStr}."),
         };
     }
 
     private function formatTextContent(array $content, string $indexStr): TextContent
     {
-        if (!isset($content['text']) || !is_string($content['text'])) {
+        if (!isset($content['text']) || !\is_string($content['text'])) {
             throw new \RuntimeException("Invalid 'text' content{$indexStr}: Missing or invalid 'text' string.");
         }
         return TextContent::make($content['text']);
@@ -268,12 +285,12 @@ class RegisteredPrompt extends RegisteredElement
 
     private function formatImageContent(array $content, string $indexStr): ImageContent
     {
-        if (!isset($content['data']) || !is_string($content['data'])) {
+        if (!isset($content['data']) || !\is_string($content['data'])) {
             throw new \RuntimeException(
                 "Invalid 'image' content{$indexStr}: Missing or invalid 'data' string (base64).",
             );
         }
-        if (!isset($content['mimeType']) || !is_string($content['mimeType'])) {
+        if (!isset($content['mimeType']) || !\is_string($content['mimeType'])) {
             throw new \RuntimeException("Invalid 'image' content{$indexStr}: Missing or invalid 'mimeType' string.");
         }
         return ImageContent::make($content['data'], $content['mimeType']);
@@ -281,12 +298,12 @@ class RegisteredPrompt extends RegisteredElement
 
     private function formatAudioContent(array $content, string $indexStr): AudioContent
     {
-        if (!isset($content['data']) || !is_string($content['data'])) {
+        if (!isset($content['data']) || !\is_string($content['data'])) {
             throw new \RuntimeException(
                 "Invalid 'audio' content{$indexStr}: Missing or invalid 'data' string (base64).",
             );
         }
-        if (!isset($content['mimeType']) || !is_string($content['mimeType'])) {
+        if (!isset($content['mimeType']) || !\is_string($content['mimeType'])) {
             throw new \RuntimeException("Invalid 'audio' content{$indexStr}: Missing or invalid 'mimeType' string.");
         }
         return AudioContent::make($content['data'], $content['mimeType']);
@@ -294,22 +311,22 @@ class RegisteredPrompt extends RegisteredElement
 
     private function formatResourceContent(array $content, string $indexStr): EmbeddedResource
     {
-        if (!isset($content['resource']) || !is_array($content['resource'])) {
+        if (!isset($content['resource']) || !\is_array($content['resource'])) {
             throw new \RuntimeException("Invalid 'resource' content{$indexStr}: Missing or invalid 'resource' object.");
         }
 
         $resource = $content['resource'];
-        if (!isset($resource['uri']) || !is_string($resource['uri'])) {
+        if (!isset($resource['uri']) || !\is_string($resource['uri'])) {
             throw new \RuntimeException("Invalid resource{$indexStr}: Missing or invalid 'uri'.");
         }
 
-        if (isset($resource['text']) && is_string($resource['text'])) {
+        if (isset($resource['text']) && \is_string($resource['text'])) {
             $resourceObj = TextResourceContents::make(
                 $resource['uri'],
                 $resource['mimeType'] ?? 'text/plain',
                 $resource['text'],
             );
-        } elseif (isset($resource['blob']) && is_string($resource['blob'])) {
+        } elseif (isset($resource['blob']) && \is_string($resource['blob'])) {
             $resourceObj = BlobResourceContents::make(
                 $resource['uri'],
                 $resource['mimeType'] ?? 'application/octet-stream',
@@ -320,42 +337,5 @@ class RegisteredPrompt extends RegisteredElement
         }
 
         return new EmbeddedResource($resourceObj);
-    }
-
-    public function toArray(): array
-    {
-        $completionProviders = array_map(
-            static fn (CompletionProviderInterface $provider): string => serialize($provider),
-            $this->completionProviders,
-        );
-
-        return [
-            'schema' => $this->schema->toArray(),
-            'completionProviders' => $completionProviders,
-            ...parent::toArray(),
-        ];
-    }
-
-    public static function fromArray(array $data): self|false
-    {
-        try {
-            if (!isset($data['schema']) || !isset($data['handler'])) {
-                return false;
-            }
-
-            $completionProviders = array_map(
-                static fn (string $provider): CompletionProviderInterface => unserialize($provider),
-                $data['completionProviders'] ?? [],
-            );
-
-            return new self(
-                Prompt::fromArray($data['schema']),
-                $data['handler'],
-                $data['isManual'] ?? false,
-                $completionProviders,
-            );
-        } catch (Throwable) {
-            return false;
-        }
     }
 }

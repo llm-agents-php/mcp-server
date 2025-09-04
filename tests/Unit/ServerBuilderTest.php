@@ -1,32 +1,32 @@
 <?php
 
-namespace PhpMcp\Server\Tests\Unit;
+declare(strict_types=1);
 
-use Mockery;
+namespace Mcp\Server\Tests\Unit;
+
 use PhpMcp\Schema\Implementation;
 use PhpMcp\Schema\ServerCapabilities;
-use PhpMcp\Server\Attributes\CompletionProvider;
-use PhpMcp\Server\Contracts\CompletionProviderInterface;
-use PhpMcp\Server\Contracts\SessionHandlerInterface;
-use PhpMcp\Server\Contracts\SessionInterface;
-use PhpMcp\Server\Defaults\BasicContainer;
-use PhpMcp\Server\Elements\RegisteredPrompt;
-use PhpMcp\Server\Elements\RegisteredTool;
-use PhpMcp\Server\Exception\ConfigurationException;
-use PhpMcp\Server\Protocol;
-use PhpMcp\Server\Registry;
-use PhpMcp\Server\Server;
-use PhpMcp\Server\ServerBuilder;
-use PhpMcp\Server\Session\ArraySessionHandler;
-use PhpMcp\Server\Session\CacheSessionHandler;
-use PhpMcp\Server\Session\SessionManager;
+use Mcp\Server\Attributes\CompletionProvider;
+use Mcp\Server\Contracts\CompletionProviderInterface;
+use Mcp\Server\Contracts\SessionHandlerInterface;
+use Mcp\Server\Contracts\SessionInterface;
+use Mcp\Server\Defaults\BasicContainer;
+use Mcp\Server\Elements\RegisteredPrompt;
+use Mcp\Server\Elements\RegisteredTool;
+use Mcp\Server\Exception\ConfigurationException;
+use Mcp\Server\Protocol;
+use Mcp\Server\Registry;
+use Mcp\Server\Server;
+use Mcp\Server\ServerBuilder;
+use Mcp\Server\Session\ArraySessionHandler;
+use Mcp\Server\Session\CacheSessionHandler;
+use Mcp\Server\Session\SessionManager;
 use Psr\Container\ContainerInterface;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
 use Psr\SimpleCache\CacheInterface;
 use React\EventLoop\LoopInterface;
 use React\EventLoop\TimerInterface;
-use ReflectionClass;
 
 class SB_DummyHandlerClass
 {
@@ -43,7 +43,7 @@ class SB_DummyHandlerClass
     public function handlerWithCompletion(
         string $name,
         #[CompletionProvider(provider: SB_DummyCompletionProvider::class)]
-        string $uriParam
+        string $uriParam,
     ): array {
         return [];
     }
@@ -66,12 +66,12 @@ class SB_DummyCompletionProvider implements CompletionProviderInterface
 }
 
 
-beforeEach(function () {
+beforeEach(function (): void {
     $this->builder = new ServerBuilder();
 });
 
 
-it('sets server info correctly', function () {
+it('sets server info correctly', function (): void {
     $this->builder->withServerInfo('MyServer', '1.2.3');
     $serverInfo = getPrivateProperty($this->builder, 'serverInfo');
     expect($serverInfo)->toBeInstanceOf(Implementation::class)
@@ -79,72 +79,72 @@ it('sets server info correctly', function () {
         ->and($serverInfo->version)->toBe('1.2.3');
 });
 
-it('sets capabilities correctly', function () {
+it('sets capabilities correctly', function (): void {
     $capabilities = ServerCapabilities::make(toolsListChanged: true);
     $this->builder->withCapabilities($capabilities);
     expect(getPrivateProperty($this->builder, 'capabilities'))->toBe($capabilities);
 });
 
-it('sets pagination limit correctly', function () {
+it('sets pagination limit correctly', function (): void {
     $this->builder->withPaginationLimit(100);
     expect(getPrivateProperty($this->builder, 'paginationLimit'))->toBe(100);
 });
 
-it('sets logger correctly', function () {
-    $logger = Mockery::mock(LoggerInterface::class);
+it('sets logger correctly', function (): void {
+    $logger = \Mockery::mock(LoggerInterface::class);
     $this->builder->withLogger($logger);
     expect(getPrivateProperty($this->builder, 'logger'))->toBe($logger);
 });
 
-it('sets cache correctly', function () {
-    $cache = Mockery::mock(CacheInterface::class);
+it('sets cache correctly', function (): void {
+    $cache = \Mockery::mock(CacheInterface::class);
     $this->builder->withCache($cache);
     expect(getPrivateProperty($this->builder, 'cache'))->toBe($cache);
 });
 
-it('sets session handler correctly', function () {
-    $handler = Mockery::mock(SessionHandlerInterface::class);
+it('sets session handler correctly', function (): void {
+    $handler = \Mockery::mock(SessionHandlerInterface::class);
     $this->builder->withSessionHandler($handler, 7200);
     expect(getPrivateProperty($this->builder, 'sessionHandler'))->toBe($handler);
     expect(getPrivateProperty($this->builder, 'sessionTtl'))->toBe(7200);
 });
 
-it('sets session driver to array correctly', function () {
+it('sets session driver to array correctly', function (): void {
     $this->builder->withSession('array', 1800);
     expect(getPrivateProperty($this->builder, 'sessionDriver'))->toBe('array');
     expect(getPrivateProperty($this->builder, 'sessionTtl'))->toBe(1800);
 });
 
-it('sets session driver to cache correctly', function () {
+it('sets session driver to cache correctly', function (): void {
     $this->builder->withSession('cache', 900);
     expect(getPrivateProperty($this->builder, 'sessionDriver'))->toBe('cache');
     expect(getPrivateProperty($this->builder, 'sessionTtl'))->toBe(900);
 });
 
-it('uses default TTL when not specified for session', function () {
+it('uses default TTL when not specified for session', function (): void {
     $this->builder->withSession('array');
     expect(getPrivateProperty($this->builder, 'sessionTtl'))->toBe(3600);
 });
 
-it('throws exception for invalid session driver', function () {
+it('throws exception for invalid session driver', function (): void {
     $this->builder->withSession('redis');
 })->throws(\InvalidArgumentException::class, "Unsupported session driver 'redis'. Only 'array' and 'cache' drivers are supported.");
 
-it('throws exception for cache session driver without cache during build', function () {
+it('throws exception for cache session driver without cache during build', function (): void {
     $this->builder
         ->withServerInfo('Test', '1.0')
         ->withSession('cache')
         ->build();
 })->throws(ConfigurationException::class, 'Cache session driver requires a cache instance');
 
-it('creates ArraySessionHandler when array driver is specified', function () {
+it('creates ArraySessionHandler when array driver is specified', function (): void {
     $server = $this->builder
         ->withServerInfo('Test', '1.0')
         ->withSession('array', 1800)
         ->build();
 
     $sessionManager = $server->getSessionManager();
-    $smReflection = new ReflectionClass(SessionManager::class);
+    $smReflection = new \ReflectionClass(SessionManager::class);
     $handlerProp = $smReflection->getProperty('handler');
     $handler = $handlerProp->getValue($sessionManager);
 
@@ -152,8 +152,8 @@ it('creates ArraySessionHandler when array driver is specified', function () {
     expect($handler->ttl)->toBe(1800);
 });
 
-it('creates CacheSessionHandler when cache driver is specified', function () {
-    $cache = Mockery::mock(CacheInterface::class);
+it('creates CacheSessionHandler when cache driver is specified', function (): void {
+    $cache = \Mockery::mock(CacheInterface::class);
     $cache->shouldReceive('get')->with('mcp_session_index', [])->andReturn([]);
 
     $server = $this->builder
@@ -163,7 +163,7 @@ it('creates CacheSessionHandler when cache driver is specified', function () {
         ->build();
 
     $sessionManager = $server->getSessionManager();
-    $smReflection = new ReflectionClass(SessionManager::class);
+    $smReflection = new \ReflectionClass(SessionManager::class);
     $handlerProp = $smReflection->getProperty('handler');
     $handler = $handlerProp->getValue($sessionManager);
 
@@ -172,8 +172,8 @@ it('creates CacheSessionHandler when cache driver is specified', function () {
     expect($handler->ttl)->toBe(900);
 });
 
-it('prefers custom session handler over session driver', function () {
-    $customHandler = Mockery::mock(SessionHandlerInterface::class);
+it('prefers custom session handler over session driver', function (): void {
+    $customHandler = \Mockery::mock(SessionHandlerInterface::class);
 
     $server = $this->builder
         ->withServerInfo('Test', '1.0')
@@ -182,26 +182,26 @@ it('prefers custom session handler over session driver', function () {
         ->build();
 
     $sessionManager = $server->getSessionManager();
-    $smReflection = new ReflectionClass(SessionManager::class);
+    $smReflection = new \ReflectionClass(SessionManager::class);
     $handlerProp = $smReflection->getProperty('handler');
 
     expect($handlerProp->getValue($sessionManager))->toBe($customHandler);
 });
 
 
-it('sets container correctly', function () {
-    $container = Mockery::mock(ContainerInterface::class);
+it('sets container correctly', function (): void {
+    $container = \Mockery::mock(ContainerInterface::class);
     $this->builder->withContainer($container);
     expect(getPrivateProperty($this->builder, 'container'))->toBe($container);
 });
 
-it('sets loop correctly', function () {
-    $loop = Mockery::mock(LoopInterface::class);
+it('sets loop correctly', function (): void {
+    $loop = \Mockery::mock(LoopInterface::class);
     $this->builder->withLoop($loop);
     expect(getPrivateProperty($this->builder, 'loop'))->toBe($loop);
 });
 
-it('stores manual tool registration data', function () {
+it('stores manual tool registration data', function (): void {
     $handler = [SB_DummyHandlerClass::class, 'handle'];
     $this->builder->withTool($handler, 'my-tool', 'Tool desc');
     $manualTools = getPrivateProperty($this->builder, 'manualTools');
@@ -210,7 +210,7 @@ it('stores manual tool registration data', function () {
         ->and($manualTools[0]['description'])->toBe('Tool desc');
 });
 
-it('stores manual resource registration data', function () {
+it('stores manual resource registration data', function (): void {
     $handler = [SB_DummyHandlerClass::class, 'handle'];
     $this->builder->withResource($handler, 'res://resource', 'Resource name');
     $manualResources = getPrivateProperty($this->builder, 'manualResources');
@@ -219,7 +219,7 @@ it('stores manual resource registration data', function () {
         ->and($manualResources[0]['name'])->toBe('Resource name');
 });
 
-it('stores manual resource template registration data', function () {
+it('stores manual resource template registration data', function (): void {
     $handler = [SB_DummyHandlerClass::class, 'handle'];
     $this->builder->withResourceTemplate($handler, 'res://resource', 'Resource name');
     $manualResourceTemplates = getPrivateProperty($this->builder, 'manualResourceTemplates');
@@ -228,7 +228,7 @@ it('stores manual resource template registration data', function () {
         ->and($manualResourceTemplates[0]['name'])->toBe('Resource name');
 });
 
-it('stores manual prompt registration data', function () {
+it('stores manual prompt registration data', function (): void {
     $handler = [SB_DummyHandlerClass::class, 'handle'];
     $this->builder->withPrompt($handler, 'my-prompt', 'Prompt desc');
     $manualPrompts = getPrivateProperty($this->builder, 'manualPrompts');
@@ -237,12 +237,12 @@ it('stores manual prompt registration data', function () {
         ->and($manualPrompts[0]['description'])->toBe('Prompt desc');
 });
 
-it('throws ConfigurationException if server info not provided', function () {
+it('throws ConfigurationException if server info not provided', function (): void {
     $this->builder->build();
 })->throws(ConfigurationException::class, 'Server name and version must be provided');
 
 
-it('resolves default Logger, Loop, Container, SessionHandler if not provided', function () {
+it('resolves default Logger, Loop, Container, SessionHandler if not provided', function (): void {
     $server = $this->builder->withServerInfo('Test', '1.0')->build();
     $config = $server->getConfiguration();
 
@@ -251,20 +251,20 @@ it('resolves default Logger, Loop, Container, SessionHandler if not provided', f
     expect($config->container)->toBeInstanceOf(BasicContainer::class);
 
     $sessionManager = $server->getSessionManager();
-    $smReflection = new ReflectionClass(SessionManager::class);
+    $smReflection = new \ReflectionClass(SessionManager::class);
     $handlerProp = $smReflection->getProperty('handler');
     expect($handlerProp->getValue($sessionManager))->toBeInstanceOf(ArraySessionHandler::class);
 });
 
-it('builds Server with correct Configuration, Registry, Protocol, SessionManager', function () {
+it('builds Server with correct Configuration, Registry, Protocol, SessionManager', function (): void {
     $logger = new NullLogger();
-    $loop = Mockery::mock(LoopInterface::class)->shouldIgnoreMissing();
-    $cache = Mockery::mock(CacheInterface::class);
-    $container = Mockery::mock(ContainerInterface::class);
-    $sessionHandler = Mockery::mock(SessionHandlerInterface::class);
+    $loop = \Mockery::mock(LoopInterface::class)->shouldIgnoreMissing();
+    $cache = \Mockery::mock(CacheInterface::class);
+    $container = \Mockery::mock(ContainerInterface::class);
+    $sessionHandler = \Mockery::mock(SessionHandlerInterface::class);
     $capabilities = ServerCapabilities::make(promptsListChanged: true, resourcesListChanged: true);
 
-    $loop->shouldReceive('addPeriodicTimer')->with(300, Mockery::type('callable'))->andReturn(Mockery::mock(TimerInterface::class));
+    $loop->shouldReceive('addPeriodicTimer')->with(300, \Mockery::type('callable'))->andReturn(\Mockery::mock(TimerInterface::class));
 
     $server = $this->builder
         ->withServerInfo('FullBuild', '3.0')
@@ -292,12 +292,12 @@ it('builds Server with correct Configuration, Registry, Protocol, SessionManager
     expect($server->getRegistry())->toBeInstanceOf(Registry::class);
     expect($server->getProtocol())->toBeInstanceOf(Protocol::class);
     expect($server->getSessionManager())->toBeInstanceOf(SessionManager::class);
-    $smReflection = new ReflectionClass($server->getSessionManager());
+    $smReflection = new \ReflectionClass($server->getSessionManager());
     $handlerProp = $smReflection->getProperty('handler');
     expect($handlerProp->getValue($server->getSessionManager()))->toBe($sessionHandler);
 });
 
-it('registers manual tool successfully during build', function () {
+it('registers manual tool successfully during build', function (): void {
     $handler = [SB_DummyHandlerClass::class, 'handle'];
 
     $server = $this->builder
@@ -316,7 +316,7 @@ it('registers manual tool successfully during build', function () {
     expect($tool->handler)->toBe($handler);
 });
 
-it('infers tool name from invokable class if not provided', function () {
+it('infers tool name from invokable class if not provided', function (): void {
     $handler = SB_DummyInvokableClass::class;
 
     $server = $this->builder
@@ -329,8 +329,8 @@ it('infers tool name from invokable class if not provided', function () {
     expect($tool->schema->name)->toBe('SB_DummyInvokableClass');
 });
 
-it('registers tool with closure handler', function () {
-    $closure = (fn (string $message): string => "Hello, $message!");
+it('registers tool with closure handler', function (): void {
+    $closure = (static fn(string $message): string => "Hello, $message!");
 
     $server = $this->builder
         ->withServerInfo('ClosureTest', '1.0')
@@ -346,11 +346,11 @@ it('registers tool with closure handler', function () {
     expect($tool->schema->inputSchema)->toEqual([
         'type' => 'object',
         'properties' => ['message' => ['type' => 'string']],
-        'required' => ['message']
+        'required' => ['message'],
     ]);
 });
 
-it('registers tool with static method handler', function () {
+it('registers tool with static method handler', function (): void {
     $handler = [SB_DummyHandlerClass::class, 'handle'];
 
     $server = $this->builder
@@ -365,11 +365,11 @@ it('registers tool with static method handler', function () {
     expect($tool->handler)->toBe($handler);
 });
 
-it('registers resource with closure handler', function () {
-    $closure = (fn (string $id): array => [
+it('registers resource with closure handler', function (): void {
+    $closure = (static fn(string $id): array => [
         'uri' => "res://item/$id",
         'name' => "Item $id",
-        'mimeType' => 'application/json'
+        'mimeType' => 'application/json',
     ]);
 
     $server = $this->builder
@@ -383,10 +383,10 @@ it('registers resource with closure handler', function () {
     expect($resource->isManual)->toBeTrue();
 });
 
-it('registers prompt with closure handler', function () {
-    $closure = (fn (string $topic): array => [
+it('registers prompt with closure handler', function (): void {
+    $closure = (static fn(string $topic): array => [
         'role' => 'user',
-        'content' => ['type' => 'text', 'text' => "Tell me about $topic"]
+        'content' => ['type' => 'text', 'text' => "Tell me about $topic"],
     ]);
 
     $server = $this->builder
@@ -400,8 +400,8 @@ it('registers prompt with closure handler', function () {
     expect($prompt->isManual)->toBeTrue();
 });
 
-it('infers closure tool name automatically', function () {
-    $closure = (fn (int $count): array => ['count' => $count]);
+it('infers closure tool name automatically', function (): void {
+    $closure = (static fn(int $count): array => ['count' => $count]);
 
     $server = $this->builder
         ->withServerInfo('AutoNameTest', '1.0')
@@ -411,16 +411,16 @@ it('infers closure tool name automatically', function () {
     $tools = $server->getRegistry()->getTools();
     expect($tools)->toHaveCount(1);
 
-    $toolName = array_keys($tools)[0];
+    $toolName = \array_keys($tools)[0];
     expect($toolName)->toStartWith('closure_tool_');
 
     $tool = $server->getRegistry()->getTool($toolName);
     expect($tool->handler)->toBe($closure);
 });
 
-it('generates unique names for multiple closures', function () {
-    $closure1 = (fn (string $a): string => $a);
-    $closure2 = (fn (int $b): int => $b);
+it('generates unique names for multiple closures', function (): void {
+    $closure1 = (static fn(string $a): string => $a);
+    $closure2 = (static fn(int $b): int => $b);
 
     $server = $this->builder
         ->withServerInfo('MultiClosureTest', '1.0')
@@ -431,13 +431,13 @@ it('generates unique names for multiple closures', function () {
     $tools = $server->getRegistry()->getTools();
     expect($tools)->toHaveCount(2);
 
-    $toolNames = array_keys($tools);
+    $toolNames = \array_keys($tools);
     expect($toolNames[0])->toStartWith('closure_tool_');
     expect($toolNames[1])->toStartWith('closure_tool_');
     expect($toolNames[0])->not->toBe($toolNames[1]);
 });
 
-it('infers prompt arguments and completion providers for manual prompt', function () {
+it('infers prompt arguments and completion providers for manual prompt', function (): void {
     $handler = [SB_DummyHandlerClass::class, 'handlerWithCompletion'];
 
     $server = $this->builder
@@ -458,14 +458,14 @@ class SB_DummyHandlerWithEnhancedCompletion
 {
     public function handleWithListCompletion(
         #[CompletionProvider(values: ['option1', 'option2', 'option3'])]
-        string $choice
+        string $choice,
     ): array {
         return [['role' => 'user', 'content' => "Selected: {$choice}"]];
     }
 
     public function handleWithEnumCompletion(
         #[CompletionProvider(enum: SB_TestEnum::class)]
-        string $status
+        string $status,
     ): array {
         return [['role' => 'user', 'content' => "Status: {$status}"]];
     }
@@ -478,7 +478,7 @@ enum SB_TestEnum: string
     case INACTIVE = 'inactive';
 }
 
-it('creates ListCompletionProvider for values attribute in manual registration', function () {
+it('creates ListCompletionProvider for values attribute in manual registration', function (): void {
     $handler = [SB_DummyHandlerWithEnhancedCompletion::class, 'handleWithListCompletion'];
 
     $server = $this->builder
@@ -487,10 +487,10 @@ it('creates ListCompletionProvider for values attribute in manual registration',
         ->build();
 
     $prompt = $server->getRegistry()->getPrompt('listPrompt');
-    expect($prompt->completionProviders['choice'])->toBeInstanceOf(\PhpMcp\Server\Defaults\ListCompletionProvider::class);
+    expect($prompt->completionProviders['choice'])->toBeInstanceOf(\Mcp\Server\Defaults\ListCompletionProvider::class);
 });
 
-it('creates EnumCompletionProvider for enum attribute in manual registration', function () {
+it('creates EnumCompletionProvider for enum attribute in manual registration', function (): void {
     $handler = [SB_DummyHandlerWithEnhancedCompletion::class, 'handleWithEnumCompletion'];
 
     $server = $this->builder
@@ -499,7 +499,7 @@ it('creates EnumCompletionProvider for enum attribute in manual registration', f
         ->build();
 
     $prompt = $server->getRegistry()->getPrompt('enumPrompt');
-    expect($prompt->completionProviders['status'])->toBeInstanceOf(\PhpMcp\Server\Defaults\EnumCompletionProvider::class);
+    expect($prompt->completionProviders['status'])->toBeInstanceOf(\Mcp\Server\Defaults\EnumCompletionProvider::class);
 });
 
 // it('throws DefinitionException if HandlerResolver fails for a manual element', function () {
@@ -512,14 +512,14 @@ it('creates EnumCompletionProvider for enum attribute in manual registration', f
 // })->throws(DefinitionException::class, '1 error(s) occurred during manual element registration');
 
 
-it('builds successfully with minimal valid config', function () {
+it('builds successfully with minimal valid config', function (): void {
     $server = $this->builder
         ->withServerInfo('TS-Compatible', '0.1')
         ->build();
     expect($server)->toBeInstanceOf(Server::class);
 });
 
-it('can be built multiple times with different configurations', function () {
+it('can be built multiple times with different configurations', static function (): void {
     $builder = new ServerBuilder();
 
     $server1 = $builder

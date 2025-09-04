@@ -2,28 +2,24 @@
 
 declare(strict_types=1);
 
-namespace PhpMcp\Server\Routes;
+namespace Mcp\Server\Routes;
 
 use PhpMcp\Schema\JsonRpc\Request;
 use PhpMcp\Schema\JsonRpc\Notification;
 use PhpMcp\Schema\JsonRpc\Result;
 use PhpMcp\Schema\Request\SetLogLevelRequest;
 use PhpMcp\Schema\Result\EmptyResult;
-use PhpMcp\Server\Configuration;
-use PhpMcp\Server\Context;
-use PhpMcp\Server\Contracts\RouteInterface;
-use PhpMcp\Server\RequestMethod;
+use Mcp\Server\Context;
+use Mcp\Server\Contracts\RouteInterface;
+use Mcp\Server\RequestMethod;
 use Psr\Log\LoggerInterface;
+use Psr\Log\NullLogger;
 
 final readonly class LoggingRoute implements RouteInterface
 {
-    private LoggerInterface $logger;
-
     public function __construct(
-        private Configuration $configuration,
-    ) {
-        $this->logger = $this->configuration->logger;
-    }
+        private LoggerInterface $logger = new NullLogger(),
+    ) {}
 
     public function getMethods(): array
     {

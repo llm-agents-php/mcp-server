@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace PhpMcp\Server\Tests\Mocks\Clients;
+namespace Mcp\Server\Tests\Mocks\Clients;
 
 use Psr\Http\Message\ResponseInterface;
 use React\EventLoop\Loop;
@@ -16,13 +16,13 @@ use function React\Promise\reject;
 class MockSseClient
 {
     public Browser $browser;
+    public ?string $endpointUrl = null; // The /message endpoint URL provided by server
+    public ?string $clientId = null; // The clientId from the /message endpoint URL
+    public ?ResponseInterface $lastConnectResponse = null; // Last connect response for header testing
     private ?ReadableStreamInterface $stream = null;
     private string $buffer = '';
     private array $receivedMessages = []; // Stores decoded JSON-RPC messages
     private array $receivedSseEvents = []; // Stores raw SSE events (type, data, id)
-    public ?string $endpointUrl = null; // The /message endpoint URL provided by server
-    public ?string $clientId = null; // The clientId from the /message endpoint URL
-    public ?ResponseInterface $lastConnectResponse = null; // Last connect response for header testing
 
     public function __construct(int $timeout = 2)
     {
@@ -39,10 +39,10 @@ class MockSseClient
                     throw new \RuntimeException("SSE connection failed with status {$response->getStatusCode()}: {$body}");
                 }
                 $stream = $response->getBody();
-                assert($stream instanceof ReadableStreamInterface, "SSE response body is not a readable stream");
+                \assert($stream instanceof ReadableStreamInterface, "SSE response body is not a readable stream");
                 $this->stream = $stream;
                 $this->stream->on('data', $this->handleSseData(...));
-                $this->stream->on('close', function () {
+                $this->stream->on('close', function (): void {
                     $this->stream = null;
                 });
                 return $this;
@@ -53,34 +53,34 @@ class MockSseClient
     {
         $this->buffer .= $chunk;
 
-        while (($eventPos = strpos($this->buffer, "\n\n")) !== false) {
-            $eventBlock = substr($this->buffer, 0, $eventPos);
-            $this->buffer = substr($this->buffer, $eventPos + 2);
+        while (($eventPos = \strpos($this->buffer, "\n\n")) !== false) {
+            $eventBlock = \substr($this->buffer, 0, $eventPos);
+            $this->buffer = \substr($this->buffer, $eventPos + 2);
 
-            $lines = explode("\n", $eventBlock);
+            $lines = \explode("\n", $eventBlock);
             $event = ['type' => 'message', 'data' => '', 'id' => null];
 
             foreach ($lines as $line) {
-                if (str_starts_with($line, "event:")) {
-                    $event['type'] = trim(substr($line, strlen("event:")));
-                } elseif (str_starts_with($line, "data:")) {
-                    $event['data'] .= (empty($event['data']) ? "" : "\n") . trim(substr($line, strlen("data:")));
-                } elseif (str_starts_with($line, "id:")) {
-                    $event['id'] = trim(substr($line, strlen("id:")));
+                if (\str_starts_with($line, "event:")) {
+                    $event['type'] = \trim(\substr($line, \strlen("event:")));
+                } elseif (\str_starts_with($line, "data:")) {
+                    $event['data'] .= (empty($event['data']) ? "" : "\n") . \trim(\substr($line, \strlen("data:")));
+                } elseif (\str_starts_with($line, "id:")) {
+                    $event['id'] = \trim(\substr($line, \strlen("id:")));
                 }
             }
             $this->receivedSseEvents[] = $event;
 
             if ($event['type'] === 'endpoint' && $event['data']) {
                 $this->endpointUrl = $event['data'];
-                $query = parse_url($this->endpointUrl, PHP_URL_QUERY);
+                $query = \parse_url($this->endpointUrl, PHP_URL_QUERY);
                 if ($query) {
-                    parse_str($query, $params);
+                    \parse_str($query, $params);
                     $this->clientId = $params['clientId'] ?? null;
                 }
             } elseif ($event['type'] === 'message' && $event['data']) {
                 try {
-                    $decodedJson = json_decode($event['data'], true, 512, JSON_THROW_ON_ERROR);
+                    $decodedJson = \json_decode($event['data'], true, 512, JSON_THROW_ON_ERROR);
                     $this->receivedMessages[] = $decodedJson;
                 } catch (\JsonException) {
                 }
@@ -91,20 +91,20 @@ class MockSseClient
     public function getNextMessageResponse(string $expectedRequestId, int $timeoutSecs = 2): PromiseInterface
     {
         $deferred = new Deferred();
-        $startTime = microtime(true);
+        $startTime = \microtime(true);
 
         $checkMessages = null;
-        $checkMessages = function () use (&$checkMessages, $deferred, $expectedRequestId, $startTime, $timeoutSecs) {
+        $checkMessages = function () use (&$checkMessages, $deferred, $expectedRequestId, $startTime, $timeoutSecs): void {
             foreach ($this->receivedMessages as $i => $msg) {
                 if (isset($msg['id']) && $msg['id'] === $expectedRequestId) {
                     unset($this->receivedMessages[$i]); // Consume message
-                    $this->receivedMessages = array_values($this->receivedMessages);
+                    $this->receivedMessages = \array_values($this->receivedMessages);
                     $deferred->resolve($msg);
                     return;
                 }
             }
 
-            if (microtime(true) - $startTime > $timeoutSecs) {
+            if (\microtime(true) - $startTime > $timeoutSecs) {
                 $deferred->reject(new \RuntimeException("Timeout waiting for SSE message with ID '{$expectedRequestId}'"));
                 return;
             }
@@ -123,19 +123,19 @@ class MockSseClient
     public function getNextBatchMessageResponse(int $expectedItemCount, int $timeoutSecs = 2): PromiseInterface
     {
         $deferred = new Deferred();
-        $startTime = microtime(true);
+        $startTime = \microtime(true);
 
         $checkMessages = null;
-        $checkMessages = function () use (&$checkMessages, $deferred, $expectedItemCount, $startTime, $timeoutSecs) {
+        $checkMessages = function () use (&$checkMessages, $deferred, $expectedItemCount, $startTime, $timeoutSecs): void {
             foreach ($this->receivedMessages as $i => $msg) {
-                if (is_array($msg) && !isset($msg['jsonrpc']) && count($msg) === $expectedItemCount) {
+                if (\is_array($msg) && !isset($msg['jsonrpc']) && \count($msg) === $expectedItemCount) {
                     $isLikelyBatchResponse = true;
                     if (empty($msg) && $expectedItemCount === 0) {
                     } elseif (empty($msg) && $expectedItemCount > 0) {
                         $isLikelyBatchResponse = false;
                     } else {
                         foreach ($msg as $item) {
-                            if (!is_array($item) || (!isset($item['id']) && !isset($item['method']))) {
+                            if (!\is_array($item) || (!isset($item['id']) && !isset($item['method']))) {
                                 $isLikelyBatchResponse = false;
                                 break;
                             }
@@ -144,14 +144,14 @@ class MockSseClient
 
                     if ($isLikelyBatchResponse) {
                         unset($this->receivedMessages[$i]);
-                        $this->receivedMessages = array_values($this->receivedMessages);
+                        $this->receivedMessages = \array_values($this->receivedMessages);
                         $deferred->resolve($msg);
                         return;
                     }
                 }
             }
 
-            if (microtime(true) - $startTime > $timeoutSecs) {
+            if (\microtime(true) - $startTime > $timeoutSecs) {
                 $deferred->reject(new \RuntimeException("Timeout waiting for SSE Batch Response with {$expectedItemCount} items."));
                 return;
             }
@@ -178,10 +178,10 @@ class MockSseClient
             'method' => $method,
             'params' => $params,
         ];
-        $body = json_encode($payload);
+        $body = \json_encode($payload);
 
         return $this->browser->post($this->endpointUrl, ['Content-Type' => 'application/json'], $body)
-            ->then(function (ResponseInterface $response) use ($requestId) {
+            ->then(static function (ResponseInterface $response) use ($requestId) {
                 $bodyContent = (string) $response->getBody();
                 if ($response->getStatusCode() !== 202) {
                     throw new \RuntimeException("HTTP POST request failed with status {$response->getStatusCode()}: {$bodyContent}");
@@ -195,10 +195,10 @@ class MockSseClient
         if (!$this->endpointUrl || !$this->clientId) {
             return reject(new \LogicException("SSE Client not fully initialized (endpoint or clientId missing)."));
         }
-        $body = json_encode($batchRequestObjects);
+        $body = \json_encode($batchRequestObjects);
 
         return $this->browser->post($this->endpointUrl, ['Content-Type' => 'application/json'], $body)
-            ->then(function (ResponseInterface $response) {
+            ->then(static function (ResponseInterface $response) {
                 $bodyContent = (string) $response->getBody();
                 if ($response->getStatusCode() !== 202) {
                     throw new \RuntimeException("HTTP BATCH POST request failed with status {$response->getStatusCode()}: {$bodyContent}");
@@ -217,9 +217,9 @@ class MockSseClient
             'method' => $method,
             'params' => $params,
         ];
-        $body = json_encode($payload);
+        $body = \json_encode($payload);
         return $this->browser->post($this->endpointUrl, ['Content-Type' => 'application/json'], $body)
-            ->then(function (ResponseInterface $response) {
+            ->then(static function (ResponseInterface $response) {
                 $bodyContent = (string) $response->getBody();
                 if ($response->getStatusCode() !== 202) {
                     throw new \RuntimeException("HTTP POST notification failed with status {$response->getStatusCode()}: {$bodyContent}");

@@ -1,21 +1,22 @@
 <?php
 
-namespace PhpMcp\Server\Tests\Fixtures\General;
+declare(strict_types=1);
+
+namespace Mcp\Server\Tests\Fixtures\General;
 
 use PhpMcp\Schema\Content\PromptMessage;
 use PhpMcp\Schema\Enum\Role;
 use PhpMcp\Schema\Content\TextContent;
 use PhpMcp\Schema\Content\ImageContent;
 use PhpMcp\Schema\Content\AudioContent;
-use PhpMcp\Server\Attributes\CompletionProvider;
-use Psr\Log\LoggerInterface;
+use Mcp\Server\Attributes\CompletionProvider;
 
 class PromptHandlerFixture
 {
     public function generateSimpleGreeting(string $name, string $style = "friendly"): array
     {
         return [
-            ['role' => 'user', 'content' => "Craft a {$style} greeting for {$name}."]
+            ['role' => 'user', 'content' => "Craft a {$style} greeting for {$name}."],
         ];
     }
 
@@ -41,7 +42,7 @@ class PromptHandlerFixture
     {
         return [
             'user' => "This is the user's turn.",
-            'assistant' => "And this is the assistant's reply."
+            'assistant' => "And this is the assistant's reply.",
         ];
     }
 
@@ -76,7 +77,7 @@ class PromptHandlerFixture
             ['role' => 'assistant', 'content' => TextContent::make("Second raw message with Content obj.")],
             ['role' => 'user', 'content' => ['type' => 'image', 'data' => 'raw_img_data', 'mimeType' => 'image/webp']],
             ['role' => 'assistant', 'content' => ['type' => 'audio', 'data' => 'raw_aud_data', 'mimeType' => 'audio/ogg']],
-            ['role' => 'user', 'content' => ['type' => 'resource', 'resource' => ['uri' => 'file://doc.pdf', 'blob' => base64_encode('pdf-data'), 'mimeType' => 'application/pdf']]],
+            ['role' => 'user', 'content' => ['type' => 'resource', 'resource' => ['uri' => 'file://doc.pdf', 'blob' => \base64_encode('pdf-data'), 'mimeType' => 'application/pdf']]],
             ['role' => 'assistant', 'content' => ['type' => 'resource', 'resource' => ['uri' => 'config://settings.json', 'text' => '{"theme":"dark"}']]],
         ];
     }
@@ -105,10 +106,10 @@ class PromptHandlerFixture
     public function promptWithArgumentCompletion(
         #[CompletionProvider(provider: CompletionProviderFixture::class)]
         string $entityName,
-        string $action = "describe"
+        string $action = "describe",
     ): array {
         return [
-            ['role' => 'user', 'content' => "Please {$action} the entity: {$entityName}."]
+            ['role' => 'user', 'content' => "Please {$action} the entity: {$entityName}."],
         ];
     }
 
@@ -142,8 +143,8 @@ class PromptHandlerFixture
         return [
             [
                 'role' => 'user',
-                'content' => ['type' => 'resource', 'resource' => ['uri' => 'uri://uri']]
-            ]
+                'content' => ['type' => 'resource', 'resource' => ['uri' => 'uri://uri']],
+            ],
         ];
     }
 

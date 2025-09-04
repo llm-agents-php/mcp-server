@@ -2,12 +2,11 @@
 
 declare(strict_types=1);
 
-namespace PhpMcp\Server\Defaults;
+namespace Mcp\Server\Defaults;
 
-use DateTimeImmutable;
 use Psr\Clock\ClockInterface;
 
-final class SystemClock implements ClockInterface
+final readonly class SystemClock implements ClockInterface
 {
     public function now(): \DateTimeImmutable
     {

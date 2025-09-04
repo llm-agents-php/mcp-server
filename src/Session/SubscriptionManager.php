@@ -1,6 +1,8 @@
 <?php
 
-namespace PhpMcp\Server\Session;
+declare(strict_types=1);
+
+namespace Mcp\Server\Session;
 
 use Psr\Log\LoggerInterface;
 
@@ -14,8 +16,7 @@ final class SubscriptionManager
 
     public function __construct(
         private readonly LoggerInterface $logger,
-    ) {
-    }
+    ) {}
 
     /**
      * Subscribe a session to a resource
@@ -56,7 +57,7 @@ final class SubscriptionManager
      */
     public function getSubscribers(string $uri): array
     {
-        return array_keys($this->resourceSubscribers[$uri] ?? []);
+        return \array_keys($this->resourceSubscribers[$uri] ?? []);
     }
 
     /**
@@ -76,7 +77,7 @@ final class SubscriptionManager
             return;
         }
 
-        $uris = array_keys($this->sessionSubscriptions[$sessionId]);
+        $uris = \array_keys($this->sessionSubscriptions[$sessionId]);
         foreach ($uris as $uri) {
             unset($this->resourceSubscribers[$uri][$sessionId]);
 
@@ -90,7 +91,7 @@ final class SubscriptionManager
 
         $this->logger->debug('Cleaned up all subscriptions for session', [
             'sessionId' => $sessionId,
-            'count' => count($uris),
+            'count' => \count($uris),
         ]);
     }
 }

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace PhpMcp\Server;
+namespace Mcp\Server;
 
 use PhpMcp\Schema\Implementation;
 use PhpMcp\Schema\ServerCapabilities;
@@ -16,7 +16,7 @@ use React\EventLoop\LoopInterface;
  *
  * This object is typically assembled by the ServerBuilder and passed to the Server constructor.
  */
-readonly class Configuration
+final readonly class Configuration
 {
     /**
      * @param Implementation $serverInfo Info about this MCP server application.
@@ -37,6 +37,5 @@ readonly class Configuration
         public ContainerInterface $container,
         public int $paginationLimit = 50,
         public ?string $instructions = null,
-    ) {
-    }
+    ) {}
 }

@@ -1,71 +1,72 @@
 <?php
 
-namespace PhpMcp\Server\Tests\Fixtures\General;
+declare(strict_types=1);
 
-use PhpMcp\Server\Context;
-use PhpMcp\Server\Tests\Fixtures\Enums\BackedIntEnum;
-use PhpMcp\Server\Tests\Fixtures\Enums\BackedStringEnum;
-use PhpMcp\Server\Tests\Fixtures\Enums\UnitEnum;
-use stdClass;
+namespace Mcp\Server\Tests\Fixtures\General;
+
+use Mcp\Server\Context;
+use Mcp\Server\Tests\Fixtures\Enums\BackedIntEnum;
+use Mcp\Server\Tests\Fixtures\Enums\BackedStringEnum;
+use Mcp\Server\Tests\Fixtures\Enums\UnitEnum;
 
 class VariousTypesHandler
 {
     public function noArgsMethod(): array
     {
-        return compact([]);
+        return \compact([]);
     }
 
     public function simpleRequiredArgs(string $pString, int $pInt, bool $pBool): array
     {
-        return compact('pString', 'pInt', 'pBool');
+        return \compact('pString', 'pInt', 'pBool');
     }
 
     public function optionalArgsWithDefaults(
         string $pString = 'default_string',
         int $pInt = 100,
         ?bool $pNullableBool = true,
-        float $pFloat = 3.14
+        float $pFloat = 3.14,
     ): array {
-        return compact('pString', 'pInt', 'pNullableBool', 'pFloat');
+        return \compact('pString', 'pInt', 'pNullableBool', 'pFloat');
     }
 
     public function nullableArgsWithoutDefaults(?string $pString, ?int $pInt, ?array $pArray): array
     {
-        return compact('pString', 'pInt', 'pArray');
+        return \compact('pString', 'pInt', 'pArray');
     }
 
     public function mixedTypeArg(mixed $pMixed): array
     {
-        return compact('pMixed');
+        return \compact('pMixed');
     }
 
     public function backedEnumArgs(
         BackedStringEnum $pBackedString,
         BackedIntEnum $pBackedInt,
         ?BackedStringEnum $pNullableBackedString = null,
-        BackedIntEnum $pOptionalBackedInt = BackedIntEnum::First
+        BackedIntEnum $pOptionalBackedInt = BackedIntEnum::First,
     ): array {
-        return compact('pBackedString', 'pBackedInt', 'pNullableBackedString', 'pOptionalBackedInt');
+        return \compact('pBackedString', 'pBackedInt', 'pNullableBackedString', 'pOptionalBackedInt');
     }
 
     public function unitEnumArg(UnitEnum $pUnitEnum): array
     {
-        return compact('pUnitEnum');
+        return \compact('pUnitEnum');
     }
 
     public function arrayArg(array $pArray): array
     {
-        return compact('pArray');
+        return \compact('pArray');
     }
 
-    public function objectArg(stdClass $pObject): array
+    public function objectArg(\stdClass $pObject): array
     {
-        return compact('pObject');
+        return \compact('pObject');
     }
 
     public function variadicArgs(string ...$items): array
     {
-        return compact('items');
+        return \compact('items');
     }
 
     /**
@@ -81,7 +82,7 @@ class VariousTypesHandler
      * @param string|null $nullableStringParam A nullable string.
      * @param int $optionalIntWithDefaultParam An optional int with default.
      * @param mixed $mixedParam A mixed type.
-     * @param stdClass $objectParam An object.
+     * @param \stdClass $objectParam An object.
      * @param string $stringForIntCast String that should be cast to int.
      * @param string $stringForFloatCast String that should be cast to float.
      * @param string $stringForBoolTrueCast String that should be cast to bool true.
@@ -103,7 +104,7 @@ class VariousTypesHandler
         UnitEnum $unitEnumParam,
         ?string $nullableStringParam,
         mixed $mixedParam,
-        stdClass $objectParam,
+        \stdClass $objectParam,
         string $stringForIntCast,
         string $stringForFloatCast,
         string $stringForBoolTrueCast,
@@ -115,7 +116,7 @@ class VariousTypesHandler
         int $valueForBackedIntEnum,
         int $optionalIntWithDefaultParam = 999,
     ): array {
-        return compact(
+        return \compact(
             'strParam',
             'intParam',
             'boolProp',
@@ -136,13 +137,11 @@ class VariousTypesHandler
             'intForFloatCast',
             'boolForStringCast',
             'valueForBackedStringEnum',
-            'valueForBackedIntEnum'
+            'valueForBackedIntEnum',
         );
     }
 
-    public function methodCausesTypeError(int $mustBeInt): void
-    {
-    }
+    public function methodCausesTypeError(int $mustBeInt): void {}
 
     public function contextArg(Context $context): array
     {

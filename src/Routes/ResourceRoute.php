@@ -2,9 +2,8 @@
 
 declare(strict_types=1);
 
-namespace PhpMcp\Server\Routes;
+namespace Mcp\Server\Routes;
 
-use JsonException;
 use PhpMcp\Schema\JsonRpc\Request;
 use PhpMcp\Schema\JsonRpc\Notification;
 use PhpMcp\Schema\JsonRpc\Result;
@@ -17,30 +16,25 @@ use PhpMcp\Schema\Result\EmptyResult;
 use PhpMcp\Schema\Result\ListResourcesResult;
 use PhpMcp\Schema\Result\ListResourceTemplatesResult;
 use PhpMcp\Schema\Result\ReadResourceResult;
-use PhpMcp\Server\Configuration;
-use PhpMcp\Server\Context;
-use PhpMcp\Server\Contracts\RouteInterface;
-use PhpMcp\Server\Exception\McpServerException;
-use PhpMcp\Server\Registry;
-use PhpMcp\Server\RequestMethod;
-use PhpMcp\Server\Session\SubscriptionManager;
-use Psr\Container\ContainerInterface;
+use Mcp\Server\Context;
+use Mcp\Server\Contracts\RouteInterface;
+use Mcp\Server\Exception\McpServerException;
+use Mcp\Server\Helpers\PaginationHelper;
+use Mcp\Server\Registry;
+use Mcp\Server\RequestMethod;
+use Mcp\Server\Session\SubscriptionManager;
 use Psr\Log\LoggerInterface;
-use Throwable;
+use Psr\Log\NullLogger;
 
 final readonly class ResourceRoute implements RouteInterface
 {
-    private ContainerInterface $container;
-    private LoggerInterface $logger;
-
     public function __construct(
         private Registry $registry,
         private SubscriptionManager $subscriptionManager,
-        private Configuration $configuration,
-    ) {
-        $this->container = $this->configuration->container;
-        $this->logger = $this->configuration->logger;
-    }
+        private LoggerInterface $logger = new NullLogger(),
+        private PaginationHelper $paginationHelper = new PaginationHelper(),
+        private int $paginationLimit = 50,
+    ) {}
 
     public function getMethods(): array
     {
@@ -84,24 +78,26 @@ final readonly class ResourceRoute implements RouteInterface
 
     private function handleResourcesList(ListResourcesRequest $request): ListResourcesResult
     {
-        $limit = $this->configuration->paginationLimit;
-        $offset = $this->decodeCursor($request->cursor);
         $allItems = $this->registry->getResources();
-        $pagedItems = array_slice($allItems, $offset, $limit);
-        $nextCursor = $this->encodeNextCursor($offset, count($pagedItems), count($allItems), $limit);
+        $pagination = $this->paginationHelper->paginate(
+            $allItems,
+            $request->cursor,
+            $this->paginationLimit,
+        );
 
-        return new ListResourcesResult(array_values($pagedItems), $nextCursor);
+        return new ListResourcesResult($pagination['items'], $pagination['nextCursor']);
     }
 
     private function handleResourceTemplateList(ListResourceTemplatesRequest $request): ListResourceTemplatesResult
     {
-        $limit = $this->configuration->paginationLimit;
-        $offset = $this->decodeCursor($request->cursor);
         $allItems = $this->registry->getResourceTemplates();
-        $pagedItems = array_slice($allItems, $offset, $limit);
-        $nextCursor = $this->encodeNextCursor($offset, count($pagedItems), count($allItems), $limit);
+        $pagination = $this->paginationHelper->paginate(
+            $allItems,
+            $request->cursor,
+            $this->paginationLimit,
+        );
 
-        return new ListResourceTemplatesResult(array_values($pagedItems), $nextCursor);
+        return new ListResourceTemplatesResult($pagination['items'], $pagination['nextCursor']);
     }
 
     private function handleResourceRead(ReadResourceRequest $request, Context $context): ReadResourceResult
@@ -115,15 +111,15 @@ final readonly class ResourceRoute implements RouteInterface
         }
 
         try {
-            $result = $registeredResource->read($this->container, $uri, $context);
+            $result = $registeredResource->read($uri, $context);
 
             return new ReadResourceResult($result);
-        } catch (JsonException $e) {
+        } catch (\JsonException $e) {
             $this->logger->warning('Failed to JSON encode resource content.', ['exception' => $e, 'uri' => $uri]);
             throw McpServerException::internalError("Failed to serialize resource content for '{$uri}'.", $e);
         } catch (McpServerException $e) {
             throw $e;
-        } catch (Throwable $e) {
+        } catch (\Throwable $e) {
             $this->logger->error('Resource read failed.', ['uri' => $uri, 'exception' => $e]);
             throw McpServerException::resourceReadFailed($uri, $e);
         }
@@ -139,37 +135,5 @@ final readonly class ResourceRoute implements RouteInterface
     {
         $this->subscriptionManager->unsubscribe($context->session->getId(), $request->uri);
         return new EmptyResult();
-    }
-
-    private function decodeCursor(?string $cursor): int
-    {
-        if ($cursor === null) {
-            return 0;
-        }
-
-        $decoded = base64_decode($cursor, true);
-        if ($decoded === false) {
-            $this->logger->warning('Received invalid pagination cursor (not base64)', ['cursor' => $cursor]);
-
-            return 0;
-        }
-
-        if (preg_match('/^offset=(\d+)$/', $decoded, $matches)) {
-            return (int) $matches[1];
-        }
-
-        $this->logger->warning('Received invalid pagination cursor format', ['cursor' => $decoded]);
-
-        return 0;
-    }
-
-    private function encodeNextCursor(int $currentOffset, int $returnedCount, int $totalCount, int $limit): ?string
-    {
-        $nextOffset = $currentOffset + $returnedCount;
-        if ($returnedCount > 0 && $nextOffset < $totalCount) {
-            return base64_encode("offset={$nextOffset}");
-        }
-
-        return null;
     }
 }

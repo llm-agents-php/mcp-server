@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace PhpMcp\Server;
+namespace Mcp\Server;
 
-use PhpMcp\Server\Contracts\SessionInterface;
+use Mcp\Server\Contracts\SessionInterface;
 use Psr\Http\Message\ServerRequestInterface;
 
 final readonly class Context
@@ -12,6 +12,5 @@ final readonly class Context
     public function __construct(
         public SessionInterface $session,
         public ?ServerRequestInterface $request = null,
-    ) {
-    }
+    ) {}
 }

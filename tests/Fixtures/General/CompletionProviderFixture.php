@@ -1,9 +1,11 @@
 <?php
 
-namespace PhpMcp\Server\Tests\Fixtures\General;
+declare(strict_types=1);
 
-use PhpMcp\Server\Contracts\CompletionProviderInterface;
-use PhpMcp\Server\Contracts\SessionInterface;
+namespace Mcp\Server\Tests\Fixtures\General;
+
+use Mcp\Server\Contracts\CompletionProviderInterface;
+use Mcp\Server\Contracts\SessionInterface;
 
 class CompletionProviderFixture implements CompletionProviderInterface
 {
@@ -16,6 +18,6 @@ class CompletionProviderFixture implements CompletionProviderInterface
         self::$lastCurrentValue = $currentValue;
         self::$lastSession = $session;
 
-        return array_filter(self::$completions, fn ($item) => str_starts_with((string) $item, $currentValue));
+        return \array_filter(self::$completions, static fn($item) => \str_starts_with((string) $item, $currentValue));
     }
 }

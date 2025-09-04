@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace PhpMcp\Server\Session;
+namespace Mcp\Server\Session;
 
-use PhpMcp\Server\Contracts\SessionHandlerInterface;
-use PhpMcp\Server\Defaults\SystemClock;
+use Mcp\Server\Contracts\SessionHandlerInterface;
+use Mcp\Server\Defaults\SystemClock;
 use Psr\SimpleCache\CacheInterface;
 use Psr\Clock\ClockInterface;
 

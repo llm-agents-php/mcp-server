@@ -2,31 +2,32 @@
 
 declare(strict_types=1);
 
-namespace PhpMcp\Server\Session;
+namespace Mcp\Server\Session;
 
 use Evenement\EventEmitterInterface;
 use Evenement\EventEmitterTrait;
-use PhpMcp\Server\Contracts\SessionHandlerInterface;
-use PhpMcp\Server\Contracts\SessionInterface;
+use Mcp\Server\Contracts\SessionHandlerInterface;
+use Mcp\Server\Contracts\SessionInterface;
 use Psr\Log\LoggerInterface;
 use React\EventLoop\Loop;
 use React\EventLoop\LoopInterface;
 use React\EventLoop\TimerInterface;
 
-class SessionManager implements EventEmitterInterface
+final class SessionManager implements EventEmitterInterface
 {
     use EventEmitterTrait;
 
-    protected ?TimerInterface $gcTimer = null;
+    private ?TimerInterface $gcTimer = null;
+    private readonly LoopInterface $loop;
 
     public function __construct(
-        protected SessionHandlerInterface $handler,
-        protected LoggerInterface $logger,
-        protected ?LoopInterface $loop = null,
-        protected int $ttl = 3600,
-        protected int|float $gcInterval = 300,
+        private readonly SessionHandlerInterface $handler,
+        private readonly LoggerInterface $logger,
+        ?LoopInterface $loop = null,
+        private readonly int $ttl = 3600,
+        private readonly int|float $gcInterval = 300,
     ) {
-        $this->loop ??= Loop::get();
+        $this->loop = $loop ?: Loop::get();
     }
 
     /**
@@ -49,9 +50,9 @@ class SessionManager implements EventEmitterInterface
             $this->emit('session_deleted', [$sessionId]);
         }
 
-        if (count($deletedSessions) > 0) {
+        if (\count($deletedSessions) > 0) {
             $this->logger->debug('Session garbage collection complete', [
-                'purged_sessions' => count($deletedSessions),
+                'purged_sessions' => \count($deletedSessions),
             ]);
         }
 

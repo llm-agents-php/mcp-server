@@ -1,19 +1,18 @@
 <?php
 
-namespace PhpMcp\Server\Tests\Fixtures\General;
+declare(strict_types=1);
+
+namespace Mcp\Server\Tests\Fixtures\General;
 
 use PhpMcp\Schema\Content\TextContent;
 use PhpMcp\Schema\Content\ImageContent;
 use PhpMcp\Schema\Content\AudioContent;
-use PhpMcp\Server\Context;
-use PhpMcp\Server\Tests\Fixtures\Enums\BackedStringEnum;
-use Psr\Log\LoggerInterface;
+use Mcp\Server\Context;
+use Mcp\Server\Tests\Fixtures\Enums\BackedStringEnum;
 
 class ToolHandlerFixture
 {
-    public function __construct()
-    {
-    }
+    public function __construct() {}
 
     public function greet(string $name): string
     {
@@ -32,7 +31,7 @@ class ToolHandlerFixture
 
     public function noParamsTool(): array
     {
-        return ['status' => 'ok', 'timestamp' => time()];
+        return ['status' => 'ok', 'timestamp' => \time()];
     }
 
     public function processBackedEnum(BackedStringEnum $status): string
@@ -101,7 +100,7 @@ class ToolHandlerFixture
     {
         return [
             TextContent::make("Part 1"),
-            ImageContent::make("imgdata", "image/jpeg")
+            ImageContent::make("imgdata", "image/jpeg"),
         ];
     }
 
@@ -115,7 +114,7 @@ class ToolHandlerFixture
             null,
             ['nested_key' => 'nested_value', 'sub_array' => [4, 5]],
             ImageContent::make("img_data_mixed", "image/gif"),
-            (object)['obj_prop' => 'obj_val']
+            (object) ['obj_prop' => 'obj_val'],
         ];
     }
 
@@ -131,7 +130,7 @@ class ToolHandlerFixture
 
     public function toolUnencodableResult()
     {
-        return fopen('php://memory', 'r');
+        return \fopen('php://memory', 'r');
     }
 
     public function toolReadsContext(Context $context): string

@@ -1,9 +1,9 @@
 <?php
 
-namespace PhpMcp\Server\Defaults;
+declare(strict_types=1);
 
-use DateInterval;
-use DateTime;
+namespace Mcp\Server\Defaults;
+
 use Psr\SimpleCache\CacheInterface;
 
 /**
@@ -12,7 +12,6 @@ use Psr\SimpleCache\CacheInterface;
 final class ArrayCache implements CacheInterface
 {
     private array $store = [];
-
     private array $expires = [];
 
     public function get(string $key, mixed $default = null): mixed
@@ -24,7 +23,7 @@ final class ArrayCache implements CacheInterface
         return $this->store[$key];
     }
 
-    public function set(string $key, mixed $value, DateInterval|int|null $ttl = null): bool
+    public function set(string $key, mixed $value, \DateInterval|int|null $ttl = null): bool
     {
         $this->store[$key] = $value;
         $this->expires[$key] = $this->calculateExpiry($ttl);
@@ -57,7 +56,7 @@ final class ArrayCache implements CacheInterface
         return $result;
     }
 
-    public function setMultiple(iterable $values, DateInterval|int|null $ttl = null): bool
+    public function setMultiple(iterable $values, \DateInterval|int|null $ttl = null): bool
     {
         $expiry = $this->calculateExpiry($ttl);
         foreach ($values as $key => $value) {
@@ -83,7 +82,7 @@ final class ArrayCache implements CacheInterface
             return false;
         }
         // Check expiry
-        if (isset($this->expires[$key]) && $this->expires[$key] !== null && time() >= $this->expires[$key]) {
+        if (isset($this->expires[$key]) && $this->expires[$key] !== null && \time() >= $this->expires[$key]) {
             $this->delete($key);
 
             return false;
@@ -92,16 +91,16 @@ final class ArrayCache implements CacheInterface
         return true;
     }
 
-    private function calculateExpiry(DateInterval|int|null $ttl): ?int
+    private function calculateExpiry(\DateInterval|int|null $ttl): ?int
     {
         if ($ttl === null) {
             return null; // No expiry
         }
-        if (is_int($ttl)) {
-            return time() + $ttl;
+        if (\is_int($ttl)) {
+            return \time() + $ttl;
         }
-        if ($ttl instanceof DateInterval) {
-            return (new DateTime())->add($ttl)->getTimestamp();
+        if ($ttl instanceof \DateInterval) {
+            return (new \DateTime())->add($ttl)->getTimestamp();
         }
 
         // Invalid TTL type, treat as no expiry

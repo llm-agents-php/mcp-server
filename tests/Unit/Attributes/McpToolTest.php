@@ -1,10 +1,12 @@
 <?php
 
-namespace PhpMcp\Server\Tests\Unit\Attributes;
+declare(strict_types=1);
 
-use PhpMcp\Server\Attributes\McpTool;
+namespace Mcp\Server\Tests\Unit\Attributes;
 
-it('instantiates with correct properties', function () {
+use Mcp\Server\Attributes\McpTool;
+
+it('instantiates with correct properties', static function (): void {
     // Arrange
     $name = 'test-tool-name';
     $description = 'This is a test description.';
@@ -17,7 +19,7 @@ it('instantiates with correct properties', function () {
     expect($attribute->description)->toBe($description);
 });
 
-it('instantiates with null values for name and description', function () {
+it('instantiates with null values for name and description', static function (): void {
     // Arrange & Act
     $attribute = new McpTool(name: null, description: null);
 
@@ -26,7 +28,7 @@ it('instantiates with null values for name and description', function () {
     expect($attribute->description)->toBeNull();
 });
 
-it('instantiates with missing optional arguments', function () {
+it('instantiates with missing optional arguments', static function (): void {
     // Arrange & Act
     $attribute = new McpTool(); // Use default constructor values
 

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace PhpMcp\Server\Tests\Fixtures\Middlewares;
+namespace Mcp\Server\Tests\Fixtures\Middlewares;
 
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Message\ResponseInterface;
@@ -15,9 +15,9 @@ class FirstMiddleware
         $result = $next($request);
 
         return match (true) {
-            $result instanceof PromiseInterface => $result->then(fn ($response) => $this->handle($response)),
+            $result instanceof PromiseInterface => $result->then(fn($response) => $this->handle($response)),
             $result instanceof ResponseInterface => $this->handle($result),
-            default => $result
+            default => $result,
         };
     }
 

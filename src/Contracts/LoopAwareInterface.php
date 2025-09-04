@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace PhpMcp\Server\Contracts;
+namespace Mcp\Server\Contracts;
 
 use React\EventLoop\LoopInterface;
 

@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace PhpMcp\Server\Tests\Fixtures\Discovery;
+namespace Mcp\Server\Tests\Fixtures\Discovery;
 
-use PhpMcp\Server\Attributes\McpPrompt;
-use PhpMcp\Server\Attributes\CompletionProvider;
-use PhpMcp\Server\Tests\Fixtures\General\CompletionProviderFixture;
+use Mcp\Server\Attributes\McpPrompt;
+use Mcp\Server\Attributes\CompletionProvider;
+use Mcp\Server\Tests\Fixtures\General\CompletionProviderFixture;
 
 class DiscoverablePromptHandler
 {
@@ -20,10 +20,10 @@ class DiscoverablePromptHandler
     public function generateStoryPrompt(
         #[CompletionProvider(provider: CompletionProviderFixture::class)]
         string $genre,
-        int $lengthWords = 200
+        int $lengthWords = 200,
     ): array {
         return [
-            ["role" => "user", "content" => "Write a {$genre} story about a lost robot, approximately {$lengthWords} words long."]
+            ["role" => "user", "content" => "Write a {$genre} story about a lost robot, approximately {$lengthWords} words long."],
         ];
     }
 
@@ -32,7 +32,7 @@ class DiscoverablePromptHandler
     {
         return [
             ["role" => "user", "content" => $question],
-            ["role" => "assistant", "content" => "I will try to answer that."]
+            ["role" => "assistant", "content" => "I will try to answer that."],
         ];
     }
 }

@@ -1,7 +1,9 @@
 <?php
 
-use PhpMcp\Server\Protocol;
-use PhpMcp\Server\Tests\Fixtures\General\ResourceHandlerFixture;
+declare(strict_types=1);
+
+use Mcp\Server\Protocol;
+use Mcp\Server\Tests\Fixtures\General\ResourceHandlerFixture;
 use React\ChildProcess\Process;
 use React\EventLoop\Loop;
 use React\EventLoop\LoopInterface;
@@ -15,7 +17,7 @@ const PROCESS_TIMEOUT_SECONDS = 5;
 
 function sendRequestToServer(Process $process, string $requestId, string $method, array $params = []): void
 {
-    $request = json_encode([
+    $request = \json_encode([
         'jsonrpc' => '2.0',
         'id' => $requestId,
         'method' => $method,
@@ -26,7 +28,7 @@ function sendRequestToServer(Process $process, string $requestId, string $method
 
 function sendNotificationToServer(Process $process, string $method, array $params = []): void
 {
-    $notification = json_encode([
+    $notification = \json_encode([
         'jsonrpc' => '2.0',
         'method' => $method,
         'params' => $params,
@@ -40,23 +42,23 @@ function readResponseFromServer(Process $process, string $expectedRequestId, Loo
     $deferred = new Deferred();
     $buffer = '';
 
-    $dataListener = function ($chunk) use (&$buffer, $deferred, $expectedRequestId, $process, &$dataListener) {
+    $dataListener = static function ($chunk) use (&$buffer, $deferred, $expectedRequestId, $process, &$dataListener): void {
         $buffer .= $chunk;
-        if (str_contains($buffer, "\n")) {
-            $lines = explode("\n", $buffer);
-            $buffer = array_pop($lines);
+        if (\str_contains($buffer, "\n")) {
+            $lines = \explode("\n", $buffer);
+            $buffer = \array_pop($lines);
 
             foreach ($lines as $line) {
-                if (empty(trim($line))) {
+                if (empty(\trim($line))) {
                     continue;
                 }
                 try {
-                    $response = json_decode(trim($line), true);
-                    if (array_key_exists('id', $response) && $response['id'] == $expectedRequestId) {
+                    $response = \json_decode(\trim($line), true);
+                    if (\array_key_exists('id', $response) && $response['id'] == $expectedRequestId) {
                         $process->stdout->removeListener('data', $dataListener);
                         $deferred->resolve($response);
                         return;
-                    } elseif (isset($response['method']) && str_starts_with((string) $response['method'], 'notifications/')) {
+                    } elseif (isset($response['method']) && \str_starts_with((string) $response['method'], 'notifications/')) {
                         // It's a notification, log it or handle if necessary for a specific test, but don't resolve
                     }
                 } catch (\JsonException $e) {
@@ -71,36 +73,36 @@ function readResponseFromServer(Process $process, string $expectedRequestId, Loo
     $process->stdout->on('data', $dataListener);
 
     return timeout($deferred->promise(), PROCESS_TIMEOUT_SECONDS, $loop)
-        ->catch(function ($reason) use ($expectedRequestId) {
-            if ($reason instanceof \RuntimeException && str_contains($reason->getMessage(), 'Timed out after')) {
+        ->catch(static function ($reason) use ($expectedRequestId): void {
+            if ($reason instanceof \RuntimeException && \str_contains($reason->getMessage(), 'Timed out after')) {
                 throw new \RuntimeException("Timeout waiting for response to request ID '{$expectedRequestId}'");
             }
             throw $reason;
         })
-        ->finally(function () use ($process, $dataListener) {
+        ->finally(static function () use ($process, $dataListener): void {
             $process->stdout->removeListener('data', $dataListener);
         });
 }
 
-beforeEach(function () {
+beforeEach(function (): void {
     $this->loop = Loop::get();
 
-    if (!is_executable(STDIO_SERVER_SCRIPT_PATH)) {
-        chmod(STDIO_SERVER_SCRIPT_PATH, 0755);
+    if (!\is_executable(STDIO_SERVER_SCRIPT_PATH)) {
+        \chmod(STDIO_SERVER_SCRIPT_PATH, 0755);
     }
 
     $phpPath = PHP_BINARY ?: 'php';
-    $command = escapeshellarg($phpPath) . ' ' . escapeshellarg(STDIO_SERVER_SCRIPT_PATH);
+    $command = \escapeshellarg($phpPath) . ' ' . \escapeshellarg(STDIO_SERVER_SCRIPT_PATH);
     $this->process = new Process($command);
     $this->process->start($this->loop);
 
     $this->processErrorOutput = '';
-    $this->process->stderr->on('data', function ($chunk) {
+    $this->process->stderr->on('data', function ($chunk): void {
         $this->processErrorOutput .= $chunk;
     });
 });
 
-afterEach(function () {
+afterEach(function (): void {
     if ($this->process instanceof Process && $this->process->isRunning()) {
         if ($this->process->stdin->isWritable()) {
             $this->process->stdin->end();
@@ -117,12 +119,12 @@ afterEach(function () {
     $this->process = null;
 });
 
-it('starts the stdio server, initializes, calls a tool, and closes', function () {
+it('starts the stdio server, initializes, calls a tool, and closes', function (): void {
     // 1. Initialize Request
     sendRequestToServer($this->process, 'init-1', 'initialize', [
         'protocolVersion' => Protocol::LATEST_PROTOCOL_VERSION,
         'clientInfo' => ['name' => 'PestTestClient', 'version' => '1.0'],
-        'capabilities' => []
+        'capabilities' => [],
     ]);
     $initResponse = await(readResponseFromServer($this->process, 'init-1', $this->loop));
 
@@ -139,7 +141,7 @@ it('starts the stdio server, initializes, calls a tool, and closes', function ()
     // 3. Call a tool
     sendRequestToServer($this->process, 'tool-call-1', 'tools/call', [
         'name' => 'greet_stdio_tool',
-        'arguments' => ['name' => 'Integration Tester']
+        'arguments' => ['name' => 'Integration Tester'],
     ]);
     $toolResponse = await(readResponseFromServer($this->process, 'tool-call-1', $this->loop));
 
@@ -151,7 +153,7 @@ it('starts the stdio server, initializes, calls a tool, and closes', function ()
     $this->process->stdin->end();
 })->group('integration', 'stdio_transport');
 
-it('can handle invalid JSON request from client', function () {
+it('can handle invalid JSON request from client', function (): void {
     $this->process->stdin->write("this is not json\n");
 
     $response = await(readResponseFromServer($this->process, '', $this->loop));
@@ -163,7 +165,7 @@ it('can handle invalid JSON request from client', function () {
     $this->process->stdin->end();
 })->group('integration', 'stdio_transport');
 
-it('handles request for non-existent method', function () {
+it('handles request for non-existent method', function (): void {
     sendRequestToServer($this->process, 'init-err', 'initialize', ['protocolVersion' => Protocol::LATEST_PROTOCOL_VERSION, 'clientInfo' => [], 'capabilities' => []]);
     await(readResponseFromServer($this->process, 'init-err', $this->loop));
 
@@ -180,12 +182,12 @@ it('handles request for non-existent method', function () {
     $this->process->stdin->end();
 })->group('integration', 'stdio_transport');
 
-it('can handle batch requests correctly', function () {
+it('can handle batch requests correctly', function (): void {
     // 1. Initialize
     sendRequestToServer($this->process, 'init-batch', 'initialize', [
         'protocolVersion' => Protocol::LATEST_PROTOCOL_VERSION,
         'clientInfo' => ['name' => 'BatchClient', 'version' => '1.0'],
-        'capabilities' => []
+        'capabilities' => [],
     ]);
     await(readResponseFromServer($this->process, 'init-batch', $this->loop));
     sendNotificationToServer($this->process, 'notifications/initialized');
@@ -196,23 +198,23 @@ it('can handle batch requests correctly', function () {
         ['jsonrpc' => '2.0', 'id' => 'batch-req-1', 'method' => 'tools/call', 'params' => ['name' => 'greet_stdio_tool', 'arguments' => ['name' => 'Batch Item 1']]],
         ['jsonrpc' => '2.0', 'method' => 'notifications/something'],
         ['jsonrpc' => '2.0', 'id' => 'batch-req-2', 'method' => 'tools/call', 'params' => ['name' => 'greet_stdio_tool', 'arguments' => ['name' => 'Batch Item 2']]],
-        ['jsonrpc' => '2.0', 'id' => 'batch-req-3', 'method' => 'nonexistent/method']
+        ['jsonrpc' => '2.0', 'id' => 'batch-req-3', 'method' => 'nonexistent/method'],
     ];
 
-    $rawBatchRequest = json_encode($batchRequests);
+    $rawBatchRequest = \json_encode($batchRequests);
     $this->process->stdin->write($rawBatchRequest . "\n");
 
     // 3. Read Batch Response
     $batchResponsePromise = new Deferred();
     $fullBuffer = '';
-    $batchDataListener = function ($chunk) use (&$fullBuffer, $batchResponsePromise, &$batchDataListener) {
+    $batchDataListener = function ($chunk) use (&$fullBuffer, $batchResponsePromise, &$batchDataListener): void {
         $fullBuffer .= $chunk;
-        if (str_contains($fullBuffer, "\n")) {
-            $line = trim($fullBuffer);
+        if (\str_contains($fullBuffer, "\n")) {
+            $line = \trim($fullBuffer);
             $fullBuffer = '';
             try {
-                $decoded = json_decode($line, true);
-                if (is_array($decoded)) { // Batch response is an array
+                $decoded = \json_decode($line, true);
+                if (\is_array($decoded)) { // Batch response is an array
                     $this->process->stdout->removeListener('data', $batchDataListener);
                     $batchResponsePromise->resolve($decoded);
                 }
@@ -228,9 +230,9 @@ it('can handle batch requests correctly', function () {
 
     expect($batchResponseArray)->toBeArray()->toHaveCount(3); // greet1, greet2, error
 
-    $response1 = array_values(array_filter($batchResponseArray, fn ($response) => $response['id'] === 'batch-req-1'))[0] ?? null;
-    $response2 = array_values(array_filter($batchResponseArray, fn ($response) => $response['id'] === 'batch-req-2'))[0] ?? null;
-    $response3 = array_values(array_filter($batchResponseArray, fn ($response) => $response['id'] === 'batch-req-3'))[0] ?? null;
+    $response1 = \array_values(\array_filter($batchResponseArray, static fn($response) => $response['id'] === 'batch-req-1'))[0] ?? null;
+    $response2 = \array_values(\array_filter($batchResponseArray, static fn($response) => $response['id'] === 'batch-req-2'))[0] ?? null;
+    $response3 = \array_values(\array_filter($batchResponseArray, static fn($response) => $response['id'] === 'batch-req-3'))[0] ?? null;
 
     expect($response1['result']['content'][0]['text'])->toBe('Hello, Batch Item 1!');
     expect($response2['result']['content'][0]['text'])->toBe('Hello, Batch Item 2!');
@@ -241,7 +243,7 @@ it('can handle batch requests correctly', function () {
     $this->process->stdin->end();
 })->group('integration', 'stdio_transport');
 
-it('can passes an empty context', function () {
+it('can passes an empty context', function (): void {
     sendRequestToServer($this->process, 'init-context', 'initialize', ['protocolVersion' => Protocol::LATEST_PROTOCOL_VERSION, 'clientInfo' => [], 'capabilities' => []]);
     await(readResponseFromServer($this->process, 'init-context', $this->loop));
     sendNotificationToServer($this->process, 'notifications/initialized');
@@ -249,7 +251,7 @@ it('can passes an empty context', function () {
 
     sendRequestToServer($this->process, 'tool-context-1', 'tools/call', [
         'name' => 'tool_reads_context',
-        'arguments' => []
+        'arguments' => [],
     ]);
     $toolResponse = await(readResponseFromServer($this->process, 'tool-context-1', $this->loop));
 
@@ -261,7 +263,7 @@ it('can passes an empty context', function () {
     $this->process->stdin->end();
 })->group('integration', 'stdio_transport');
 
-it('can handle tool list request', function () {
+it('can handle tool list request', function (): void {
     sendRequestToServer($this->process, 'init-tool-list', 'initialize', ['protocolVersion' => Protocol::LATEST_PROTOCOL_VERSION, 'clientInfo' => [], 'capabilities' => []]);
     await(readResponseFromServer($this->process, 'init-tool-list', $this->loop));
     sendNotificationToServer($this->process, 'notifications/initialized');
@@ -279,7 +281,7 @@ it('can handle tool list request', function () {
     $this->process->stdin->end();
 })->group('integration', 'stdio_transport');
 
-it('can read a registered resource', function () {
+it('can read a registered resource', function (): void {
     sendRequestToServer($this->process, 'init-res', 'initialize', ['protocolVersion' => Protocol::LATEST_PROTOCOL_VERSION, 'clientInfo' => [], 'capabilities' => []]);
     await(readResponseFromServer($this->process, 'init-res', $this->loop));
     sendNotificationToServer($this->process, 'notifications/initialized');
@@ -298,7 +300,7 @@ it('can read a registered resource', function () {
     $this->process->stdin->end();
 })->group('integration', 'stdio_transport');
 
-it('can get a registered prompt', function () {
+it('can get a registered prompt', function (): void {
     sendRequestToServer($this->process, 'init-prompt', 'initialize', ['protocolVersion' => Protocol::LATEST_PROTOCOL_VERSION, 'clientInfo' => [], 'capabilities' => []]);
     await(readResponseFromServer($this->process, 'init-prompt', $this->loop));
     sendNotificationToServer($this->process, 'notifications/initialized');
@@ -306,7 +308,7 @@ it('can get a registered prompt', function () {
 
     sendRequestToServer($this->process, 'prompt-get-1', 'prompts/get', [
         'name' => 'simple_stdio_prompt',
-        'arguments' => ['name' => 'StdioPromptUser']
+        'arguments' => ['name' => 'StdioPromptUser'],
     ]);
     $promptResponse = await(readResponseFromServer($this->process, 'prompt-get-1', $this->loop));
 
@@ -319,11 +321,11 @@ it('can get a registered prompt', function () {
     $this->process->stdin->end();
 })->group('integration', 'stdio_transport');
 
-it('handles client not sending initialized notification before other requests', function () {
+it('handles client not sending initialized notification before other requests', function (): void {
     sendRequestToServer($this->process, 'init-no-ack', 'initialize', [
         'protocolVersion' => Protocol::LATEST_PROTOCOL_VERSION,
         'clientInfo' => ['name' => 'ForgetfulClient', 'version' => '1.0'],
-        'capabilities' => []
+        'capabilities' => [],
     ]);
     await(readResponseFromServer($this->process, 'init-no-ack', $this->loop));
     // Client "forgets" to send notifications/initialized
@@ -331,7 +333,7 @@ it('handles client not sending initialized notification before other requests', 
 
     sendRequestToServer($this->process, 'tool-call-no-ack', 'tools/call', [
         'name' => 'greet_stdio_tool',
-        'arguments' => ['name' => 'NoAckUser']
+        'arguments' => ['name' => 'NoAckUser'],
     ]);
     $toolResponse = await(readResponseFromServer($this->process, 'tool-call-no-ack', $this->loop));
 

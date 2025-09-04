@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace PhpMcp\Server\Contracts;
+namespace Mcp\Server\Contracts;
 
 use PhpMcp\Schema\JsonRpc\Request;
 use PhpMcp\Schema\JsonRpc\Notification;
 use PhpMcp\Schema\JsonRpc\Result;
-use PhpMcp\Server\Context;
+use Mcp\Server\Context;
 
 interface RouteInterface
 {

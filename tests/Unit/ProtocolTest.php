@@ -1,15 +1,16 @@
 <?php
 
-namespace PhpMcp\Server\Tests\Unit;
+declare(strict_types=1);
 
-use Mockery;
+namespace Mcp\Server\Tests\Unit;
+
 use Mockery\MockInterface;
 use PhpMcp\Schema\Implementation;
-use PhpMcp\Server\Context;
-use PhpMcp\Server\Configuration;
-use PhpMcp\Server\Contracts\ServerTransportInterface;
-use PhpMcp\Server\Dispatcher;
-use PhpMcp\Server\Exception\McpServerException;
+use Mcp\Server\Context;
+use Mcp\Server\Configuration;
+use Mcp\Server\Contracts\ServerTransportInterface;
+use Mcp\Server\Dispatcher;
+use Mcp\Server\Exception\McpServerException;
 use PhpMcp\Schema\JsonRpc\BatchRequest;
 use PhpMcp\Schema\JsonRpc\BatchResponse;
 use PhpMcp\Schema\JsonRpc\Error;
@@ -21,11 +22,11 @@ use PhpMcp\Schema\Notification\ResourceUpdatedNotification;
 use PhpMcp\Schema\Notification\ToolListChangedNotification;
 use PhpMcp\Schema\Result\EmptyResult;
 use PhpMcp\Schema\ServerCapabilities;
-use PhpMcp\Server\Protocol;
-use PhpMcp\Server\Registry;
-use PhpMcp\Server\Session\SessionManager;
-use PhpMcp\Server\Contracts\SessionInterface;
-use PhpMcp\Server\Session\SubscriptionManager;
+use Mcp\Server\Protocol;
+use Mcp\Server\Registry;
+use Mcp\Server\Session\SessionManager;
+use Mcp\Server\Contracts\SessionInterface;
+use Mcp\Server\Session\SubscriptionManager;
 use Psr\Container\ContainerInterface;
 use Psr\Log\LoggerInterface;
 use Psr\SimpleCache\CacheInterface;
@@ -67,28 +68,28 @@ function expectSuccessResponse(mixed $response, mixed $expectedResult, string|in
 }
 
 
-beforeEach(function () {
+beforeEach(function (): void {
     /** @var MockInterface&Registry $registry */
-    $this->registry = Mockery::mock(Registry::class);
+    $this->registry = \Mockery::mock(Registry::class);
     /** @var MockInterface&SessionManager $sessionManager */
-    $this->sessionManager = Mockery::mock(SessionManager::class);
+    $this->sessionManager = \Mockery::mock(SessionManager::class);
     /** @var MockInterface&Dispatcher $dispatcher */
-    $this->dispatcher = Mockery::mock(Dispatcher::class);
+    $this->dispatcher = \Mockery::mock(Dispatcher::class);
     /** @var MockInterface&SubscriptionManager $subscriptionManager */
-    $this->subscriptionManager = Mockery::mock(SubscriptionManager::class);
+    $this->subscriptionManager = \Mockery::mock(SubscriptionManager::class);
     /** @var MockInterface&LoggerInterface $logger */
-    $this->logger = Mockery::mock(LoggerInterface::class)->shouldIgnoreMissing();
+    $this->logger = \Mockery::mock(LoggerInterface::class)->shouldIgnoreMissing();
     /** @var MockInterface&ServerTransportInterface $transport */
-    $this->transport = Mockery::mock(ServerTransportInterface::class);
+    $this->transport = \Mockery::mock(ServerTransportInterface::class);
     /** @var MockInterface&SessionInterface $session */
-    $this->session = Mockery::mock(SessionInterface::class);
+    $this->session = \Mockery::mock(SessionInterface::class);
 
     /** @var MockInterface&LoopInterface $loop */
-    $loop = Mockery::mock(LoopInterface::class);
+    $loop = \Mockery::mock(LoopInterface::class);
     /** @var MockInterface&CacheInterface $cache */
-    $cache = Mockery::mock(CacheInterface::class);
+    $cache = \Mockery::mock(CacheInterface::class);
     /** @var MockInterface&ContainerInterface $container */
-    $container = Mockery::mock(ContainerInterface::class);
+    $container = \Mockery::mock(ContainerInterface::class);
 
     $this->configuration = new Configuration(
         serverInfo: Implementation::make(SERVER_NAME_PROTO, SERVER_VERSION_PROTO),
@@ -96,7 +97,7 @@ beforeEach(function () {
         logger: $this->logger,
         loop: $loop,
         cache: $cache,
-        container: $container
+        container: $container,
     );
 
     $this->sessionManager->shouldReceive('getSession')->with(SESSION_ID)->andReturn($this->session)->byDefault();
@@ -119,44 +120,44 @@ beforeEach(function () {
         $this->registry,
         $this->sessionManager,
         $this->dispatcher,
-        $this->subscriptionManager
+        $this->subscriptionManager,
     );
 
     $this->protocol->bindTransport($this->transport);
 });
 
-it('listens to SessionManager events on construction', function () {
-    $this->sessionManager->shouldHaveReceived('on')->with('session_deleted', Mockery::type('callable'));
+it('listens to SessionManager events on construction', function (): void {
+    $this->sessionManager->shouldHaveReceived('on')->with('session_deleted', \Mockery::type('callable'));
 });
 
-it('listens to Registry events on construction', function () {
-    $this->registry->shouldHaveReceived('on')->with('list_changed', Mockery::type('callable'));
+it('listens to Registry events on construction', function (): void {
+    $this->registry->shouldHaveReceived('on')->with('list_changed', \Mockery::type('callable'));
 });
 
-it('binds to a transport and attaches listeners', function () {
-    $newTransport = Mockery::mock(ServerTransportInterface::class);
-    $newTransport->shouldReceive('on')->with('message', Mockery::type('callable'))->once();
-    $newTransport->shouldReceive('on')->with('client_connected', Mockery::type('callable'))->once();
-    $newTransport->shouldReceive('on')->with('client_disconnected', Mockery::type('callable'))->once();
-    $newTransport->shouldReceive('on')->with('error', Mockery::type('callable'))->once();
+it('binds to a transport and attaches listeners', function (): void {
+    $newTransport = \Mockery::mock(ServerTransportInterface::class);
+    $newTransport->shouldReceive('on')->with('message', \Mockery::type('callable'))->once();
+    $newTransport->shouldReceive('on')->with('client_connected', \Mockery::type('callable'))->once();
+    $newTransport->shouldReceive('on')->with('client_disconnected', \Mockery::type('callable'))->once();
+    $newTransport->shouldReceive('on')->with('error', \Mockery::type('callable'))->once();
 
     $this->protocol->bindTransport($newTransport);
 });
 
-it('unbinds from a previous transport when binding a new one', function () {
+it('unbinds from a previous transport when binding a new one', function (): void {
     $this->transport->shouldReceive('removeListener')->times(4);
 
-    $newTransport = Mockery::mock(ServerTransportInterface::class);
+    $newTransport = \Mockery::mock(ServerTransportInterface::class);
     $newTransport->shouldReceive('on')->times(4);
 
     $this->protocol->bindTransport($newTransport);
 });
 
-it('unbinds transport and removes listeners', function () {
-    $this->transport->shouldReceive('removeListener')->with('message', Mockery::type('callable'))->once();
-    $this->transport->shouldReceive('removeListener')->with('client_connected', Mockery::type('callable'))->once();
-    $this->transport->shouldReceive('removeListener')->with('client_disconnected', Mockery::type('callable'))->once();
-    $this->transport->shouldReceive('removeListener')->with('error', Mockery::type('callable'))->once();
+it('unbinds transport and removes listeners', function (): void {
+    $this->transport->shouldReceive('removeListener')->with('message', \Mockery::type('callable'))->once();
+    $this->transport->shouldReceive('removeListener')->with('client_connected', \Mockery::type('callable'))->once();
+    $this->transport->shouldReceive('removeListener')->with('client_disconnected', \Mockery::type('callable'))->once();
+    $this->transport->shouldReceive('removeListener')->with('error', \Mockery::type('callable'))->once();
 
     $this->protocol->unbindTransport();
 
@@ -165,31 +166,31 @@ it('unbinds transport and removes listeners', function () {
     expect($transportProp->getValue($this->protocol))->toBeNull();
 });
 
-it('processes a valid Request message', function () {
+it('processes a valid Request message', function (): void {
     $request = createRequest('test/method', ['param' => 1]);
     $result = new EmptyResult();
     $expectedResponse = Response::make($request->id, $result);
 
     $this->dispatcher->shouldReceive('handleRequest')->once()
         ->with(
-            Mockery::on(fn ($arg) => $arg instanceof Request && $arg->method === 'test/method'),
-            Mockery::on(fn ($arg) => $arg instanceof Context && $arg->session === $this->session),
+            \Mockery::on(static fn($arg) => $arg instanceof Request && $arg->method === 'test/method'),
+            \Mockery::on(fn($arg) => $arg instanceof Context && $arg->session === $this->session),
         )
         ->andReturn($result);
 
     $this->transport->shouldReceive('sendMessage')->once()
-        ->with(Mockery::on(fn ($arg) => $arg instanceof Response && $arg->id === $request->id && $arg->result === $result), SESSION_ID, Mockery::any())
+        ->with(\Mockery::on(static fn($arg) => $arg instanceof Response && $arg->id === $request->id && $arg->result === $result), SESSION_ID, \Mockery::any())
         ->andReturn(resolve(null));
 
     $this->protocol->processMessage($request, SESSION_ID);
     $this->session->shouldHaveReceived('save');
 });
 
-it('processes a valid Notification message', function () {
+it('processes a valid Notification message', function (): void {
     $notification = createNotification('test/notify', ['data' => 'info']);
 
     $this->dispatcher->shouldReceive('handleNotification')->once()
-        ->with(Mockery::on(fn ($arg) => $arg instanceof Notification && $arg->method === 'test/notify'), $this->session)
+        ->with(\Mockery::on(static fn($arg) => $arg instanceof Notification && $arg->method === 'test/notify'), $this->session)
         ->andReturnNull();
 
     $this->transport->shouldNotReceive('sendMessage');
@@ -198,7 +199,7 @@ it('processes a valid Notification message', function () {
     $this->session->shouldHaveReceived('save');
 });
 
-it('processes a BatchRequest with mixed requests and notifications', function () {
+it('processes a BatchRequest with mixed requests and notifications', function (): void {
     $req1 = createRequest('req/1', [], 'batch-id-1');
     $notif1 = createNotification('notif/1');
     $req2 = createRequest('req/2', [], 'batch-id-2');
@@ -210,38 +211,38 @@ it('processes a BatchRequest with mixed requests and notifications', function ()
     $this->dispatcher->shouldReceive('handleRequest')
         ->once()
         ->with(
-            Mockery::on(fn (Request $r) => $r->id === 'batch-id-1'),
-            Mockery::on(fn ($arg) => $arg instanceof Context && $arg->session === $this->session),
+            \Mockery::on(static fn(Request $r) => $r->id === 'batch-id-1'),
+            \Mockery::on(fn($arg) => $arg instanceof Context && $arg->session === $this->session),
         )
         ->andReturn($result1);
     $this->dispatcher->shouldReceive('handleNotification')
         ->once()
-        ->with(Mockery::on(fn (Notification $n) => $n->method === 'notif/1'), $this->session);
+        ->with(\Mockery::on(static fn(Notification $n) => $n->method === 'notif/1'), $this->session);
     $this->dispatcher->shouldReceive('handleRequest')
         ->once()
         ->with(
-            Mockery::on(fn (Request $r) => $r->id === 'batch-id-2'),
-            Mockery::on(fn ($arg) => $arg instanceof Context && $arg->session === $this->session)
+            \Mockery::on(static fn(Request $r) => $r->id === 'batch-id-2'),
+            \Mockery::on(fn($arg) => $arg instanceof Context && $arg->session === $this->session),
         )
         ->andReturn($result2);
 
 
     $this->transport->shouldReceive('sendMessage')->once()
-        ->with(Mockery::on(function (BatchResponse $response) use ($req1, $req2, $result1, $result2) {
-            expect(count($response->items))->toBe(2);
+        ->with(\Mockery::on(static function (BatchResponse $response) use ($req1, $req2, $result1, $result2) {
+            expect(\count($response->items))->toBe(2);
             expect($response->items[0]->id)->toBe($req1->id);
             expect($response->items[0]->result)->toBe($result1);
             expect($response->items[1]->id)->toBe($req2->id);
             expect($response->items[1]->result)->toBe($result2);
             return true;
-        }), SESSION_ID, Mockery::any())
+        }), SESSION_ID, \Mockery::any())
         ->andReturn(resolve(null));
 
     $this->protocol->processMessage($batchRequest, SESSION_ID);
     $this->session->shouldHaveReceived('save');
 });
 
-it('processes a BatchRequest with only notifications and sends no response', function () {
+it('processes a BatchRequest with only notifications and sends no response', function (): void {
     $notif1 = createNotification('notif/only1');
     $notif2 = createNotification('notif/only2');
     $batchRequest = new BatchRequest([$notif1, $notif2]);
@@ -254,12 +255,12 @@ it('processes a BatchRequest with only notifications and sends no response', fun
 });
 
 
-it('sends error response if session is not found', function () {
+it('sends error response if session is not found', function (): void {
     $request = createRequest('test/method');
     $this->sessionManager->shouldReceive('getSession')->with('unknown-client')->andReturn(null);
 
     $this->transport->shouldReceive('sendMessage')->once()
-        ->with(Mockery::on(function (Error $error) use ($request) {
+        ->with(\Mockery::on(static function (Error $error) use ($request) {
             expectErrorResponse($error, \PhpMcp\Schema\Constants::INVALID_REQUEST, $request->id);
             expect($error->message)->toContain('Invalid or expired session');
             return true;
@@ -270,22 +271,22 @@ it('sends error response if session is not found', function () {
     $this->session->shouldNotHaveReceived('save');
 });
 
-it('sends error response if session is not initialized for non-initialize request', function () {
+it('sends error response if session is not initialized for non-initialize request', function (): void {
     $request = createRequest('tools/list');
     $this->session->shouldReceive('get')->with('initialized', false)->andReturn(false);
 
     $this->transport->shouldReceive('sendMessage')->once()
-        ->with(Mockery::on(function (Error $error) use ($request) {
+        ->with(\Mockery::on(static function (Error $error) use ($request) {
             expectErrorResponse($error, \PhpMcp\Schema\Constants::INVALID_REQUEST, $request->id);
             expect($error->message)->toContain('Client session not initialized');
             return true;
-        }), SESSION_ID, Mockery::any())
+        }), SESSION_ID, \Mockery::any())
         ->andReturn(resolve(null));
 
     $this->protocol->processMessage($request, SESSION_ID);
 });
 
-it('sends error response if capability for request method is disabled', function () {
+it('sends error response if capability for request method is disabled', function (): void {
     $request = createRequest('tools/list');
     $configuration = new Configuration(
         serverInfo: $this->configuration->serverInfo,
@@ -301,34 +302,34 @@ it('sends error response if capability for request method is disabled', function
         $this->registry,
         $this->sessionManager,
         $this->dispatcher,
-        $this->subscriptionManager
+        $this->subscriptionManager,
     );
 
     $protocol->bindTransport($this->transport);
 
     $this->transport->shouldReceive('sendMessage')->once()
-        ->with(Mockery::on(function (Error $error) use ($request) {
+        ->with(\Mockery::on(static function (Error $error) use ($request) {
             expectErrorResponse($error, \PhpMcp\Schema\Constants::METHOD_NOT_FOUND, $request->id);
             expect($error->message)->toContain('Tools are not enabled');
             return true;
-        }), SESSION_ID, Mockery::any())
+        }), SESSION_ID, \Mockery::any())
         ->andReturn(resolve(null));
 
     $protocol->processMessage($request, SESSION_ID);
 });
 
-it('sends exceptions thrown while handling request as JSON-RPC error', function () {
+it('sends exceptions thrown while handling request as JSON-RPC error', function (): void {
     $request = createRequest('fail/method');
     $exception = McpServerException::methodNotFound('fail/method');
 
     $this->dispatcher->shouldReceive('handleRequest')->once()->andThrow($exception);
 
     $this->transport->shouldReceive('sendMessage')->once()
-        ->with(Mockery::on(function (Error $error) use ($request) {
+        ->with(\Mockery::on(static function (Error $error) use ($request) {
             expectErrorResponse($error, \PhpMcp\Schema\Constants::METHOD_NOT_FOUND, $request->id);
             expect($error->message)->toContain('Method not found');
             return true;
-        }), SESSION_ID, Mockery::any())
+        }), SESSION_ID, \Mockery::any())
         ->andReturn(resolve(null));
 
     $this->protocol->processMessage($request, SESSION_ID);
@@ -340,18 +341,18 @@ it('sends exceptions thrown while handling request as JSON-RPC error', function 
     $this->dispatcher->shouldReceive('handleRequest')->once()->andThrow($exception);
 
     $this->transport->shouldReceive('sendMessage')->once()
-        ->with(Mockery::on(function (Error $error) use ($request) {
+        ->with(\Mockery::on(static function (Error $error) use ($request) {
             expectErrorResponse($error, \PhpMcp\Schema\Constants::INTERNAL_ERROR, $request->id);
             expect($error->message)->toContain('Internal error processing method explode/method');
             expect($error->data)->toBe('Something bad happened');
             return true;
-        }), SESSION_ID, Mockery::any())
+        }), SESSION_ID, \Mockery::any())
         ->andReturn(resolve(null));
 
     $this->protocol->processMessage($request, SESSION_ID);
 });
 
-it('sends a notification successfully', function () {
+it('sends a notification successfully', function (): void {
     $notification = createNotification('event/occurred', ['value' => true]);
 
     $this->transport->shouldReceive('sendMessage')->once()
@@ -362,30 +363,30 @@ it('sends a notification successfully', function () {
     await($promise);
 });
 
-it('rejects sending notification if transport not bound', function () {
+it('rejects sending notification if transport not bound', function (): void {
     $this->protocol->unbindTransport();
     $notification = createNotification('event/occurred');
 
     $promise = $this->protocol->sendNotification($notification, SESSION_ID);
 
-    await($promise->then(null, function (McpServerException $e) {
+    await($promise->then(null, static function (McpServerException $e): void {
         expect($e->getMessage())->toContain('Transport not bound');
     }));
 });
 
-it('rejects sending notification if transport send fails', function () {
+it('rejects sending notification if transport send fails', function (): void {
     $notification = createNotification('event/occurred');
-    $transportException = new \PhpMcp\Server\Exception\TransportException('Send failed');
+    $transportException = new \Mcp\Server\Exception\TransportException('Send failed');
     $this->transport->shouldReceive('sendMessage')->once()->andReturn(reject($transportException));
 
     $promise = $this->protocol->sendNotification($notification, SESSION_ID);
-    await($promise->then(null, function (McpServerException $e) use ($transportException) {
+    await($promise->then(null, static function (McpServerException $e) use ($transportException): void {
         expect($e->getMessage())->toContain('Failed to send notification: Send failed');
         expect($e->getPrevious())->toBe($transportException);
     }));
 });
 
-it('notifies resource updated to subscribers', function () {
+it('notifies resource updated to subscribers', function (): void {
     $uri = 'test://resource/123';
     $subscribers = ['client-sub-1', 'client-sub-2'];
     $this->subscriptionManager->shouldReceive('getSubscribers')->with($uri)->andReturn($subscribers);
@@ -393,24 +394,24 @@ it('notifies resource updated to subscribers', function () {
     $expectedNotification = ResourceUpdatedNotification::make($uri);
 
     $this->transport->shouldReceive('sendMessage')->twice()
-        ->with(Mockery::on(function (Notification $notification) use ($expectedNotification) {
+        ->with(\Mockery::on(static function (Notification $notification) use ($expectedNotification) {
             expect($notification->method)->toBe($expectedNotification->method);
             expect($notification->params)->toBe($expectedNotification->params);
             return true;
-        }), Mockery::anyOf(...$subscribers), [])
+        }), \Mockery::anyOf(...$subscribers), [])
         ->andReturn(resolve(null));
 
     $this->protocol->notifyResourceUpdated($uri);
 });
 
-it('handles client connected event', function () {
+it('handles client connected event', function (): void {
     $this->logger->shouldReceive('info')->with('Client connected', ['sessionId' => SESSION_ID])->once();
     $this->sessionManager->shouldReceive('createSession')->with(SESSION_ID)->once();
 
     $this->protocol->handleClientConnected(SESSION_ID);
 });
 
-it('handles client disconnected event', function () {
+it('handles client disconnected event', function (): void {
     $reason = 'Connection closed';
     $this->logger->shouldReceive('info')->with('Client disconnected', ['clientId' => SESSION_ID, 'reason' => $reason])->once();
     $this->sessionManager->shouldReceive('deleteSession')->with(SESSION_ID)->once();
@@ -418,7 +419,7 @@ it('handles client disconnected event', function () {
     $this->protocol->handleClientDisconnected(SESSION_ID, $reason);
 });
 
-it('handles transport error event with client ID', function () {
+it('handles transport error event with client ID', function (): void {
     $error = new \RuntimeException('Socket error');
     $this->logger->shouldReceive('error')
         ->with('Transport error for client', ['error' => 'Socket error', 'exception_class' => \RuntimeException::class, 'clientId' => SESSION_ID])
@@ -427,7 +428,7 @@ it('handles transport error event with client ID', function () {
     $this->protocol->handleTransportError($error, SESSION_ID);
 });
 
-it('handles transport error event without client ID', function () {
+it('handles transport error event without client ID', function (): void {
     $error = new \RuntimeException('Listener setup failed');
     $this->logger->shouldReceive('error')
         ->with('General transport error', ['error' => 'Listener setup failed', 'exception_class' => \RuntimeException::class])
@@ -436,7 +437,7 @@ it('handles transport error event without client ID', function () {
     $this->protocol->handleTransportError($error, null);
 });
 
-it('handles list changed event from registry and notifies subscribers', function (string $listType, string $expectedNotificationClass) {
+it('handles list changed event from registry and notifies subscribers', function (string $listType, string $expectedNotificationClass): void {
     $listChangeUri = "mcp://changes/{$listType}";
     $subscribers = ['client-sub-A', 'client-sub-B'];
 
@@ -461,14 +462,14 @@ it('handles list changed event from registry and notifies subscribers', function
         $this->registry,
         $this->sessionManager,
         $this->dispatcher,
-        $this->subscriptionManager
+        $this->subscriptionManager,
     );
 
     $protocol->bindTransport($this->transport);
 
     $this->transport->shouldReceive('sendMessage')
-        ->with(Mockery::type($expectedNotificationClass), Mockery::anyOf(...$subscribers), [])
-        ->times(count($subscribers))
+        ->with(\Mockery::type($expectedNotificationClass), \Mockery::anyOf(...$subscribers), [])
+        ->times(\count($subscribers))
         ->andReturn(resolve(null));
 
     $protocol->handleListChanged($listType);
@@ -477,7 +478,7 @@ it('handles list changed event from registry and notifies subscribers', function
     'resources' => ['resources', ResourceListChangedNotification::class],
 ]);
 
-it('does not send list changed notification if capability is disabled', function (string $listType) {
+it('does not send list changed notification if capability is disabled', function (string $listType): void {
     $listChangeUri = "mcp://changes/{$listType}";
     $subscribers = ['client-sub-A'];
     $this->subscriptionManager->shouldReceive('getSubscribers')->with($listChangeUri)->andReturn($subscribers);
@@ -502,21 +503,21 @@ it('does not send list changed notification if capability is disabled', function
         $this->registry,
         $this->sessionManager,
         $this->dispatcher,
-        $this->subscriptionManager
+        $this->subscriptionManager,
     );
 
     $protocol->bindTransport($this->transport);
     $this->transport->shouldNotReceive('sendMessage');
 })->with(['tools', 'resources', 'prompts',]);
 
-it('allows initialize request when session not initialized', function () {
+it('allows initialize request when session not initialized', function (): void {
     $request = createRequest('initialize', ['protocolVersion' => SUPPORTED_VERSION_PROTO]);
     $this->session->shouldReceive('get')->with('initialized', false)->andReturn(false);
 
     $this->dispatcher->shouldReceive('handleRequest')->once()
         ->with(
-            Mockery::type(Request::class),
-            Mockery::on(fn ($arg) => $arg instanceof Context && $arg->session === $this->session)
+            \Mockery::type(Request::class),
+            \Mockery::on(fn($arg) => $arg instanceof Context && $arg->session === $this->session),
         )
         ->andReturn(new EmptyResult());
 
@@ -526,7 +527,7 @@ it('allows initialize request when session not initialized', function () {
     $this->protocol->processMessage($request, SESSION_ID);
 });
 
-it('allows initialize and ping regardless of capabilities', function (string $method) {
+it('allows initialize and ping regardless of capabilities', function (string $method): void {
     $request = createRequest($method);
     $capabilities = ServerCapabilities::make(
         tools: false,
@@ -548,7 +549,7 @@ it('allows initialize and ping regardless of capabilities', function (string $me
         $this->registry,
         $this->sessionManager,
         $this->dispatcher,
-        $this->subscriptionManager
+        $this->subscriptionManager,
     );
 
     $protocol->bindTransport($this->transport);

@@ -1,71 +1,72 @@
 <?php
 
-namespace PhpMcp\Server\Tests\Unit\Session;
+declare(strict_types=1);
 
-use Mockery;
-use PhpMcp\Server\Contracts\SessionHandlerInterface;
-use PhpMcp\Server\Contracts\SessionInterface;
-use PhpMcp\Server\Session\Session;
+namespace Mcp\Server\Tests\Unit\Session;
+
+use Mcp\Server\Contracts\SessionHandlerInterface;
+use Mcp\Server\Contracts\SessionInterface;
+use Mcp\Server\Session\Session;
 
 const SESSION_ID_SESS = 'test-session-obj-id';
 
-beforeEach(function () {
-    $this->sessionHandler = Mockery::mock(SessionHandlerInterface::class);
+beforeEach(function (): void {
+    $this->sessionHandler = \Mockery::mock(SessionHandlerInterface::class);
     $this->sessionHandler->shouldReceive('read')->with(SESSION_ID_SESS)->once()->andReturn(false)->byDefault();
 });
 
-it('implements SessionInterface', function () {
+it('implements SessionInterface', function (): void {
     $session = new Session($this->sessionHandler, SESSION_ID_SESS);
     expect($session)->toBeInstanceOf(SessionInterface::class);
 });
 
 // --- Constructor and ID Generation ---
-it('uses provided ID if given', function () {
+it('uses provided ID if given', function (): void {
     $this->sessionHandler->shouldReceive('read')->with(SESSION_ID_SESS)->once()->andReturn(false);
     $session = new Session($this->sessionHandler, SESSION_ID_SESS);
     expect($session->getId())->toBe(SESSION_ID_SESS);
 });
 
-it('generates an ID if none is provided', function () {
-    $this->sessionHandler->shouldReceive('read')->with(Mockery::type('string'))->once()->andReturn(false);
+it('generates an ID if none is provided', function (): void {
+    $this->sessionHandler->shouldReceive('read')->with(\Mockery::type('string'))->once()->andReturn(false);
     $session = new Session($this->sessionHandler);
     expect($session->getId())->toBeString()->toHaveLength(32);
 });
 
-it('loads data from handler on construction if session exists', function () {
+it('loads data from handler on construction if session exists', function (): void {
     $initialData = ['foo' => 'bar', 'count' => 5, 'nested' => ['value' => true]];
-    $this->sessionHandler->shouldReceive('read')->with(SESSION_ID_SESS)->once()->andReturn(json_encode($initialData));
+    $this->sessionHandler->shouldReceive('read')->with(SESSION_ID_SESS)->once()->andReturn(\json_encode($initialData));
 
     $session = new Session($this->sessionHandler, SESSION_ID_SESS);
     expect($session->all())->toEqual($initialData);
     expect($session->get('foo'))->toBe('bar');
 });
 
-it('initializes with empty data if handler read returns false', function () {
+it('initializes with empty data if handler read returns false', function (): void {
     $this->sessionHandler->shouldReceive('read')->with(SESSION_ID_SESS)->once()->andReturn(false);
     $session = new Session($this->sessionHandler, SESSION_ID_SESS);
     expect($session->all())->toBeEmpty();
 });
 
-it('initializes with empty data if handler read returns invalid JSON', function () {
+it('initializes with empty data if handler read returns invalid JSON', function (): void {
     $this->sessionHandler->shouldReceive('read')->with(SESSION_ID_SESS)->once()->andReturn('this is not json');
     $session = new Session($this->sessionHandler, SESSION_ID_SESS);
     expect($session->all())->toBeEmpty();
 });
 
-it('saves current data to handler', function () {
+it('saves current data to handler', function (): void {
     $this->sessionHandler->shouldReceive('read')->andReturn(false);
     $session = new Session($this->sessionHandler, SESSION_ID_SESS);
     $session->set('name', 'Alice');
     $session->set('level', 10);
 
-    $expectedSavedData = json_encode(['name' => 'Alice', 'level' => 10]);
+    $expectedSavedData = \json_encode(['name' => 'Alice', 'level' => 10]);
     $this->sessionHandler->shouldReceive('write')->with(SESSION_ID_SESS, $expectedSavedData)->once()->andReturn(true);
 
     $session->save();
 });
 
-it('sets and gets a top-level attribute', function () {
+it('sets and gets a top-level attribute', function (): void {
     $this->sessionHandler->shouldReceive('read')->andReturn(false);
     $session = new Session($this->sessionHandler, SESSION_ID_SESS);
     $session->set('name', 'Bob');
@@ -73,14 +74,14 @@ it('sets and gets a top-level attribute', function () {
     expect($session->has('name'))->toBeTrue();
 });
 
-it('gets default value if attribute does not exist', function () {
+it('gets default value if attribute does not exist', function (): void {
     $this->sessionHandler->shouldReceive('read')->andReturn(false);
     $session = new Session($this->sessionHandler, SESSION_ID_SESS);
     expect($session->get('nonexistent', 'default_val'))->toBe('default_val');
     expect($session->has('nonexistent'))->toBeFalse();
 });
 
-it('sets and gets nested attributes using dot notation', function () {
+it('sets and gets nested attributes using dot notation', function (): void {
     $this->sessionHandler->shouldReceive('read')->andReturn(false);
     $session = new Session($this->sessionHandler, SESSION_ID_SESS);
     $session->set('user.profile.email', 'test@example.com');
@@ -93,7 +94,7 @@ it('sets and gets nested attributes using dot notation', function () {
     expect($session->has('user.other_profile.settings'))->toBeFalse();
 });
 
-it('set does not overwrite if overwrite is false and key exists', function () {
+it('set does not overwrite if overwrite is false and key exists', function (): void {
     $this->sessionHandler->shouldReceive('read')->andReturn(false);
     $session = new Session($this->sessionHandler, SESSION_ID_SESS);
     $session->set('counter', 10);
@@ -105,7 +106,7 @@ it('set does not overwrite if overwrite is false and key exists', function () {
     expect($session->get('user.id'))->toBe(1);
 });
 
-it('set overwrites if overwrite is true (default)', function () {
+it('set overwrites if overwrite is true (default)', function (): void {
     $this->sessionHandler->shouldReceive('read')->andReturn(false);
     $session = new Session($this->sessionHandler, SESSION_ID_SESS);
     $session->set('counter', 10);
@@ -114,8 +115,8 @@ it('set overwrites if overwrite is true (default)', function () {
 });
 
 
-it('forgets a top-level attribute', function () {
-    $this->sessionHandler->shouldReceive('read')->andReturn(json_encode(['name' => 'Alice', 'age' => 30]));
+it('forgets a top-level attribute', function (): void {
+    $this->sessionHandler->shouldReceive('read')->andReturn(\json_encode(['name' => 'Alice', 'age' => 30]));
     $session = new Session($this->sessionHandler, SESSION_ID_SESS);
     $session->forget('age');
     expect($session->has('age'))->toBeFalse();
@@ -123,9 +124,9 @@ it('forgets a top-level attribute', function () {
     expect($session->all())->toEqual(['name' => 'Alice']);
 });
 
-it('forgets a nested attribute using dot notation', function () {
+it('forgets a nested attribute using dot notation', function (): void {
     $initialData = ['user' => ['profile' => ['email' => 'test@example.com', 'status' => 'active'], 'id' => 1]];
-    $this->sessionHandler->shouldReceive('read')->andReturn(json_encode($initialData));
+    $this->sessionHandler->shouldReceive('read')->andReturn(\json_encode($initialData));
     $session = new Session($this->sessionHandler, SESSION_ID_SESS);
 
     $session->forget('user.profile.status');
@@ -138,17 +139,17 @@ it('forgets a nested attribute using dot notation', function () {
     expect($session->get('user'))->toEqual(['id' => 1]);
 });
 
-it('forget does nothing if key does not exist', function () {
-    $this->sessionHandler->shouldReceive('read')->andReturn(json_encode(['name' => 'Test']));
+it('forget does nothing if key does not exist', function (): void {
+    $this->sessionHandler->shouldReceive('read')->andReturn(\json_encode(['name' => 'Test']));
     $session = new Session($this->sessionHandler, SESSION_ID_SESS);
     $session->forget('nonexistent');
     $session->forget('another_nonexistent');
     expect($session->all())->toEqual(['name' => 'Test']);
 });
 
-it('pulls an attribute (gets and forgets)', function () {
+it('pulls an attribute (gets and forgets)', function (): void {
     $initialData = ['item' => 'important', 'user' => ['token' => 'abc123xyz']];
-    $this->sessionHandler->shouldReceive('read')->andReturn(json_encode($initialData));
+    $this->sessionHandler->shouldReceive('read')->andReturn(\json_encode($initialData));
     $session = new Session($this->sessionHandler, SESSION_ID_SESS);
 
     $pulledItem = $session->pull('item', 'default');
@@ -164,28 +165,28 @@ it('pulls an attribute (gets and forgets)', function () {
     expect($pulledNonExistent)->toBe('fallback');
 });
 
-it('clears all session data', function () {
-    $this->sessionHandler->shouldReceive('read')->andReturn(json_encode(['a' => 1, 'b' => 2]));
+it('clears all session data', function (): void {
+    $this->sessionHandler->shouldReceive('read')->andReturn(\json_encode(['a' => 1, 'b' => 2]));
     $session = new Session($this->sessionHandler, SESSION_ID_SESS);
     $session->clear();
     expect($session->all())->toBeEmpty();
 });
 
-it('returns all data with all()', function () {
+it('returns all data with all()', function (): void {
     $data = ['a' => 1, 'b' => ['c' => 3]];
-    $this->sessionHandler->shouldReceive('read')->andReturn(json_encode($data));
+    $this->sessionHandler->shouldReceive('read')->andReturn(\json_encode($data));
     $session = new Session($this->sessionHandler, SESSION_ID_SESS);
     expect($session->all())->toEqual($data);
 });
 
-it('hydrates session data, merging with defaults and removing id', function () {
+it('hydrates session data, merging with defaults and removing id', function (): void {
     $this->sessionHandler->shouldReceive('read')->andReturn(false);
     $session = new Session($this->sessionHandler, SESSION_ID_SESS);
     $newAttributes = [
         'client_info' => ['name' => 'TestClient', 'version' => '1.1'],
         'protocol_version' => '2024-custom',
         'user_custom_key' => 'my_value',
-        'id' => 'should_be_ignored_on_hydrate'
+        'id' => 'should_be_ignored_on_hydrate',
     ];
     $session->hydrate($newAttributes);
 
@@ -199,7 +200,7 @@ it('hydrates session data, merging with defaults and removing id', function () {
     expect($allData)->not->toHaveKey('id');
 });
 
-it('queues messages correctly', function () {
+it('queues messages correctly', function (): void {
     $this->sessionHandler->shouldReceive('read')->andReturn(false);
     $session = new Session($this->sessionHandler, SESSION_ID_SESS);
     expect($session->hasQueuedMessages())->toBeFalse();
@@ -213,7 +214,7 @@ it('queues messages correctly', function () {
     expect($session->get('message_queue'))->toEqual([$msg1, $msg2]);
 });
 
-it('dequeues messages and clears queue', function () {
+it('dequeues messages and clears queue', function (): void {
     $this->sessionHandler->shouldReceive('read')->andReturn(false);
     $session = new Session($this->sessionHandler, SESSION_ID_SESS);
     $msg1 = '{"id":1}';
@@ -229,9 +230,9 @@ it('dequeues messages and clears queue', function () {
     expect($session->dequeueMessages())->toEqual([]);
 });
 
-it('jsonSerializes to all session data', function () {
+it('jsonSerializes to all session data', function (): void {
     $data = ['serialize' => 'me', 'nested' => ['ok' => true]];
-    $this->sessionHandler->shouldReceive('read')->andReturn(json_encode($data));
+    $this->sessionHandler->shouldReceive('read')->andReturn(\json_encode($data));
     $session = new Session($this->sessionHandler, SESSION_ID_SESS);
-    expect(json_encode($session))->toBe(json_encode($data));
+    expect(\json_encode($session))->toBe(\json_encode($data));
 });

@@ -1,6 +1,8 @@
 <?php
 
-namespace PhpMcp\Server\Tests\Fixtures\Utils;
+declare(strict_types=1);
+
+namespace Mcp\Server\Tests\Fixtures\Utils;
 
 /**
  * Test stub for DocBlock array type parsing
@@ -23,9 +25,8 @@ class DockBlockParserFixture
         array $booleans,
         array $floats,
         array $objects,
-        array $dateTimeInstances
-    ): void {
-    }
+        array $dateTimeInstances,
+    ): void {}
 
     /**
      * Method with array<T> generic syntax
@@ -43,9 +44,8 @@ class DockBlockParserFixture
         array $booleans,
         array $floats,
         array $objects,
-        array $dateTimeInstances
-    ): void {
-    }
+        array $dateTimeInstances,
+    ): void {}
 
     /**
      * Method with nested array syntax
@@ -59,9 +59,8 @@ class DockBlockParserFixture
         array $nestedStringArrays,
         array $nestedIntArrays,
         array $doubleStringArrays,
-        array $doubleIntArrays
-    ): void {
-    }
+        array $doubleIntArrays,
+    ): void {}
 
     /**
      * Method with object-like array syntax
@@ -73,7 +72,6 @@ class DockBlockParserFixture
     public function objectArraySyntax(
         array $person,
         array $article,
-        array $order
-    ): void {
-    }
+        array $order,
+    ): void {}
 }

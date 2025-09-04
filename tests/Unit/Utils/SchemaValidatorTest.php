@@ -1,19 +1,19 @@
 <?php
 
-namespace PhpMcp\Server\Tests\Unit\Utils;
+declare(strict_types=1);
 
-use Mockery;
-use PhpMcp\Server\Utils\SchemaValidator;
+namespace Mcp\Server\Tests\Unit\Utils;
+
+use Mcp\Server\Utils\SchemaValidator;
 use Psr\Log\LoggerInterface;
-use PhpMcp\Server\Attributes\Schema;
-use PhpMcp\Server\Attributes\Schema\ArrayItems;
-use PhpMcp\Server\Attributes\Schema\Format;
-use PhpMcp\Server\Attributes\Schema\Property;
+use Mcp\Server\Attributes\Schema;
+use Mcp\Server\Attributes\Schema\Format;
+use Mcp\Server\Attributes\Schema\Property;
 
 // --- Setup ---
-beforeEach(function () {
+beforeEach(function (): void {
     /** @var \Mockery\MockInterface&\Psr\Log\LoggerInterface */
-    $this->loggerMock = Mockery::mock(LoggerInterface::class)->shouldIgnoreMissing();
+    $this->loggerMock = \Mockery::mock(LoggerInterface::class)->shouldIgnoreMissing();
     $this->validator = new SchemaValidator($this->loggerMock);
 });
 
@@ -51,7 +51,7 @@ function getValidData(): array
 
 // --- Basic Validation Tests ---
 
-test('valid data passes validation', function () {
+test('valid data passes validation', function (): void {
     $schema = getSimpleSchema();
     $data = getValidData();
 
@@ -59,7 +59,7 @@ test('valid data passes validation', function () {
     expect($errors)->toBeEmpty();
 });
 
-test('invalid type generates type error', function () {
+test('invalid type generates type error', function (): void {
     $schema = getSimpleSchema();
     $data = getValidData();
     $data['age'] = 'thirty'; // Invalid type
@@ -71,7 +71,7 @@ test('invalid type generates type error', function () {
         ->and($errors[0]['message'])->toContain('Expected `integer`');
 });
 
-test('missing required property generates required error', function () {
+test('missing required property generates required error', function (): void {
     $schema = getSimpleSchema();
     $data = getValidData();
     unset($data['name']); // Missing required
@@ -82,7 +82,7 @@ test('missing required property generates required error', function () {
         ->and($errors[0]['message'])->toContain('Missing required properties: `name`');
 });
 
-test('additional property generates additionalProperties error', function () {
+test('additional property generates additionalProperties error', function (): void {
     $schema = getSimpleSchema();
     $data = getValidData();
     $data['extra'] = 'not allowed'; // Additional property
@@ -96,7 +96,7 @@ test('additional property generates additionalProperties error', function () {
 
 // --- Keyword Constraint Tests ---
 
-test('enum constraint violation', function () {
+test('enum constraint violation', function (): void {
     $schema = ['type' => 'string', 'enum' => ['A', 'B']];
     $data = 'C';
 
@@ -106,7 +106,7 @@ test('enum constraint violation', function () {
         ->and($errors[0]['message'])->toContain('must be one of the allowed values: "A", "B"');
 });
 
-test('minimum constraint violation', function () {
+test('minimum constraint violation', function (): void {
     $schema = ['type' => 'integer', 'minimum' => 10];
     $data = 5;
 
@@ -116,7 +116,7 @@ test('minimum constraint violation', function () {
         ->and($errors[0]['message'])->toContain('must be greater than or equal to 10');
 });
 
-test('maxLength constraint violation', function () {
+test('maxLength constraint violation', function (): void {
     $schema = ['type' => 'string', 'maxLength' => 5];
     $data = 'toolong';
 
@@ -126,7 +126,7 @@ test('maxLength constraint violation', function () {
         ->and($errors[0]['message'])->toContain('Maximum string length is 5, found 7');
 });
 
-test('pattern constraint violation', function () {
+test('pattern constraint violation', function (): void {
     $schema = ['type' => 'string', 'pattern' => '^[a-z]+$'];
     $data = '123';
 
@@ -136,7 +136,7 @@ test('pattern constraint violation', function () {
         ->and($errors[0]['message'])->toContain('does not match the required pattern: `^[a-z]+$`');
 });
 
-test('minItems constraint violation', function () {
+test('minItems constraint violation', function (): void {
     $schema = ['type' => 'array', 'minItems' => 2];
     $data = ['one'];
 
@@ -146,7 +146,7 @@ test('minItems constraint violation', function () {
         ->and($errors[0]['message'])->toContain('Array should have at least 2 items, 1 found');
 });
 
-test('uniqueItems constraint violation', function () {
+test('uniqueItems constraint violation', function (): void {
     $schema = ['type' => 'array', 'uniqueItems' => true];
     $data = ['a', 'b', 'a'];
 
@@ -157,7 +157,7 @@ test('uniqueItems constraint violation', function () {
 });
 
 // --- Nested Structures and Pointers ---
-test('nested object validation error pointer', function () {
+test('nested object validation error pointer', function (): void {
     $schema = [
         'type' => 'object',
         'properties' => [
@@ -176,7 +176,7 @@ test('nested object validation error pointer', function () {
         ->and($errors[0]['pointer'])->toBe('/user/id');
 });
 
-test('array item validation error pointer', function () {
+test('array item validation error pointer', function (): void {
     $schema = [
         'type' => 'array',
         'items' => ['type' => 'integer'],
@@ -189,15 +189,15 @@ test('array item validation error pointer', function () {
 });
 
 // --- Data Conversion Tests ---
-test('validates data passed as stdClass object', function () {
+test('validates data passed as stdClass object', function (): void {
     $schema = getSimpleSchema();
-    $dataObj = json_decode(json_encode(getValidData())); // Convert to stdClass
+    $dataObj = \json_decode(\json_encode(getValidData())); // Convert to stdClass
 
     $errors = $this->validator->validateAgainstJsonSchema($dataObj, $schema);
     expect($errors)->toBeEmpty();
 });
 
-test('validates data with nested associative arrays correctly', function () {
+test('validates data with nested associative arrays correctly', function (): void {
     $schema = [
         'type' => 'object',
         'properties' => [
@@ -216,7 +216,7 @@ test('validates data with nested associative arrays correctly', function () {
 });
 
 // --- Edge Cases ---
-test('handles invalid schema structure gracefully', function () {
+test('handles invalid schema structure gracefully', function (): void {
     $schema = ['type' => 'object', 'properties' => ['name' => ['type' => 123]]]; // Invalid type value
     $data = ['name' => 'test'];
 
@@ -226,7 +226,7 @@ test('handles invalid schema structure gracefully', function () {
         ->and($errors[0]['message'])->toContain('Schema validation process failed');
 });
 
-test('handles empty data object against schema requiring properties', function () {
+test('handles empty data object against schema requiring properties', function (): void {
     $schema = getSimpleSchema(); // Requires name, age etc.
     $data = []; // Empty data
 
@@ -236,7 +236,7 @@ test('handles empty data object against schema requiring properties', function (
         ->and($errors[0]['keyword'])->toBe('required');
 });
 
-test('handles empty schema (allows anything)', function () {
+test('handles empty schema (allows anything)', function (): void {
     $schema = []; // Empty schema object/array implies no constraints
     $data = ['anything' => [1, 2], 'goes' => true];
 
@@ -247,7 +247,7 @@ test('handles empty schema (allows anything)', function () {
         ->and($errors[0]['message'])->toContain('Invalid schema');
 });
 
-test('validates schema with string format constraints from Schema attribute', function () {
+test('validates schema with string format constraints from Schema attribute', function (): void {
     $emailSchema = (new Schema(format: 'email'))->toArray();
 
     // Valid email
@@ -261,7 +261,7 @@ test('validates schema with string format constraints from Schema attribute', fu
         ->and($invalidErrors[0]['message'])->toContain('email');
 });
 
-test('validates schema with string length constraints from Schema attribute', function () {
+test('validates schema with string length constraints from Schema attribute', function (): void {
     $passwordSchema = (new Schema(minLength: 8, pattern: '^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d]{8,}$'))->toArray();
 
     // Valid password (meets length and pattern)
@@ -279,7 +279,7 @@ test('validates schema with string length constraints from Schema attribute', fu
         ->and($noDigitErrors[0]['keyword'])->toBe('pattern');
 });
 
-test('validates schema with numeric constraints from Schema attribute', function () {
+test('validates schema with numeric constraints from Schema attribute', function (): void {
     $ageSchema = (new Schema(minimum: 18, maximum: 120))->toArray();
 
     // Valid age
@@ -297,7 +297,7 @@ test('validates schema with numeric constraints from Schema attribute', function
         ->and($tooHighErrors[0]['keyword'])->toBe('maximum');
 });
 
-test('validates schema with array constraints from Schema attribute', function () {
+test('validates schema with array constraints from Schema attribute', function (): void {
     $tagsSchema = (new Schema(uniqueItems: true, minItems: 2))->toArray();
 
     // Valid tags array
@@ -315,21 +315,21 @@ test('validates schema with array constraints from Schema attribute', function (
         ->and($tooFewErrors[0]['keyword'])->toBe('minItems');
 });
 
-test('validates schema with object constraints from Schema attribute', function () {
+test('validates schema with object constraints from Schema attribute', function (): void {
     $userSchema = (new Schema(
         properties: [
             'name' => ['type' => 'string', 'minLength' => 2],
             'email' => ['type' => 'string', 'format' => 'email'],
-            'age' => ['type' => 'integer', 'minimum' => 18]
+            'age' => ['type' => 'integer', 'minimum' => 18],
         ],
-        required: ['name', 'email']
+        required: ['name', 'email'],
     ))->toArray();
 
     // Valid user object
     $validUser = [
         'name' => 'John',
         'email' => 'john@example.com',
-        'age' => 25
+        'age' => 25,
     ];
     $validErrors = $this->validator->validateAgainstJsonSchema($validUser, $userSchema);
     expect($validErrors)->toBeEmpty();
@@ -337,7 +337,7 @@ test('validates schema with object constraints from Schema attribute', function 
     // Invalid - missing required email
     $missingEmailUser = [
         'name' => 'John',
-        'age' => 25
+        'age' => 25,
     ];
     $missingErrors = $this->validator->validateAgainstJsonSchema($missingEmailUser, $userSchema);
     expect($missingErrors)->not->toBeEmpty()
@@ -347,7 +347,7 @@ test('validates schema with object constraints from Schema attribute', function 
     $shortNameUser = [
         'name' => 'J',
         'email' => 'john@example.com',
-        'age' => 25
+        'age' => 25,
     ];
     $nameErrors = $this->validator->validateAgainstJsonSchema($shortNameUser, $userSchema);
     expect($nameErrors)->not->toBeEmpty()
@@ -357,21 +357,21 @@ test('validates schema with object constraints from Schema attribute', function 
     $youngUser = [
         'name' => 'John',
         'email' => 'john@example.com',
-        'age' => 15
+        'age' => 15,
     ];
     $ageErrors = $this->validator->validateAgainstJsonSchema($youngUser, $userSchema);
     expect($ageErrors)->not->toBeEmpty()
         ->and($ageErrors[0]['keyword'])->toBe('minimum');
 });
 
-test('validates schema with nested constraints from Schema attribute', function () {
+test('validates schema with nested constraints from Schema attribute', function (): void {
     $orderSchema = (new Schema(
         properties: [
             'customer' => [
                 'type' => 'object',
                 'properties' => [
                     'id' => ['type' => 'string', 'pattern' => '^CUS-[0-9]{6}$'],
-                    'name' => ['type' => 'string', 'minLength' => 2]
+                    'name' => ['type' => 'string', 'minLength' => 2],
                 ],
             ],
             'items' => [
@@ -381,27 +381,27 @@ test('validates schema with nested constraints from Schema attribute', function 
                     'type' => 'object',
                     'properties' => [
                         'product_id' => ['type' => 'string', 'pattern' => '^PRD-[0-9]{4}$'],
-                        'quantity' => ['type' => 'integer', 'minimum' => 1]
+                        'quantity' => ['type' => 'integer', 'minimum' => 1],
                     ],
-                    'required' => ['product_id', 'quantity']
-                ]
-            ]
+                    'required' => ['product_id', 'quantity'],
+                ],
+            ],
         ],
-        required: ['customer', 'items']
+        required: ['customer', 'items'],
     ))->toArray();
 
     // Valid order
     $validOrder = [
         'customer' => [
             'id' => 'CUS-123456',
-            'name' => 'John'
+            'name' => 'John',
         ],
         'items' => [
             [
                 'product_id' => 'PRD-1234',
-                'quantity' => 2
-            ]
-        ]
+                'quantity' => 2,
+            ],
+        ],
     ];
     $validErrors = $this->validator->validateAgainstJsonSchema($validOrder, $orderSchema);
     expect($validErrors)->toBeEmpty();
@@ -410,14 +410,14 @@ test('validates schema with nested constraints from Schema attribute', function 
     $badCustomerIdOrder = [
         'customer' => [
             'id' => 'CUST-123', // Wrong format
-            'name' => 'John'
+            'name' => 'John',
         ],
         'items' => [
             [
                 'product_id' => 'PRD-1234',
-                'quantity' => 2
-            ]
-        ]
+                'quantity' => 2,
+            ],
+        ],
     ];
     $customerIdErrors = $this->validator->validateAgainstJsonSchema($badCustomerIdOrder, $orderSchema);
     expect($customerIdErrors)->not->toBeEmpty()
@@ -427,9 +427,9 @@ test('validates schema with nested constraints from Schema attribute', function 
     $emptyItemsOrder = [
         'customer' => [
             'id' => 'CUS-123456',
-            'name' => 'John'
+            'name' => 'John',
         ],
-        'items' => []
+        'items' => [],
     ];
     $emptyItemsErrors = $this->validator->validateAgainstJsonSchema($emptyItemsOrder, $orderSchema);
     expect($emptyItemsErrors)->not->toBeEmpty()
@@ -439,14 +439,14 @@ test('validates schema with nested constraints from Schema attribute', function 
     $missingProductIdOrder = [
         'customer' => [
             'id' => 'CUS-123456',
-            'name' => 'John'
+            'name' => 'John',
         ],
         'items' => [
             [
                 // Missing product_id
-                'quantity' => 2
-            ]
-        ]
+                'quantity' => 2,
+            ],
+        ],
     ];
     $missingProductIdErrors = $this->validator->validateAgainstJsonSchema($missingProductIdOrder, $orderSchema);
     expect($missingProductIdErrors)->not->toBeEmpty()
