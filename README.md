@@ -1,8 +1,8 @@
 # PHP MCP Server SDK
 
-[![Latest Version on Packagist](https://img.shields.io/packagist/v/llm-agents/mcp-server.svg?style=flat-square)](https://packagist.org/packages/llm-agents/mcp-server)
-[![Total Downloads](https://img.shields.io/packagist/dt/llm-agents/mcp-server.svg?style=flat-square)](https://packagist.org/packages/llm-agents/mcp-server)
-[![License](https://img.shields.io/packagist/l/llm-agents/mcp-server.svg?style=flat-square)](LICENSE)
+[![Latest Version on Packagist](https://img.shields.io/packagist/v/llm/mcp-server.svg?style=flat-square)](https://packagist.org/packages/llm/mcp-server)
+[![Total Downloads](https://img.shields.io/packagist/dt/llm/mcp-server.svg?style=flat-square)](https://packagist.org/packages/llm/mcp-server)
+[![License](https://img.shields.io/packagist/l/llm/mcp-server.svg?style=flat-square)](LICENSE)
 
 **A PHP SDK for building [Model Context Protocol (MCP)](https://modelcontextprotocol.io/introduction)
 servers. Create production-ready MCP servers in PHP with modern architectur, and flexible transport
@@ -36,7 +36,7 @@ This package supports the **2025-03-26** version of the Model Context Protocol w
 ## 📦 Installation
 
 ```bash
-composer require llm-agents/mcp-server
+composer require llm/mcp-server
 ```
 
 ## 🤝 Contributing
