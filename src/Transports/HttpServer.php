@@ -12,11 +12,12 @@ use Psr\Http\Server\MiddlewareInterface;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
 use React\EventLoop\LoopInterface;
+use React\Socket\ServerInterface;
 use React\Socket\SocketServer;
 
 final class HttpServer extends EventEmitter implements HttpServerInterface
 {
-    public readonly SocketServer $socket;
+    public readonly ServerInterface $socket;
     public readonly string $mcpPath;
     public readonly string $protocol;
     public readonly string $listenAddress;

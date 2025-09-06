@@ -112,7 +112,7 @@ final class RegisteredPrompt extends RegisteredElement
      * @throws \RuntimeException If the result cannot be formatted.
      * @throws \JsonException If JSON encoding fails.
      */
-    protected function formatResult(mixed $promptGenerationResult): array
+    private function formatResult(mixed $promptGenerationResult): array
     {
         if ($promptGenerationResult instanceof PromptMessage) {
             return [$promptGenerationResult];
