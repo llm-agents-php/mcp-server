@@ -7,22 +7,23 @@ namespace Mcp\Server\Transports;
 use Evenement\EventEmitterInterface;
 use Mcp\Server\Contracts\HttpServerInterface;
 use Mcp\Server\Contracts\ServerTransportInterface;
+use Mcp\Server\Contracts\SessionIdGeneratorInterface;
 use Mcp\Server\Exception\TransportException;
-use PhpMcp\Schema\JsonRpc\Message;
+use Mcp\Server\Session\SessionIdGenerator;
 use PhpMcp\Schema\JsonRpc\Error;
+use PhpMcp\Schema\JsonRpc\Message;
 use PhpMcp\Schema\JsonRpc\Parser;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
-use Random\RandomException;
 use React\Http\Message\Response;
 use React\Promise\Deferred;
 use React\Promise\PromiseInterface;
 use React\Stream\ThroughStream;
 use React\Stream\WritableStreamInterface;
 
-use function React\Promise\resolve;
 use function React\Promise\reject;
+use function React\Promise\resolve;
 
 final class HttpServerTransport implements ServerTransportInterface
 {
@@ -34,6 +35,7 @@ final class HttpServerTransport implements ServerTransportInterface
 
     public function __construct(
         private readonly HttpServerInterface $httpServer,
+        private readonly SessionIdGeneratorInterface $sessionId = new SessionIdGenerator(),
         private readonly LoggerInterface $logger = new NullLogger(),
     ) {
         $this->ssePath = '/' . \trim($httpServer->mcpPath(), '/') . '/sse';
@@ -124,14 +126,6 @@ final class HttpServerTransport implements ServerTransportInterface
         return $this->httpServer->emit($event, $arguments);
     }
 
-    /**
-     * @throws RandomException
-     */
-    private function generateId(): string
-    {
-        return \bin2hex(\random_bytes(16)); // 32 hex characters
-    }
-
     private function createRequestHandler(): callable
     {
         return function (ServerRequestInterface $request) {
@@ -157,7 +151,7 @@ final class HttpServerTransport implements ServerTransportInterface
      */
     private function handleSseRequest(ServerRequestInterface $request): Response
     {
-        $sessionId = $this->generateId();
+        $sessionId = $this->sessionId->generate();
         $this->logger->info('New SSE connection', ['sessionId' => $sessionId]);
 
         $sseStream = new ThroughStream();
