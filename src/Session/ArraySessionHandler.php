@@ -11,7 +11,10 @@ use Psr\Clock\ClockInterface;
 final class ArraySessionHandler implements SessionHandlerInterface
 {
     /**
-     * @var array<string, array{ data: array, timestamp: int }>
+     * @var array<string, array{
+     *     data: string,
+     *     timestamp: int
+     * }>
      */
     protected array $store = [];
 
@@ -22,8 +25,8 @@ final class ArraySessionHandler implements SessionHandlerInterface
 
     public function read(string $id): string|false
     {
-        $session = $this->store[$id] ?? '';
-        if ($session === '') {
+        $session = $this->store[$id] ?? null;
+        if ($session === null) {
             return false;
         }
 

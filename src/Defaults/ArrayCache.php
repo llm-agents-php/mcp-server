@@ -99,11 +99,7 @@ final class ArrayCache implements CacheInterface
         if (\is_int($ttl)) {
             return \time() + $ttl;
         }
-        if ($ttl instanceof \DateInterval) {
-            return (new \DateTime())->add($ttl)->getTimestamp();
-        }
 
-        // Invalid TTL type, treat as no expiry
-        return null;
+        return (new \DateTime())->add($ttl)->getTimestamp();
     }
 }

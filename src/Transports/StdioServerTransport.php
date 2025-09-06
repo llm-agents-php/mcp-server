@@ -111,6 +111,9 @@ final class StdioServerTransport extends EventEmitter implements
             throw new TransportException('Cannot listen, transport is closing/closed.');
         }
 
+        \assert(\is_resource($this->inputStreamResource));
+        \assert(\is_resource($this->outputStreamResource));
+
         try {
             $this->stdin = new ReadableResourceStream($this->inputStreamResource, $this->loop);
             $this->stdout = new WritableResourceStream($this->outputStreamResource, $this->loop);
@@ -177,7 +180,7 @@ final class StdioServerTransport extends EventEmitter implements
         }
 
         $deferred = new Deferred();
-        $json = \json_encode($message, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+        $json = \json_encode($message, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR);
         $written = $this->stdout->write($json . "\n");
 
         if ($written) {
@@ -221,7 +224,7 @@ final class StdioServerTransport extends EventEmitter implements
     private function processBuffer(): void
     {
         while (\str_contains($this->buffer, "\n")) {
-            $pos = \strpos($this->buffer, "\n");
+            $pos = (int) \strpos($this->buffer, "\n");
             $line = \substr($this->buffer, 0, $pos);
             $this->buffer = \substr($this->buffer, $pos + 1);
 

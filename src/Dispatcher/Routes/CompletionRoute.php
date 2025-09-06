@@ -12,6 +12,7 @@ use Mcp\Server\Exception\McpServerException;
 use PhpMcp\Schema\JsonRpc\Notification;
 use PhpMcp\Schema\JsonRpc\Request;
 use PhpMcp\Schema\JsonRpc\Result;
+use PhpMcp\Schema\PromptReference;
 use PhpMcp\Schema\Request\CompletionCompleteRequest;
 use PhpMcp\Schema\Result\CompletionCompleteResult;
 
@@ -54,7 +55,7 @@ final readonly class CompletionRoute implements RouteInterface
         $argumentName = $request->argument['name'];
         $currentValue = $request->argument['value'];
 
-        if ($ref->type === 'ref/prompt') {
+        if ($ref instanceof PromptReference) {
             $identifier = $ref->name;
             $registeredPrompt = $this->registry->getPrompt($identifier);
             if (!$registeredPrompt) {
@@ -75,34 +76,32 @@ final readonly class CompletionRoute implements RouteInterface
             }
 
             return $registeredPrompt->complete($argumentName, $currentValue, $context->session);
-        } elseif ($ref->type === 'ref/resource') {
-            $identifier = $ref->uri;
-            $registeredResourceTemplate = $this->registry->getResourceTemplate($identifier);
-            if (!$registeredResourceTemplate) {
-                throw McpServerException::invalidParams("Resource template '{$identifier}' not found.");
-            }
+        }
 
-            $foundArg = false;
-            foreach ($registeredResourceTemplate->getVariableNames() as $uriVariableName) {
-                if ($uriVariableName === $argumentName) {
-                    $foundArg = true;
-                    break;
-                }
-            }
+        $identifier = $ref->uri;
+        $registeredResourceTemplate = $this->registry->getResourceTemplate($identifier);
+        if (!$registeredResourceTemplate) {
+            throw McpServerException::invalidParams("Resource template '{$identifier}' not found.");
+        }
 
-            if (!$foundArg) {
-                throw McpServerException::invalidParams(
-                    "URI variable '{$argumentName}' not found in resource template '{$identifier}'.",
-                );
+        $foundArg = false;
+        foreach ($registeredResourceTemplate->getVariableNames() as $uriVariableName) {
+            if ($uriVariableName === $argumentName) {
+                $foundArg = true;
+                break;
             }
+        }
 
-            return $registeredResourceTemplate->complete(
-                $argumentName,
-                $currentValue,
-                $context->session,
+        if (!$foundArg) {
+            throw McpServerException::invalidParams(
+                "URI variable '{$argumentName}' not found in resource template '{$identifier}'.",
             );
         }
 
-        throw McpServerException::invalidParams("Invalid ref type '{$ref->type}' for completion complete request.");
+        return $registeredResourceTemplate->complete(
+            $argumentName,
+            $currentValue,
+            $context->session,
+        );
     }
 }

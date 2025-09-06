@@ -22,7 +22,7 @@ final readonly class EnumCompletionProvider implements CompletionProviderInterfa
         }
 
         $this->values = \array_map(
-            static fn($case) => isset($case->value) && \is_string($case->value) ? $case->value : $case->name,
+            static fn($case) => $case->value && \is_string($case->value) ? $case->value : $case->name,
             $enumClass::cases(),
         );
     }

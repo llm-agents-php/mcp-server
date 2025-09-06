@@ -9,6 +9,7 @@ use Mcp\Server\Elements\RegisteredResource;
 use Mcp\Server\Elements\RegisteredResourceTemplate;
 use Mcp\Server\Elements\RegisteredTool;
 use PhpMcp\Schema\Prompt;
+use PhpMcp\Schema\Resource;
 use PhpMcp\Schema\ResourceTemplate;
 use PhpMcp\Schema\Tool;
 

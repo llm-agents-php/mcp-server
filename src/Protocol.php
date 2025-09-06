@@ -112,6 +112,7 @@ final class Protocol
      * Handles a message received from the transport.
      *
      * Processes via Processor, sends Response/Error.
+     * @throws McpServerException
      */
     public function processMessage(
         Request|Notification|BatchRequest $message,
@@ -120,12 +121,17 @@ final class Protocol
     ): void {
         $this->logger->debug('Message received.', ['sessionId' => $sessionId, 'message' => $message]);
 
+        if ($this->transport === null) {
+            $this->logger->error('Cannot process message, transport not bound');
+            throw new McpServerException('Transport not bound');
+        }
+
         $session = $this->sessionManager->getSession($sessionId);
 
         if ($session === null) {
             $error = Error::forInvalidRequest(
                 'Invalid or expired session. Please re-initialize the session.',
-                $message->id,
+                (string) $message->getId(),
             );
             $messageContext['status_code'] = 404;
 
@@ -164,7 +170,7 @@ final class Protocol
             $response = $this->processBatchRequest($message, $session, $context);
         } elseif ($message instanceof Request) {
             $response = $this->processRequest($message, $session, $context);
-        } elseif ($message instanceof Notification) {
+        } else {
             $this->processNotification($message, $session, $context);
         }
 
