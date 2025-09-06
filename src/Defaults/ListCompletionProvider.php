@@ -9,6 +9,9 @@ use Mcp\Server\Contracts\SessionInterface;
 
 final readonly class ListCompletionProvider implements CompletionProviderInterface
 {
+    /**
+     * @param string[] $values
+     */
     public function __construct(
         private array $values,
     ) {}

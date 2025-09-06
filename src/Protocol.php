@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Mcp\Server;
 
+use Mcp\Server\Contracts\DispatcherInterface;
 use Mcp\Server\Contracts\ReferenceRegistryInterface;
 use PhpMcp\Schema\Constants;
 use Mcp\Server\Contracts\ServerTransportInterface;
@@ -53,7 +54,7 @@ final class Protocol
         protected Configuration $configuration,
         protected ReferenceRegistryInterface $registry,
         protected SessionManager $sessionManager,
-        protected Dispatcher $dispatcher,
+        protected DispatcherInterface $dispatcher,
         protected SubscriptionManager $subscriptionManager,
         protected LoggerInterface $logger = new NullLogger(),
     ) {

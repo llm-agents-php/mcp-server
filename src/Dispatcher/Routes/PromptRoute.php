@@ -10,7 +10,6 @@ use Mcp\Server\Contracts\RouteInterface;
 use Mcp\Server\Dispatcher\Paginator;
 use Mcp\Server\Dispatcher\RequestMethod;
 use Mcp\Server\Exception\McpServerException;
-use Mcp\Server\Registry;
 use PhpMcp\Schema\JsonRpc\Notification;
 use PhpMcp\Schema\JsonRpc\Request;
 use PhpMcp\Schema\JsonRpc\Result;

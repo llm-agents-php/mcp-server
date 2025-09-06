@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Mcp\Server;
 
-use Evenement\EventEmitterInterface;
 use Evenement\EventEmitterTrait;
 use Mcp\Server\Contracts\HandlerInterface;
 use Mcp\Server\Contracts\ReferenceProviderInterface;

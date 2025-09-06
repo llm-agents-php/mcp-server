@@ -13,7 +13,6 @@ use Mcp\Server\Dispatcher\Paginator;
 use Mcp\Server\Dispatcher\RequestMethod;
 use Mcp\Server\Exception\McpServerException;
 use Mcp\Server\Exception\ValidationException;
-use Mcp\Server\Registry;
 use PhpMcp\Schema\Content\TextContent;
 use PhpMcp\Schema\JsonRpc\Notification;
 use PhpMcp\Schema\JsonRpc\Request;
@@ -35,7 +34,7 @@ final readonly class ToolRoute implements RouteInterface
         private LoggerInterface $logger = new NullLogger(),
         private Paginator $paginationHelper = new Paginator(),
     ) {
-        $this->toolExecutor = $toolExecutor ?: new ToolExecutor($this->logger);
+        $this->toolExecutor = $toolExecutor ?: new ToolExecutor($this->registry, $this->logger);
     }
 
     public function getMethods(): array
@@ -78,13 +77,8 @@ final readonly class ToolRoute implements RouteInterface
         $toolName = $request->name;
         $arguments = $request->arguments;
 
-        $registeredTool = $this->registry->getTool($toolName);
-        if (!$registeredTool) {
-            throw McpServerException::methodNotFound("Tool '{$toolName}' not found.");
-        }
-
         try {
-            $result = $this->toolExecutor->call($registeredTool, $arguments, $context);
+            $result = $this->toolExecutor->call($toolName, $arguments, $context);
 
             return new CallToolResult($result, false);
         } catch (ValidationException $e) {

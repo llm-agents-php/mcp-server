@@ -14,7 +14,6 @@ use Mcp\Server\Dispatcher\Routes\LoggingRoute;
 use Mcp\Server\Dispatcher\Routes\PromptRoute;
 use Mcp\Server\Dispatcher\Routes\ResourceRoute;
 use Mcp\Server\Dispatcher\Routes\ToolRoute;
-use Mcp\Server\Registry;
 use Mcp\Server\Session\SubscriptionManager;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
