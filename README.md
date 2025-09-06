@@ -10,6 +10,7 @@ servers. Create production-ready MCP servers in PHP with modern architecture, fl
 comprehensive feature support.
 
 ## Table of Contents
+
 - [Requirements](#requirements)
 - [Installation](#installation)
     - [Framework Integration](#framework-integration)
@@ -807,6 +808,144 @@ final readonly class LoggingHandlerDecorator implements HandlerInterface
         }
     }
 }
+```
+
+### Class-Based Tool Handlers with Schema Mapping
+
+For more advanced use cases with automatic schema generation and request mapping, you can create handlers that work with
+DTO classes:
+
+```php
+use Spiral\McpServer\SchemaMapperInterface;
+
+final readonly class ClassHandler implements HandlerInterface
+{
+    public function __construct(
+        private FactoryInterface $factory,
+        private SchemaMapperInterface $schemaMapper,
+        private \ReflectionClass $class,
+        private ?string $schemaClass = null,
+    ) {}
+
+    public function handle(
+        array $arguments,
+        Context $context,
+    ): mixed {
+        /** @var callable $tool */
+        $tool = $this->factory->make($this->class->getName());
+
+        if ($this->schemaClass === null) {
+            return $tool();
+        }
+
+        // Map raw arguments to strongly-typed DTO
+        $object = $this->schemaMapper->toObject(
+            json: \json_encode($arguments),
+            class: $this->schemaClass,
+        );
+
+        return $tool($object);
+    }
+}
+```
+
+**Schema Mapper Interface:**
+
+```php
+interface SchemaMapperInterface
+{
+    /**
+     * Generate JSON schema from PHP class
+     * @param class-string $class
+     */
+    public function toJsonSchema(string $class): array;
+
+    /**
+     * Map JSON to strongly-typed PHP object
+     * @template T of object
+     * @param class-string<T>|null $class
+     * @return T
+     */
+    public function toObject(string $json, ?string $class = null): object;
+}
+```
+
+**Implementation with Valinor and spiral/json-schema-generator:**
+
+```php
+use CuyZ\Valinor\Mapper\TreeMapper;
+use Spiral\JsonSchemaGenerator\Generator as JsonSchemaGenerator;
+
+final readonly class SchemaMapper implements SchemaMapperInterface
+{
+    public function __construct(
+        private JsonSchemaGenerator $generator,
+        private TreeMapper $mapper,
+    ) {}
+
+    public function toJsonSchema(string $class): array
+    {
+        if (\json_validate($class)) {
+            return \json_decode($class, associative: true);
+        }
+
+        if (\class_exists($class)) {
+            return $this->generator->generate($class)->jsonSerialize();
+        }
+
+        throw new \InvalidArgumentException("Invalid class or JSON schema: {$class}");
+    }
+
+    public function toObject(string $json, ?string $class = null): object
+    {
+        if ($class === null) {
+            return \json_decode($json, associative: false);
+        }
+
+        return $this->mapper->map($class, \json_decode($json, associative: true));
+    }
+}
+```
+
+**Usage Example:**
+
+```php
+// DTO class
+final readonly class CalculatorRequest
+{
+    public function __construct(
+        public string $operation,
+        public float $a,
+        public float $b,
+    ) {}
+}
+
+// Tool implementation
+final readonly class Calculator
+{
+    public function __invoke(CalculatorRequest $request): float
+    {
+        return match($request->operation) {
+            'add' => $request->a + $request->b,
+            'subtract' => $request->a - $request->b,
+            'multiply' => $request->a * $request->b,
+            'divide' => $request->b !== 0.0 ? $request->a / $request->b 
+                : throw new InvalidArgumentException('Division by zero'),
+            default => throw new InvalidArgumentException('Unknown operation')
+        };
+    }
+}
+
+// Registration with automatic schema generation
+$schema = $schemaMapper->toJsonSchema(CalculatorRequest::class);
+$tool = Tool::make('calculator', 'Performs calculations', $schema);
+$handler = new ClassHandler(
+  $factory, 
+  $schemaMapper, 
+  new \ReflectionClass(Calculator::class), 
+  CalculatorRequest::class,
+);
+$registry->registerTool($tool, $handler);
 ```
 
 ## Contributing
