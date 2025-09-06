@@ -59,12 +59,12 @@ documents:
           - vendor/php-mcp/schema/src/Tool.php
           - tests/Unit/Defaults/ToolExecutorTest.php
 
-  - description: Resources
-    outputPath: src/resources.md
+  - description: Source code
+    outputPath: src/src.md
     sources:
       - type: file
         sourcePaths:
-          - src/Elements
+          - src
 
   - description: HTTP Server
     outputPath: src/http-server.md

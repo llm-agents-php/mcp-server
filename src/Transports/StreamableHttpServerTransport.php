@@ -259,41 +259,15 @@ final class StreamableHttpServerTransport implements ServerTransportInterface
                 return new HttpResponse(404, ['Content-Type' => 'application/json'], \json_encode($error));
             }
 
-            $corsHeaders = [
-                'Access-Control-Allow-Origin' => '*',
-                'Access-Control-Allow-Methods' => 'GET, POST, DELETE, OPTIONS',
-                'Access-Control-Allow-Headers' => 'Content-Type, Mcp-Session-Id, Last-Event-ID, Authorization',
-            ];
-
-            if ($method === 'OPTIONS') {
-                return new HttpResponse(204, $corsHeaders);
-            }
-
-            $addCors = static function (HttpResponse $r) use ($corsHeaders) {
-                foreach ($corsHeaders as $key => $value) {
-                    $r = $r->withAddedHeader($key, $value);
-                }
-                return $r;
-            };
-
             try {
                 return match ($method) {
-                    'GET' => $this->handleGetRequest($request)->then(
-                        $addCors,
-                        fn($e) => $addCors($this->handleRequestError($e, $request)),
-                    ),
-                    'POST' => $this->handlePostRequest($request)->then(
-                        $addCors,
-                        fn($e) => $addCors($this->handleRequestError($e, $request)),
-                    ),
-                    'DELETE' => $this->handleDeleteRequest($request)->then(
-                        $addCors,
-                        fn($e) => $addCors($this->handleRequestError($e, $request)),
-                    ),
-                    default => $addCors($this->handleUnsupportedRequest($request)),
+                    'GET' => $this->handleGetRequest($request),
+                    'POST' => $this->handlePostRequest($request),
+                    'DELETE' => $this->handleDeleteRequest($request),
+                    default => $this->handleUnsupportedRequest($request),
                 };
             } catch (\Throwable $e) {
-                return $addCors($this->handleRequestError($e, $request));
+                return $this->handleRequestError($e, $request);
             }
         };
     }

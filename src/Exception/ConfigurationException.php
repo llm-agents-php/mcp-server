@@ -6,8 +6,6 @@ namespace Mcp\Server\Exception;
 
 /**
  * Exception related to invalid server configuration.
- *
- * Typically thrown during ServerBuilder::build().
  */
 class ConfigurationException extends McpServerException
 {

@@ -15,8 +15,6 @@ use Psr\Log\NullLogger;
  * Holds the configured MCP logic (Configuration, Registry, Protocol)
  * but is transport-agnostic. It relies on a ServerTransportInterface implementation,
  * provided via the listen() method, to handle network communication.
- *
- * Instances should be created via the ServerBuilder.
  */
 final class Server
 {
@@ -40,9 +38,8 @@ final class Server
      * @throws \LogicException If called after already listening.
      * @throws \Throwable If transport->listen() fails immediately.
      */
-    public function listen(
-        ServerTransportInterface $transport,
-    ): void {
+    public function listen(ServerTransportInterface $transport): void
+    {
         if ($this->isListening) {
             throw new \LogicException('Server is already listening via a transport.');
         }

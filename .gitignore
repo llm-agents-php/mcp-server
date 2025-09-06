@@ -40,7 +40,7 @@ Thumbs.db
 /_ide_helper.php
 
 # Build artifacts
-/build/
+/.build/
 /coverage/
 
 # PHPUnit coverage reports
