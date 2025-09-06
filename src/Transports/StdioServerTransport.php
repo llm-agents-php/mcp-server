@@ -6,16 +6,12 @@ namespace Mcp\Server\Transports;
 
 use Evenement\EventEmitter;
 use PhpMcp\Schema\JsonRpc\Parser;
-use Mcp\Server\Contracts\LoggerAwareInterface;
-use Mcp\Server\Contracts\LoopAwareInterface;
 use Mcp\Server\Contracts\ServerTransportInterface;
 use Mcp\Server\Exception\TransportException;
 use PhpMcp\Schema\JsonRpc\Error;
 use PhpMcp\Schema\JsonRpc\Message;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
-use React\ChildProcess\Process;
-use React\EventLoop\Loop;
 use React\EventLoop\LoopInterface;
 use React\Promise\Deferred;
 use React\Promise\PromiseInterface;
@@ -30,16 +26,10 @@ use function React\Promise\reject;
  * Implementation of the STDIO server transport using ReactPHP Process and Streams.
  * Listens on STDIN, writes to STDOUT, and emits events for the Protocol.
  */
-final class StdioServerTransport extends EventEmitter implements
-    ServerTransportInterface,
-    LoggerAwareInterface,
-    LoopAwareInterface
+final class StdioServerTransport extends EventEmitter implements ServerTransportInterface
 {
     private const string CLIENT_ID = 'stdio';
 
-    protected LoggerInterface $logger;
-    protected LoopInterface $loop;
-    protected ?Process $process = null;
     protected ?ReadableStreamInterface $stdin = null;
     protected ?WritableStreamInterface $stdout = null;
     protected string $buffer = '';
@@ -57,8 +47,10 @@ final class StdioServerTransport extends EventEmitter implements
      * @throws TransportException If provided resources are invalid.
      */
     public function __construct(
+        protected readonly LoopInterface $loop,
         protected $inputStreamResource = STDIN,
         protected $outputStreamResource = STDOUT,
+        protected readonly LoggerInterface $logger = new NullLogger(),
     ) {
         if (
             \str_contains(PHP_OS, 'WIN')
@@ -81,19 +73,6 @@ final class StdioServerTransport extends EventEmitter implements
         ) {
             throw new TransportException('Invalid output stream resource provided.');
         }
-
-        $this->logger = new NullLogger();
-        $this->loop = Loop::get();
-    }
-
-    public function setLogger(LoggerInterface $logger): void
-    {
-        $this->logger = $logger;
-    }
-
-    public function setLoop(LoopInterface $loop): void
-    {
-        $this->loop = $loop;
     }
 
     /**
