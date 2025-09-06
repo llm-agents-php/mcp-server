@@ -6,16 +6,10 @@ namespace Mcp\Server\Tests\Unit\Session;
 
 use Mcp\Server\Session\SessionIdGenerator;
 use PHPUnit\Framework\TestCase;
-use Random\RandomException;
 
 final class SessionIdGeneratorTest extends TestCase
 {
     private SessionIdGenerator $generator;
-
-    protected function setUp(): void
-    {
-        $this->generator = new SessionIdGenerator();
-    }
 
     public function test_generate_returns_string(): void
     {
@@ -28,7 +22,7 @@ final class SessionIdGeneratorTest extends TestCase
     {
         $sessionId = $this->generator->generate();
 
-        $this->assertEquals(32, strlen($sessionId));
+        $this->assertEquals(32, \strlen($sessionId));
         $this->assertMatchesRegularExpression('/^[a-f0-9]{32}$/', $sessionId);
     }
 
@@ -53,8 +47,8 @@ final class SessionIdGeneratorTest extends TestCase
         $this->assertNotEquals($id1, $id2);
 
         // Check that the IDs have good entropy (not all the same character)
-        $this->assertNotEquals(str_repeat($id1[0], 32), $id1);
-        $this->assertNotEquals(str_repeat($id2[0], 32), $id2);
+        $this->assertNotEquals(\str_repeat($id1[0], 32), $id1);
+        $this->assertNotEquals(\str_repeat($id2[0], 32), $id2);
     }
 
     public function test_multiple_generators_produce_unique_ids(): void
@@ -83,18 +77,18 @@ final class SessionIdGeneratorTest extends TestCase
         $sessionId = $this->generator->generate();
 
         // Convert hex string back to binary to verify it represents 16 bytes
-        $binaryData = hex2bin($sessionId);
-        $this->assertEquals(16, strlen($binaryData));
+        $binaryData = \hex2bin($sessionId);
+        $this->assertEquals(16, \strlen($binaryData));
     }
 
     public function test_generated_ids_have_good_distribution(): void
     {
-        $charCounts = array_fill_keys(str_split('0123456789abcdef'), 0);
+        $charCounts = \array_fill_keys(\str_split('0123456789abcdef'), 0);
 
         // Generate many IDs and count character frequency
         for ($i = 0; $i < 100; $i++) {
             $sessionId = $this->generator->generate();
-            foreach (str_split($sessionId) as $char) {
+            foreach (\str_split($sessionId) as $char) {
                 $charCounts[$char]++;
             }
         }
@@ -105,11 +99,16 @@ final class SessionIdGeneratorTest extends TestCase
         }
 
         // Check that no character dominates (rough distribution check)
-        $totalChars = array_sum($charCounts);
+        $totalChars = \array_sum($charCounts);
         $expectedAverage = $totalChars / 16; // 16 hex characters
 
         foreach ($charCounts as $char => $count) {
             $this->assertLessThan($expectedAverage * 3, $count, "Character '{$char}' appears too frequently");
         }
+    }
+
+    protected function setUp(): void
+    {
+        $this->generator = new SessionIdGenerator();
     }
 }

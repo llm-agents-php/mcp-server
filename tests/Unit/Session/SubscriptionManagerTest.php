@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Mcp\Server\Tests\Unit\Session;
 
 use Mcp\Server\Session\SubscriptionManager;
-use Mockery;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\LoggerInterface;
 
@@ -13,17 +12,6 @@ final class SubscriptionManagerTest extends TestCase
 {
     private LoggerInterface $logger;
     private SubscriptionManager $subscriptionManager;
-
-    protected function setUp(): void
-    {
-        $this->logger = Mockery::mock(LoggerInterface::class);
-        $this->subscriptionManager = new SubscriptionManager($this->logger);
-    }
-
-    protected function tearDown(): void
-    {
-        Mockery::close();
-    }
 
     public function test_subscribe_adds_session_to_resource(): void
     {
@@ -345,5 +333,16 @@ final class SubscriptionManagerTest extends TestCase
         $this->assertCount(1, $uri2Subscribers);
         $this->assertContains($session1, $uri1Subscribers);
         $this->assertContains($session2, $uri2Subscribers);
+    }
+
+    protected function setUp(): void
+    {
+        $this->logger = \Mockery::mock(LoggerInterface::class);
+        $this->subscriptionManager = new SubscriptionManager($this->logger);
+    }
+
+    protected function tearDown(): void
+    {
+        \Mockery::close();
     }
 }
