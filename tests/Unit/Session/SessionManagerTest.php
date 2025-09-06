@@ -8,7 +8,6 @@ use Evenement\EventEmitterInterface;
 use Mcp\Server\Contracts\SessionHandlerInterface;
 use Mcp\Server\Contracts\SessionInterface;
 use Mcp\Server\Session\SessionManager;
-use Mockery;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\LoggerInterface;
 use React\EventLoop\LoopInterface;
@@ -21,26 +20,6 @@ final class SessionManagerTest extends TestCase
     private LoopInterface $loop;
     private SessionManager $sessionManager;
 
-    protected function setUp(): void
-    {
-        $this->handler = Mockery::mock(SessionHandlerInterface::class);
-        $this->logger = Mockery::mock(LoggerInterface::class);
-        $this->loop = Mockery::mock(LoopInterface::class);
-
-        $this->sessionManager = new SessionManager(
-            handler: $this->handler,
-            logger: $this->logger,
-            loop: $this->loop,
-            ttl: 3600,
-            gcInterval: 300,
-        );
-    }
-
-    protected function tearDown(): void
-    {
-        Mockery::close();
-    }
-
     public function test_implements_event_emitter_interface(): void
     {
         $this->assertInstanceOf(EventEmitterInterface::class, $this->sessionManager);
@@ -48,11 +27,11 @@ final class SessionManagerTest extends TestCase
 
     public function test_start_gc_timer_adds_periodic_timer(): void
     {
-        $timer = Mockery::mock(TimerInterface::class);
+        $timer = \Mockery::mock(TimerInterface::class);
 
         $this->loop
             ->shouldReceive('addPeriodicTimer')
-            ->with(300, Mockery::type('callable'))
+            ->with(300, \Mockery::type('callable'))
             ->andReturn($timer)
             ->once();
 
@@ -63,11 +42,11 @@ final class SessionManagerTest extends TestCase
 
     public function test_start_gc_timer_does_not_add_duplicate_timer(): void
     {
-        $timer = Mockery::mock(TimerInterface::class);
+        $timer = \Mockery::mock(TimerInterface::class);
 
         $this->loop
             ->shouldReceive('addPeriodicTimer')
-            ->with(300, Mockery::type('callable'))
+            ->with(300, \Mockery::type('callable'))
             ->andReturn($timer)
             ->once(); // Should only be called once
 
@@ -79,7 +58,7 @@ final class SessionManagerTest extends TestCase
 
     public function test_stop_gc_timer_cancels_timer(): void
     {
-        $timer = Mockery::mock(TimerInterface::class);
+        $timer = \Mockery::mock(TimerInterface::class);
 
         $this->loop->shouldReceive('addPeriodicTimer')->andReturn($timer);
         $this->loop->shouldReceive('cancelTimer')->with($timer)->once();
@@ -116,7 +95,7 @@ final class SessionManagerTest extends TestCase
 
         // Capture emitted events
         $emittedEvents = [];
-        $this->sessionManager->on('session_deleted', function ($sessionId) use (&$emittedEvents) {
+        $this->sessionManager->on('session_deleted', static function ($sessionId) use (&$emittedEvents): void {
             $emittedEvents[] = $sessionId;
         });
 
@@ -156,8 +135,8 @@ final class SessionManagerTest extends TestCase
             ->shouldReceive('write')
             ->with(
                 $sessionId,
-                Mockery::on(function ($json) {
-                    $data = json_decode($json, true);
+                \Mockery::on(static function ($json) {
+                    $data = \json_decode($json, true);
                     return $data['initialized'] === false &&
                         $data['client_info'] === null &&
                         $data['subscriptions'] === [] &&
@@ -177,7 +156,7 @@ final class SessionManagerTest extends TestCase
         $createdSession = null;
         $this->sessionManager->on(
             'session_created',
-            function ($id, $session) use (&$createdSessionId, &$createdSession) {
+            static function ($id, $session) use (&$createdSessionId, &$createdSession): void {
                 $createdSessionId = $id;
                 $createdSession = $session;
             },
@@ -194,7 +173,7 @@ final class SessionManagerTest extends TestCase
     public function test_get_session_returns_existing_session(): void
     {
         $sessionId = 'existing-session';
-        $sessionData = json_encode(['user_id' => 123]);
+        $sessionData = \json_encode(['user_id' => 123]);
 
         $this->handler
             ->shouldReceive('read')
@@ -224,7 +203,7 @@ final class SessionManagerTest extends TestCase
     public function test_has_session_returns_true_for_existing(): void
     {
         $sessionId = 'existing-session';
-        $sessionData = json_encode(['user_id' => 123]);
+        $sessionData = \json_encode(['user_id' => 123]);
 
         $this->handler
             ->shouldReceive('read')
@@ -267,7 +246,7 @@ final class SessionManagerTest extends TestCase
 
         // Capture emitted event
         $deletedSessionId = null;
-        $this->sessionManager->on('session_deleted', function ($id) use (&$deletedSessionId) {
+        $this->sessionManager->on('session_deleted', static function ($id) use (&$deletedSessionId): void {
             $deletedSessionId = $id;
         });
 
@@ -301,7 +280,7 @@ final class SessionManagerTest extends TestCase
     {
         $sessionId = 'existing-session';
         $message = 'test message';
-        $sessionData = json_encode(['message_queue' => []]);
+        $sessionData = \json_encode(['message_queue' => []]);
 
         $this->handler
             ->shouldReceive('read')
@@ -313,9 +292,9 @@ final class SessionManagerTest extends TestCase
             ->shouldReceive('write')
             ->with(
                 $sessionId,
-                Mockery::on(function ($json) use ($message) {
-                    $data = json_decode($json, true);
-                    return in_array($message, $data['message_queue'] ?? []);
+                \Mockery::on(static function ($json) use ($message) {
+                    $data = \json_decode($json, true);
+                    return \in_array($message, $data['message_queue'] ?? []);
                 }),
             )
             ->andReturn(true)
@@ -345,7 +324,7 @@ final class SessionManagerTest extends TestCase
     {
         $sessionId = 'existing-session';
         $messages = ['message1', 'message2'];
-        $sessionData = json_encode(['message_queue' => $messages]);
+        $sessionData = \json_encode(['message_queue' => $messages]);
 
         $this->handler
             ->shouldReceive('read')
@@ -357,8 +336,8 @@ final class SessionManagerTest extends TestCase
             ->shouldReceive('write')
             ->with(
                 $sessionId,
-                Mockery::on(function ($json) {
-                    $data = json_decode($json, true);
+                \Mockery::on(static function ($json) {
+                    $data = \json_decode($json, true);
                     return empty($data['message_queue']);
                 }),
             )
@@ -386,7 +365,7 @@ final class SessionManagerTest extends TestCase
     public function test_has_queued_messages_returns_true_when_messages_exist(): void
     {
         $sessionId = 'existing-session';
-        $sessionData = json_encode(['message_queue' => ['message1']]);
+        $sessionData = \json_encode(['message_queue' => ['message1']]);
 
         $this->handler
             ->shouldReceive('read')
@@ -402,7 +381,7 @@ final class SessionManagerTest extends TestCase
     public function test_has_queued_messages_returns_false_when_no_messages(): void
     {
         $sessionId = 'existing-session';
-        $sessionData = json_encode(['message_queue' => []]);
+        $sessionData = \json_encode(['message_queue' => []]);
 
         $this->handler
             ->shouldReceive('read')
@@ -443,12 +422,12 @@ final class SessionManagerTest extends TestCase
 
     public function test_gc_timer_callback_triggers_gc(): void
     {
-        $timer = Mockery::mock(TimerInterface::class);
+        $timer = \Mockery::mock(TimerInterface::class);
         $gcCallback = null;
 
         $this->loop
             ->shouldReceive('addPeriodicTimer')
-            ->with(300, Mockery::capture($gcCallback))
+            ->with(300, \Mockery::capture($gcCallback))
             ->andReturn($timer);
 
         $this->handler
@@ -461,8 +440,28 @@ final class SessionManagerTest extends TestCase
 
         // Execute the callback that was passed to addPeriodicTimer
         $this->assertNotNull($gcCallback);
-        call_user_func($gcCallback);
+        \call_user_func($gcCallback);
 
         $this->addToAssertionCount(1);
+    }
+
+    protected function setUp(): void
+    {
+        $this->handler = \Mockery::mock(SessionHandlerInterface::class);
+        $this->logger = \Mockery::mock(LoggerInterface::class);
+        $this->loop = \Mockery::mock(LoopInterface::class);
+
+        $this->sessionManager = new SessionManager(
+            handler: $this->handler,
+            logger: $this->logger,
+            loop: $this->loop,
+            ttl: 3600,
+            gcInterval: 300,
+        );
+    }
+
+    protected function tearDown(): void
+    {
+        \Mockery::close();
     }
 }

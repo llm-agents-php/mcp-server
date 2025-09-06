@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Mcp\Server\Tests\Unit\Session;
 
 use Mcp\Server\Session\CacheSessionHandler;
-use Mockery;
 use PHPUnit\Framework\TestCase;
 use Psr\Clock\ClockInterface;
 use Psr\SimpleCache\CacheInterface;
@@ -15,25 +14,6 @@ final class CacheSessionHandlerTest extends TestCase
     private CacheInterface $cache;
     private ClockInterface $clock;
     private CacheSessionHandler $handler;
-
-    protected function setUp(): void
-    {
-        $this->cache = Mockery::mock(CacheInterface::class);
-        $this->clock = Mockery::mock(ClockInterface::class);
-        
-        // Mock the initial session index retrieval in constructor
-        $this->cache->shouldReceive('get')
-            ->with('mcp_session_index', [])
-            ->andReturn([])
-            ->once();
-            
-        $this->handler = new CacheSessionHandler($this->cache, ttl: 3600, clock: $this->clock);
-    }
-
-    protected function tearDown(): void
-    {
-        Mockery::close();
-    }
 
     public function test_read_returns_false_when_session_not_exists(): void
     {
@@ -47,7 +27,7 @@ final class CacheSessionHandlerTest extends TestCase
     public function test_read_removes_expired_session_from_index(): void
     {
         $sessionId = 'expired-session';
-        
+
         // Session exists in cache but not in index
         $this->cache->shouldReceive('get')->with($sessionId, false)->andReturn(false);
         $this->cache->shouldReceive('set')->with('mcp_session_index', [])->andReturn(true);
@@ -209,7 +189,7 @@ final class CacheSessionHandlerTest extends TestCase
 
     public function test_constructor_with_default_ttl(): void
     {
-        $cache = Mockery::mock(CacheInterface::class);
+        $cache = \Mockery::mock(CacheInterface::class);
         $cache->shouldReceive('get')->with('mcp_session_index', [])->andReturn([]);
 
         $handler = new CacheSessionHandler($cache);
@@ -219,7 +199,7 @@ final class CacheSessionHandlerTest extends TestCase
 
     public function test_constructor_with_custom_ttl(): void
     {
-        $cache = Mockery::mock(CacheInterface::class);
+        $cache = \Mockery::mock(CacheInterface::class);
         $cache->shouldReceive('get')->with('mcp_session_index', [])->andReturn([]);
 
         $handler = new CacheSessionHandler($cache, ttl: 7200);
@@ -248,7 +228,7 @@ final class CacheSessionHandlerTest extends TestCase
         $this->cache->shouldReceive('set')
             ->with('mcp_session_index', [
                 $sessionId1 => $currentTime->getTimestamp(),
-                $sessionId2 => $currentTime->getTimestamp()
+                $sessionId2 => $currentTime->getTimestamp(),
             ])
             ->andReturn(true);
         $this->cache->shouldReceive('set')->with($sessionId2, $sessionData2)->andReturn(true);
@@ -262,5 +242,24 @@ final class CacheSessionHandlerTest extends TestCase
         $result = $this->handler->destroy($sessionId1);
 
         $this->assertTrue($result);
+    }
+
+    protected function setUp(): void
+    {
+        $this->cache = \Mockery::mock(CacheInterface::class);
+        $this->clock = \Mockery::mock(ClockInterface::class);
+
+        // Mock the initial session index retrieval in constructor
+        $this->cache->shouldReceive('get')
+            ->with('mcp_session_index', [])
+            ->andReturn([])
+            ->once();
+
+        $this->handler = new CacheSessionHandler($this->cache, ttl: 3600, clock: $this->clock);
+    }
+
+    protected function tearDown(): void
+    {
+        \Mockery::close();
     }
 }

@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Mcp\Server\Tests\Unit\Session;
 
 use Mcp\Server\Session\ArraySessionHandler;
-use Mockery;
 use PHPUnit\Framework\TestCase;
 use Psr\Clock\ClockInterface;
 
@@ -13,17 +12,6 @@ final class ArraySessionHandlerTest extends TestCase
 {
     private ClockInterface $clock;
     private ArraySessionHandler $handler;
-
-    protected function setUp(): void
-    {
-        $this->clock = Mockery::mock(ClockInterface::class);
-        $this->handler = new ArraySessionHandler(ttl: 3600, clock: $this->clock);
-    }
-
-    protected function tearDown(): void
-    {
-        Mockery::close();
-    }
 
     public function test_read_returns_false_when_session_not_exists(): void
     {
@@ -177,5 +165,16 @@ final class ArraySessionHandlerTest extends TestCase
         $handler = new ArraySessionHandler(ttl: 7200);
 
         $this->assertEquals(7200, $handler->ttl);
+    }
+
+    protected function setUp(): void
+    {
+        $this->clock = \Mockery::mock(ClockInterface::class);
+        $this->handler = new ArraySessionHandler(ttl: 3600, clock: $this->clock);
+    }
+
+    protected function tearDown(): void
+    {
+        \Mockery::close();
     }
 }
