@@ -42,7 +42,7 @@ final class HttpServer extends EventEmitter implements HttpServerInterface
         private readonly bool $runLoop = true,
     ) {
         $this->listenAddress = "{$host}:{$port}";
-        $this->protocol = $this->sslContext !== [] ? 'https' : 'http';
+        $this->protocol = !empty($this->sslContext) ? 'https' : 'http';
 
         $this->mcpPath = '/' . \trim($mcpPath, '/');
 
