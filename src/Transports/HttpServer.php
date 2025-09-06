@@ -109,7 +109,9 @@ final class HttpServer extends EventEmitter implements HttpServerInterface
 
     public function onTick(\Closure $onTick): void
     {
-        $this->loop->futureTick($onTick($this));
+        $this->loop->futureTick(function () use ($onTick): void {
+            $onTick($this);
+        });
     }
 
     public function isClosing(): bool

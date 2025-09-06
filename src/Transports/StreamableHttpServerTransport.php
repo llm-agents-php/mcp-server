@@ -19,6 +19,7 @@ use PhpMcp\Schema\JsonRpc\Message;
 use PhpMcp\Schema\JsonRpc\Parser;
 use PhpMcp\Schema\JsonRpc\Request;
 use PhpMcp\Schema\JsonRpc\Response;
+use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
@@ -248,28 +249,26 @@ final class StreamableHttpServerTransport implements ServerTransportInterface
         return $this->httpServer->emit($event, $arguments);
     }
 
-    private function createRequestHandler(): callable
+    private function createRequestHandler(ServerRequestInterface $request): ResponseInterface
     {
-        return function (ServerRequestInterface $request) {
-            $path = $request->getUri()->getPath();
-            $method = $request->getMethod();
+        $path = $request->getUri()->getPath();
+        $method = $request->getMethod();
 
-            if ($path !== $this->httpServer->mcpPath()) {
-                $error = Error::forInvalidRequest("Not found: {$path}");
-                return new HttpResponse(404, ['Content-Type' => 'application/json'], \json_encode($error));
-            }
+        if ($path !== $this->httpServer->mcpPath()) {
+            $error = Error::forInvalidRequest("Not found: {$path}");
+            return new HttpResponse(404, ['Content-Type' => 'application/json'], \json_encode($error));
+        }
 
-            try {
-                return match ($method) {
-                    'GET' => $this->handleGetRequest($request),
-                    'POST' => $this->handlePostRequest($request),
-                    'DELETE' => $this->handleDeleteRequest($request),
-                    default => $this->handleUnsupportedRequest($request),
-                };
-            } catch (\Throwable $e) {
-                return $this->handleRequestError($e, $request);
-            }
-        };
+        try {
+            return match ($method) {
+                'GET' => $this->handleGetRequest($request),
+                'POST' => $this->handlePostRequest($request),
+                'DELETE' => $this->handleDeleteRequest($request),
+                default => $this->handleUnsupportedRequest($request),
+            };
+        } catch (\Throwable $e) {
+            return $this->handleRequestError($e, $request);
+        }
     }
 
     private function handleGetRequest(ServerRequestInterface $request): PromiseInterface

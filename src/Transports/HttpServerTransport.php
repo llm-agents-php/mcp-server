@@ -13,6 +13,7 @@ use Mcp\Server\Session\SessionIdGenerator;
 use PhpMcp\Schema\JsonRpc\Error;
 use PhpMcp\Schema\JsonRpc\Message;
 use PhpMcp\Schema\JsonRpc\Parser;
+use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
@@ -126,24 +127,22 @@ final class HttpServerTransport implements ServerTransportInterface
         return $this->httpServer->emit($event, $arguments);
     }
 
-    private function createRequestHandler(): callable
+    private function createRequestHandler(ServerRequestInterface $request): ResponseInterface
     {
-        return function (ServerRequestInterface $request) {
-            $path = $request->getUri()->getPath();
-            $method = $request->getMethod();
+        $path = $request->getUri()->getPath();
+        $method = $request->getMethod();
 
-            if ($method === 'GET' && $path === $this->ssePath) {
-                return $this->handleSseRequest($request);
-            }
+        if ($method === 'GET' && $path === $this->ssePath) {
+            return $this->handleSseRequest($request);
+        }
 
-            if ($method === 'POST' && $path === $this->messagePath) {
-                return $this->handleMessagePostRequest($request);
-            }
+        if ($method === 'POST' && $path === $this->messagePath) {
+            return $this->handleMessagePostRequest($request);
+        }
 
-            $this->logger->debug('404 Not Found', ['method' => $method, 'path' => $path]);
+        $this->logger->debug('404 Not Found', ['method' => $method, 'path' => $path]);
 
-            return new Response(404, ['Content-Type' => 'text/plain'], 'Not Found');
-        };
+        return new Response(404, ['Content-Type' => 'text/plain'], 'Not Found');
     }
 
     /**
