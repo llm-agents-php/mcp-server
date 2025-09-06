@@ -76,3 +76,13 @@ documents:
           - vendor/react/http/src/Io/MiddlewareRunner.php
           - vendor/react/http/src/Middleware
           - src/Transports/Middleware
+
+  - description: Session
+    outputPath: src/session.md
+    sources:
+      - type: file
+        sourcePaths:
+          - src/Session
+          - src/Contracts/SessionHandlerInterface.php
+          - src/Contracts/SessionIdGeneratorInterface.php
+          - src/Contracts/SessionInterface.php
