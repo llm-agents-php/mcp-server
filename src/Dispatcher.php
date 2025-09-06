@@ -22,7 +22,15 @@ final readonly class Dispatcher implements DispatcherInterface
         private LoggerInterface $logger,
         DispatcherRoutesFactoryInterface $routesFactory,
     ) {
-        $this->routes = $routesFactory->create();
+        $routes = [];
+
+        foreach ($routesFactory->create() as $route) {
+            foreach ($route->getMethods() as $method) {
+                $routes[$method] = $route;
+            }
+        }
+
+        $this->routes = $routes;
     }
 
     /**
