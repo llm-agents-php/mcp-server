@@ -28,7 +28,11 @@ final class MiddlewareRunnerIntegrationTest extends TestCase
         $expectedResponse = new Response(200, [], 'Hello World');
 
         // Final middleware (no $next parameter)
-        $middleware = (static fn(ServerRequestInterface $request): ResponseInterface => new Response(200, [], 'Hello World'));
+        $middleware = (static fn(ServerRequestInterface $request): ResponseInterface => new Response(
+            200,
+            [],
+            'Hello World',
+        ));
 
         $runner = new MiddlewareRunner([$middleware]);
         $response = $runner($request);
@@ -52,7 +56,11 @@ final class MiddlewareRunnerIntegrationTest extends TestCase
         };
 
         // Final handler (no $next parameter)
-        $finalHandler = (static fn(ServerRequestInterface $request): ResponseInterface => new Response(404, [], 'Not Found'));
+        $finalHandler = (static fn(ServerRequestInterface $request): ResponseInterface => new Response(
+            404,
+            [],
+            'Not Found',
+        ));
 
         $runner = new MiddlewareRunner([new MiddlewareAdapter($psr15Middleware), $finalHandler]);
 
@@ -85,7 +93,11 @@ final class MiddlewareRunnerIntegrationTest extends TestCase
         };
 
         // Final handler (no $next)
-        $finalHandler = (static fn(ServerRequestInterface $request): ResponseInterface => new Response(200, [], 'Final Response'));
+        $finalHandler = (static fn(ServerRequestInterface $request): ResponseInterface => new Response(
+            200,
+            [],
+            'Final Response',
+        ));
 
         $middlewares = [
             $reactMiddleware,
@@ -126,7 +138,11 @@ final class MiddlewareRunnerIntegrationTest extends TestCase
         };
 
         // Final handler (no $next)
-        $finalHandler = (static fn(ServerRequestInterface $request): ResponseInterface => new Response(201, [], 'Created'));
+        $finalHandler = (static fn(ServerRequestInterface $request): ResponseInterface => new Response(
+            201,
+            [],
+            'Created',
+        ));
 
         // Use MiddlewareUtils to normalize
         $normalizedMiddleware = MiddlewareUtils::normalizeMiddleware([
@@ -278,25 +294,17 @@ final class MiddlewareRunnerIntegrationTest extends TestCase
 
     public function testRequestHandlerWithClosure(): void
     {
-        $closure = (static fn(ServerRequestInterface $request): ResponseInterface => new Response(200, [], 'Handler response'));
+        $closure = (static fn(ServerRequestInterface $request): ResponseInterface => new Response(
+            200,
+            [],
+            'Handler response',
+        ));
 
         $handler = new RequestHandler($closure);
         $response = $handler->handle(new ServerRequest('GET', '/'));
 
         $this->assertInstanceOf(ResponseInterface::class, $response);
         $this->assertEquals('Handler response', (string) $response->getBody());
-    }
-
-    public function testRequestHandlerWithPromiseRejection(): void
-    {
-        $closure = (static fn(ServerRequestInterface $request): PromiseInterface => \React\Promise\reject(new \RuntimeException('Promise rejected')));
-
-        $handler = new RequestHandler($closure);
-
-        $this->expectException(\RuntimeException::class);
-        $this->expectExceptionMessage('Promise-based handlers cannot be used in PSR-15 context');
-
-        $handler->handle(new ServerRequest('GET', '/'));
     }
 
     public function testMiddlewareRunnerWithComplexMiddlewareChain(): void

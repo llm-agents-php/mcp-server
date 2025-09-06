@@ -47,7 +47,8 @@ documents:
       - type: file
         sourcePaths:
           - src/Dispatcher.php
-          - src/DispatcherRouter.php
+          - src/DispatcherRoutesFactory.php
+          - src/Contracts/DispatcherRoutesFactoryInterface.php
           - src/Routes
           - src/Contracts/RouteInterface.php
 

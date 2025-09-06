@@ -48,7 +48,7 @@
   },
   "autoload-dev": {
     "psr-4": {
-      "Mcp\\Server\\Tests\\": "tests/"
+      "Mcp\\Server\\Tests\\": "tests/Unit"
     }
   },
   "scripts": {

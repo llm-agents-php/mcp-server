@@ -4,11 +4,12 @@ declare(strict_types=1);
 
 namespace Mcp\Server;
 
-use PhpMcp\Schema\JsonRpc\Request;
-use PhpMcp\Schema\JsonRpc\Notification;
-use PhpMcp\Schema\JsonRpc\Result;
+use Mcp\Server\Contracts\DispatcherRoutesFactoryInterface;
 use Mcp\Server\Contracts\RouteInterface;
 use Mcp\Server\Exception\McpServerException;
+use PhpMcp\Schema\JsonRpc\Notification;
+use PhpMcp\Schema\JsonRpc\Request;
+use PhpMcp\Schema\JsonRpc\Result;
 use Psr\Log\LoggerInterface;
 
 final readonly class Dispatcher

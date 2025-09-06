@@ -2,9 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Mcp\Server;
-
-use Mcp\Server\Contracts\RouteInterface;
+namespace Mcp\Server\Contracts;
 
 interface DispatcherRoutesFactoryInterface
 {

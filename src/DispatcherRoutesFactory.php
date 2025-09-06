@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Mcp\Server;
 
+use Mcp\Server\Contracts\DispatcherRoutesFactoryInterface;
 use Mcp\Server\Contracts\ToolExecutorInterface;
 use Mcp\Server\Helpers\PaginationHelper;
 use Mcp\Server\Routes\CompletionRoute;
