@@ -8,26 +8,27 @@ use Evenement\EventEmitterInterface;
 use Mcp\Server\Contracts\EventStoreInterface;
 use Mcp\Server\Contracts\HttpServerInterface;
 use Mcp\Server\Contracts\ServerTransportInterface;
+use Mcp\Server\Contracts\SessionIdGeneratorInterface;
 use Mcp\Server\Exception\McpServerException;
 use Mcp\Server\Exception\TransportException;
-use PhpMcp\Schema\JsonRpc\Message;
+use Mcp\Server\Session\SessionIdGenerator;
 use PhpMcp\Schema\JsonRpc\BatchRequest;
 use PhpMcp\Schema\JsonRpc\BatchResponse;
 use PhpMcp\Schema\JsonRpc\Error;
+use PhpMcp\Schema\JsonRpc\Message;
 use PhpMcp\Schema\JsonRpc\Parser;
 use PhpMcp\Schema\JsonRpc\Request;
 use PhpMcp\Schema\JsonRpc\Response;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
-use Random\RandomException;
 use React\Http\Message\Response as HttpResponse;
 use React\Promise\Deferred;
 use React\Promise\PromiseInterface;
 use React\Stream\ThroughStream;
 
-use function React\Promise\resolve;
 use function React\Promise\reject;
+use function React\Promise\resolve;
 
 final class StreamableHttpServerTransport implements ServerTransportInterface
 {
@@ -55,6 +56,7 @@ final class StreamableHttpServerTransport implements ServerTransportInterface
      */
     public function __construct(
         private readonly HttpServerInterface $httpServer,
+        private readonly SessionIdGeneratorInterface $sessionId = new SessionIdGenerator(),
         private readonly LoggerInterface $logger = new NullLogger(),
         private readonly bool $enableJsonResponse = true,
         private readonly bool $stateless = false,
@@ -104,13 +106,13 @@ final class StreamableHttpServerTransport implements ServerTransportInterface
 
                 if ($message instanceof Response || $message instanceof Error) {
                     $json = \json_encode($message, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
-                    $eventId = $this->eventStore ? $this->eventStore->storeEvent($streamId, $json) : null;
+                    $eventId = $this->eventStore?->storeEvent($streamId, $json);
                     $this->sendSseEventToStream($stream, $json, $eventId);
                     $sentCountThisCall = 1;
                 } elseif ($message instanceof BatchResponse) {
                     foreach ($message->getAll() as $singleResponse) {
                         $json = \json_encode($message, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
-                        $eventId = $this->eventStore ? $this->eventStore->storeEvent($streamId, $json) : null;
+                        $eventId = $this->eventStore?->storeEvent($streamId, $json);
                         $this->sendSseEventToStream($stream, $json, $eventId);
                         $sentCountThisCall++;
                     }
@@ -179,12 +181,12 @@ final class StreamableHttpServerTransport implements ServerTransportInterface
                 }
                 if ($message instanceof Response || $message instanceof Error) {
                     $json = \json_encode($message, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
-                    $eventId = $this->eventStore ? $this->eventStore->storeEvent('GET_STREAM', $json) : null;
+                    $eventId = $this->eventStore?->storeEvent('GET_STREAM', $json);
                     $this->sendSseEventToStream($this->getStream, $json, $eventId);
                 } elseif ($message instanceof BatchResponse) {
                     foreach ($message->getAll() as $singleResponse) {
                         $json = \json_encode($singleResponse, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
-                        $eventId = $this->eventStore ? $this->eventStore->storeEvent('GET_STREAM', $json) : null;
+                        $eventId = $this->eventStore?->storeEvent('GET_STREAM', $json);
                         $this->sendSseEventToStream($this->getStream, $json, $eventId);
                     }
                 }
@@ -241,14 +243,6 @@ final class StreamableHttpServerTransport implements ServerTransportInterface
     public function emit($event, array $arguments = [])
     {
         return $this->httpServer->emit($event, $arguments);
-    }
-
-    /**
-     * @throws RandomException
-     */
-    private function generateId(): string
-    {
-        return \bin2hex(\random_bytes(16)); // 32 hex characters
     }
 
     private function createRequestHandler(): callable
@@ -391,7 +385,7 @@ final class StreamableHttpServerTransport implements ServerTransportInterface
         $sessionId = null;
 
         if ($this->stateless) {
-            $sessionId = $this->generateId();
+            $sessionId = $this->sessionId->generate();
             $this->emit('client_connected', [$sessionId]);
         } else {
             if ($isInitializeRequest) {
@@ -410,7 +404,7 @@ final class StreamableHttpServerTransport implements ServerTransportInterface
                     return $deferred->promise();
                 }
 
-                $sessionId = $this->generateId();
+                $sessionId = $this->sessionId->generate();
                 $this->emit('client_connected', [$sessionId]);
             } else {
                 $sessionId = $request->getHeaderLine('Mcp-Session-Id');
@@ -444,7 +438,7 @@ final class StreamableHttpServerTransport implements ServerTransportInterface
             $context['type'] = 'post_202_sent';
         } else {
             if ($this->enableJsonResponse) {
-                $pendingRequestId = $this->generateId();
+                $pendingRequestId = $this->sessionId->generate();
                 $this->pendingRequests[$pendingRequestId] = $deferred;
 
                 $timeoutTimer = $this->httpServer->getLoop()->addTimer(
@@ -478,7 +472,7 @@ final class StreamableHttpServerTransport implements ServerTransportInterface
                 $context['type'] = 'post_json';
                 $context['pending_request_id'] = $pendingRequestId;
             } else {
-                $streamId = $this->generateId();
+                $streamId = $this->sessionId->generate();
                 $sseStream = new ThroughStream();
                 $this->activeSseStreams[$streamId] = [
                     'stream' => $sseStream,

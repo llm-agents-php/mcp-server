@@ -25,13 +25,9 @@ final class Session implements SessionInterface
 
     public function __construct(
         private readonly SessionHandlerInterface $handler,
-        private string $id = '',
+        private readonly string $id,
         ?array $data = null,
     ) {
-        if (empty($this->id)) {
-            $this->id = $this->generateId();
-        }
-
         if ($data !== null) {
             $this->hydrate($data);
         } elseif ($sessionData = $this->handler->read($this->id)) {
@@ -66,11 +62,6 @@ final class Session implements SessionInterface
     public function getHandler(): SessionHandlerInterface
     {
         return $this->handler;
-    }
-
-    public function generateId(): string
-    {
-        return \bin2hex(\random_bytes(16));
     }
 
     public function save(): void
