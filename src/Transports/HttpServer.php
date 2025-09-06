@@ -7,6 +7,8 @@ namespace Mcp\Server\Transports;
 use Evenement\EventEmitter;
 use Mcp\Server\Contracts\HttpServerInterface;
 use Mcp\Server\Exception\TransportException;
+use Mcp\Server\Transports\Middleware\MiddlewareUtils;
+use Psr\Http\Server\MiddlewareInterface;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
 use React\EventLoop\LoopInterface;
@@ -26,7 +28,7 @@ final class HttpServer extends EventEmitter implements HttpServerInterface
      * @param int $port Port to listen on (e.g., 8080).
      * @param string $mcpPath URL prefix for MCP endpoints (e.g., 'mcp').
      * @param array|null $sslContext Optional SSL context options for React SocketServer (for HTTPS).
-     * @param array<callable(\Psr\Http\Message\ServerRequestInterface, callable): (\Psr\Http\Message\ResponseInterface|\React\Promise\PromiseInterface)> $middleware Middleware to be applied to the HTTP server.
+     * @param array<callable|MiddlewareInterface> $middleware Middleware (React callables or PSR-15) to be applied to the HTTP server.
      * @param bool $runLoop Whether to run the event loop after starting the listener. (If external loop is used, set to false.)
      */
     public function __construct(
@@ -44,11 +46,7 @@ final class HttpServer extends EventEmitter implements HttpServerInterface
 
         $this->mcpPath = '/' . \trim($mcpPath, '/');
 
-        foreach ($this->middleware as $mw) {
-            if (!\is_callable($mw)) {
-                throw new \InvalidArgumentException('All provided middlewares must be callable.');
-            }
-        }
+        $this->validateMiddleware();
 
         $this->socket = new SocketServer(
             $this->listenAddress,
@@ -76,7 +74,10 @@ final class HttpServer extends EventEmitter implements HttpServerInterface
         }
 
         try {
-            $handlers = \array_merge($this->middleware, [$onRequest]);
+            // Convert PSR-15 middleware to React format automatically
+            $reactMiddleware = MiddlewareUtils::normalizeMiddleware($this->middleware);
+            $handlers = \array_merge($reactMiddleware, [$onRequest]);
+
             $http = new \React\Http\HttpServer($this->loop, ...$handlers);
             $http->listen($this->socket);
 
@@ -119,6 +120,17 @@ final class HttpServer extends EventEmitter implements HttpServerInterface
     public function getLoop(): LoopInterface
     {
         return $this->loop;
+    }
+
+    private function validateMiddleware(): void
+    {
+        foreach ($this->middleware as $mw) {
+            if (!\is_callable($mw) && !$mw instanceof MiddlewareInterface) {
+                throw new \InvalidArgumentException(
+                    'All provided middlewares must be callable or implement MiddlewareInterface.',
+                );
+            }
+        }
     }
 
     private function close(callable $onClose): void
