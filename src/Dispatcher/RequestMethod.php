@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Mcp\Server;
+namespace Mcp\Server\Dispatcher;
 
 enum RequestMethod: string
 {

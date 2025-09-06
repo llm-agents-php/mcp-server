@@ -2,22 +2,22 @@
 
 declare(strict_types=1);
 
-namespace Mcp\Server\Routes;
+namespace Mcp\Server\Dispatcher\Routes;
 
-use PhpMcp\Schema\JsonRpc\Request;
+use Mcp\Server\Configuration;
+use Mcp\Server\Context;
+use Mcp\Server\Contracts\RouteInterface;
+use Mcp\Server\Contracts\SessionInterface;
+use Mcp\Server\Dispatcher\RequestMethod;
+use Mcp\Server\Protocol;
 use PhpMcp\Schema\JsonRpc\Notification;
+use PhpMcp\Schema\JsonRpc\Request;
 use PhpMcp\Schema\JsonRpc\Result;
 use PhpMcp\Schema\Notification\InitializedNotification;
 use PhpMcp\Schema\Request\InitializeRequest;
 use PhpMcp\Schema\Request\PingRequest;
 use PhpMcp\Schema\Result\EmptyResult;
 use PhpMcp\Schema\Result\InitializeResult;
-use Mcp\Server\Configuration;
-use Mcp\Server\Context;
-use Mcp\Server\Contracts\RouteInterface;
-use Mcp\Server\Contracts\SessionInterface;
-use Mcp\Server\Protocol;
-use Mcp\Server\RequestMethod;
 
 final readonly class InitializeRoute implements RouteInterface
 {

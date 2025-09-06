@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Mcp\Server;
 
+use Mcp\Server\Contracts\ReferenceRegistryInterface;
 use PhpMcp\Schema\Constants;
 use Mcp\Server\Contracts\ServerTransportInterface;
 use Mcp\Server\Contracts\SessionInterface;
@@ -50,7 +51,7 @@ final class Protocol
 
     public function __construct(
         protected Configuration $configuration,
-        protected Registry $registry,
+        protected ReferenceRegistryInterface $registry,
         protected SessionManager $sessionManager,
         protected Dispatcher $dispatcher,
         protected SubscriptionManager $subscriptionManager,

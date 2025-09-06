@@ -2,16 +2,16 @@
 
 declare(strict_types=1);
 
-namespace Mcp\Server\Routes;
+namespace Mcp\Server\Dispatcher\Routes;
 
-use PhpMcp\Schema\JsonRpc\Request;
+use Mcp\Server\Context;
+use Mcp\Server\Contracts\RouteInterface;
+use Mcp\Server\Dispatcher\RequestMethod;
 use PhpMcp\Schema\JsonRpc\Notification;
+use PhpMcp\Schema\JsonRpc\Request;
 use PhpMcp\Schema\JsonRpc\Result;
 use PhpMcp\Schema\Request\SetLogLevelRequest;
 use PhpMcp\Schema\Result\EmptyResult;
-use Mcp\Server\Context;
-use Mcp\Server\Contracts\RouteInterface;
-use Mcp\Server\RequestMethod;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
 
