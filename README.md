@@ -37,6 +37,7 @@ comprehensive feature support.
 - [Common Patterns](#common-patterns)
     - [Handler Factory Pattern](#handler-factory-pattern)
     - [Decorator Pattern for Handlers](#decorator-pattern-for-handlers)
+    - [Class-Based Tool Handlers with Schema Mapping](#class-based-tool-handlers-with-schema-mapping)
 - [Ecosystem & Extensions](#ecosystem--extensions)
 - [Contributing](#contributing)
 - [License](#license)
@@ -752,8 +753,6 @@ $loop->addPeriodicTimer(60, function() use ($logger) {
     }
 });
 ```
-
-## Common Patterns
 
 ### Handler Factory Pattern
 
