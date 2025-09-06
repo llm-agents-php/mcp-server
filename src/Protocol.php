@@ -22,6 +22,7 @@ use PhpMcp\Schema\Notification\ToolListChangedNotification;
 use Mcp\Server\Session\SessionManager;
 use Mcp\Server\Session\SubscriptionManager;
 use Psr\Log\LoggerInterface;
+use Psr\Log\NullLogger;
 use React\Promise\PromiseInterface;
 
 use function React\Promise\reject;
@@ -40,7 +41,6 @@ final class Protocol
     public const array SUPPORTED_PROTOCOL_VERSIONS = [self::LATEST_PROTOCOL_VERSION, '2024-11-05'];
 
     protected ?ServerTransportInterface $transport = null;
-    protected LoggerInterface $logger;
 
     /** Stores listener references for proper removal */
     protected array $listeners = [];
@@ -50,11 +50,9 @@ final class Protocol
         protected Registry $registry,
         protected SessionManager $sessionManager,
         protected Dispatcher $dispatcher,
-        protected ?SubscriptionManager $subscriptionManager = null,
+        protected SubscriptionManager $subscriptionManager,
+        protected LoggerInterface $logger = new NullLogger(),
     ) {
-        $this->logger = $this->configuration->logger;
-        $this->subscriptionManager ??= new SubscriptionManager($this->logger);
-
         $this->sessionManager->on('session_deleted', function (string $sessionId): void {
             $this->subscriptionManager->cleanupSession($sessionId);
         });
