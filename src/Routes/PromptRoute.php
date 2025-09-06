@@ -4,19 +4,19 @@ declare(strict_types=1);
 
 namespace Mcp\Server\Routes;
 
-use PhpMcp\Schema\JsonRpc\Request;
+use Mcp\Server\Context;
+use Mcp\Server\Contracts\RouteInterface;
+use Mcp\Server\Exception\McpServerException;
+use Mcp\Server\Paginator;
+use Mcp\Server\Registry;
+use Mcp\Server\RequestMethod;
 use PhpMcp\Schema\JsonRpc\Notification;
+use PhpMcp\Schema\JsonRpc\Request;
 use PhpMcp\Schema\JsonRpc\Result;
 use PhpMcp\Schema\Request\GetPromptRequest;
 use PhpMcp\Schema\Request\ListPromptsRequest;
 use PhpMcp\Schema\Result\GetPromptResult;
 use PhpMcp\Schema\Result\ListPromptsResult;
-use Mcp\Server\Context;
-use Mcp\Server\Contracts\RouteInterface;
-use Mcp\Server\Exception\McpServerException;
-use Mcp\Server\Helpers\PaginationHelper;
-use Mcp\Server\Registry;
-use Mcp\Server\RequestMethod;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
 
@@ -25,7 +25,7 @@ final readonly class PromptRoute implements RouteInterface
     public function __construct(
         private Registry $registry,
         private LoggerInterface $logger = new NullLogger(),
-        private PaginationHelper $paginationHelper = new PaginationHelper(),
+        private Paginator $paginationHelper = new Paginator(),
     ) {}
 
     public function getMethods(): array

@@ -4,8 +4,15 @@ declare(strict_types=1);
 
 namespace Mcp\Server\Routes;
 
-use PhpMcp\Schema\JsonRpc\Request;
+use Mcp\Server\Context;
+use Mcp\Server\Contracts\RouteInterface;
+use Mcp\Server\Exception\McpServerException;
+use Mcp\Server\Paginator;
+use Mcp\Server\Registry;
+use Mcp\Server\RequestMethod;
+use Mcp\Server\Session\SubscriptionManager;
 use PhpMcp\Schema\JsonRpc\Notification;
+use PhpMcp\Schema\JsonRpc\Request;
 use PhpMcp\Schema\JsonRpc\Result;
 use PhpMcp\Schema\Request\ListResourcesRequest;
 use PhpMcp\Schema\Request\ListResourceTemplatesRequest;
@@ -16,13 +23,6 @@ use PhpMcp\Schema\Result\EmptyResult;
 use PhpMcp\Schema\Result\ListResourcesResult;
 use PhpMcp\Schema\Result\ListResourceTemplatesResult;
 use PhpMcp\Schema\Result\ReadResourceResult;
-use Mcp\Server\Context;
-use Mcp\Server\Contracts\RouteInterface;
-use Mcp\Server\Exception\McpServerException;
-use Mcp\Server\Helpers\PaginationHelper;
-use Mcp\Server\Registry;
-use Mcp\Server\RequestMethod;
-use Mcp\Server\Session\SubscriptionManager;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
 
@@ -32,7 +32,7 @@ final readonly class ResourceRoute implements RouteInterface
         private Registry $registry,
         private SubscriptionManager $subscriptionManager,
         private LoggerInterface $logger = new NullLogger(),
-        private PaginationHelper $paginationHelper = new PaginationHelper(),
+        private Paginator $paginationHelper = new Paginator(),
     ) {}
 
     public function getMethods(): array

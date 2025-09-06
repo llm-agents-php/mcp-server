@@ -6,7 +6,6 @@ namespace Mcp\Server;
 
 use Mcp\Server\Contracts\DispatcherRoutesFactoryInterface;
 use Mcp\Server\Contracts\ToolExecutorInterface;
-use Mcp\Server\Helpers\PaginationHelper;
 use Mcp\Server\Routes\CompletionRoute;
 use Mcp\Server\Routes\InitializeRoute;
 use Mcp\Server\Routes\LoggingRoute;
@@ -24,7 +23,7 @@ final readonly class DispatcherRoutesFactory implements DispatcherRoutesFactoryI
         private Registry $registry,
         private SubscriptionManager $subscriptionManager,
         private ToolExecutorInterface $toolExecutor,
-        private PaginationHelper $pagination = new PaginationHelper(),
+        private Paginator $pagination = new Paginator(),
         private LoggerInterface $logger = new NullLogger(),
     ) {}
 

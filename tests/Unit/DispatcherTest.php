@@ -25,63 +25,6 @@ class DispatcherTest extends TestCase
     private SessionInterface $session;
     private array $loggedMessages = [];
 
-    protected function setUp(): void
-    {
-        $this->loggedMessages = [];
-        $this->logger = $this->createMockLogger();
-        $this->routesFactory = $this->createMock(DispatcherRoutesFactoryInterface::class);
-        $this->mockRoute = $this->createMock(RouteInterface::class);
-        $this->session = $this->createMock(SessionInterface::class);
-        $this->context = new Context($this->session);
-    }
-
-    private function createMockLogger(): LoggerInterface
-    {
-        $logger = $this->createMock(LoggerInterface::class);
-
-        $logger
-            ->method('debug')
-            ->willReturnCallback(function (string $message, array $context = []) {
-                $this->loggedMessages[] = [
-                    'level' => 'debug',
-                    'message' => $message,
-                    'context' => $context,
-                ];
-            });
-
-        $logger
-            ->method('error')
-            ->willReturnCallback(function (string $message, array $context = []) {
-                $this->loggedMessages[] = [
-                    'level' => 'error',
-                    'message' => $message,
-                    'context' => $context,
-                ];
-            });
-
-        return $logger;
-    }
-
-    private function hasLoggedMessage(string $level, string $messagePattern): bool
-    {
-        foreach ($this->loggedMessages as $log) {
-            if ($log['level'] === $level && str_contains($log['message'], $messagePattern)) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    private function getLoggedMessage(string $level, string $messagePattern): ?array
-    {
-        foreach ($this->loggedMessages as $log) {
-            if ($log['level'] === $level && str_contains($log['message'], $messagePattern)) {
-                return $log;
-            }
-        }
-        return null;
-    }
-
     public function testConstructorRegistersRoutes(): void
     {
         $routes = [
@@ -467,5 +410,62 @@ class DispatcherTest extends TestCase
 
         $logEntry = $this->getLoggedMessage('debug', 'Received notification');
         $this->assertEquals('test/notification', $logEntry['context']['method']);
+    }
+
+    protected function setUp(): void
+    {
+        $this->loggedMessages = [];
+        $this->logger = $this->createMockLogger();
+        $this->routesFactory = $this->createMock(DispatcherRoutesFactoryInterface::class);
+        $this->mockRoute = $this->createMock(RouteInterface::class);
+        $this->session = $this->createMock(SessionInterface::class);
+        $this->context = new Context($this->session);
+    }
+
+    private function createMockLogger(): LoggerInterface
+    {
+        $logger = $this->createMock(LoggerInterface::class);
+
+        $logger
+            ->method('debug')
+            ->willReturnCallback(function (string $message, array $context = []): void {
+                $this->loggedMessages[] = [
+                    'level' => 'debug',
+                    'message' => $message,
+                    'context' => $context,
+                ];
+            });
+
+        $logger
+            ->method('error')
+            ->willReturnCallback(function (string $message, array $context = []): void {
+                $this->loggedMessages[] = [
+                    'level' => 'error',
+                    'message' => $message,
+                    'context' => $context,
+                ];
+            });
+
+        return $logger;
+    }
+
+    private function hasLoggedMessage(string $level, string $messagePattern): bool
+    {
+        foreach ($this->loggedMessages as $log) {
+            if ($log['level'] === $level && \str_contains((string) $log['message'], $messagePattern)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private function getLoggedMessage(string $level, string $messagePattern): ?array
+    {
+        foreach ($this->loggedMessages as $log) {
+            if ($log['level'] === $level && \str_contains((string) $log['message'], $messagePattern)) {
+                return $log;
+            }
+        }
+        return null;
     }
 }
