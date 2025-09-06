@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Mcp\Server\Tests\Transports\Middleware;
+namespace Mcp\Server\Tests\Unit\Transports\Middleware;
 
 use Mcp\Server\Tests\TestCase;
 use Mcp\Server\Transports\Middleware\MiddlewareAdapter;

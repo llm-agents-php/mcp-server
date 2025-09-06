@@ -2,23 +2,23 @@
 
 declare(strict_types=1);
 
-namespace Mcp\Server\Routes;
+namespace Mcp\Server\Dispatcher\Routes;
 
-use PhpMcp\Schema\JsonRpc\Request;
+use Mcp\Server\Context;
+use Mcp\Server\Contracts\ReferenceProviderInterface;
+use Mcp\Server\Contracts\RouteInterface;
+use Mcp\Server\Dispatcher\RequestMethod;
+use Mcp\Server\Exception\McpServerException;
 use PhpMcp\Schema\JsonRpc\Notification;
+use PhpMcp\Schema\JsonRpc\Request;
 use PhpMcp\Schema\JsonRpc\Result;
 use PhpMcp\Schema\Request\CompletionCompleteRequest;
 use PhpMcp\Schema\Result\CompletionCompleteResult;
-use Mcp\Server\Context;
-use Mcp\Server\Contracts\RouteInterface;
-use Mcp\Server\Exception\McpServerException;
-use Mcp\Server\Registry;
-use Mcp\Server\RequestMethod;
 
 final readonly class CompletionRoute implements RouteInterface
 {
     public function __construct(
-        private Registry $registry,
+        private ReferenceProviderInterface $registry,
     ) {}
 
     public function getMethods(): array
@@ -43,6 +43,9 @@ final readonly class CompletionRoute implements RouteInterface
         // No notifications handled by this route
     }
 
+    /**
+     * @throws McpServerException
+     */
     private function handleCompletionComplete(
         CompletionCompleteRequest $request,
         Context $context,

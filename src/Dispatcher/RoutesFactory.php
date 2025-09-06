@@ -2,25 +2,27 @@
 
 declare(strict_types=1);
 
-namespace Mcp\Server;
+namespace Mcp\Server\Dispatcher;
 
+use Mcp\Server\Configuration;
 use Mcp\Server\Contracts\DispatcherRoutesFactoryInterface;
+use Mcp\Server\Contracts\ReferenceProviderInterface;
 use Mcp\Server\Contracts\ToolExecutorInterface;
-use Mcp\Server\Routes\CompletionRoute;
-use Mcp\Server\Routes\InitializeRoute;
-use Mcp\Server\Routes\LoggingRoute;
-use Mcp\Server\Routes\PromptRoute;
-use Mcp\Server\Routes\ResourceRoute;
-use Mcp\Server\Routes\ToolRoute;
+use Mcp\Server\Dispatcher\Routes\CompletionRoute;
+use Mcp\Server\Dispatcher\Routes\InitializeRoute;
+use Mcp\Server\Dispatcher\Routes\LoggingRoute;
+use Mcp\Server\Dispatcher\Routes\PromptRoute;
+use Mcp\Server\Dispatcher\Routes\ResourceRoute;
+use Mcp\Server\Dispatcher\Routes\ToolRoute;
 use Mcp\Server\Session\SubscriptionManager;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
 
-final readonly class DispatcherRoutesFactory implements DispatcherRoutesFactoryInterface
+final readonly class RoutesFactory implements DispatcherRoutesFactoryInterface
 {
     public function __construct(
         private Configuration $configuration,
-        private Registry $registry,
+        private ReferenceProviderInterface $registry,
         private SubscriptionManager $subscriptionManager,
         private ToolExecutorInterface $toolExecutor,
         private Paginator $pagination = new Paginator(),

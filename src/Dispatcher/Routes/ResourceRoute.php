@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace Mcp\Server\Routes;
+namespace Mcp\Server\Dispatcher\Routes;
 
 use Mcp\Server\Context;
+use Mcp\Server\Contracts\ReferenceProviderInterface;
 use Mcp\Server\Contracts\RouteInterface;
+use Mcp\Server\Dispatcher\Paginator;
+use Mcp\Server\Dispatcher\RequestMethod;
 use Mcp\Server\Exception\McpServerException;
-use Mcp\Server\Paginator;
-use Mcp\Server\Registry;
-use Mcp\Server\RequestMethod;
 use Mcp\Server\Session\SubscriptionManager;
 use PhpMcp\Schema\JsonRpc\Notification;
 use PhpMcp\Schema\JsonRpc\Request;
@@ -29,7 +29,7 @@ use Psr\Log\NullLogger;
 final readonly class ResourceRoute implements RouteInterface
 {
     public function __construct(
-        private Registry $registry,
+        private ReferenceProviderInterface $registry,
         private SubscriptionManager $subscriptionManager,
         private LoggerInterface $logger = new NullLogger(),
         private Paginator $paginationHelper = new Paginator(),
@@ -97,6 +97,9 @@ final readonly class ResourceRoute implements RouteInterface
         return new ListResourceTemplatesResult($pagination['items'], $pagination['nextCursor']);
     }
 
+    /**
+     * @throws McpServerException
+     */
     private function handleResourceRead(ReadResourceRequest $request, Context $context): ReadResourceResult
     {
         $uri = $request->uri;

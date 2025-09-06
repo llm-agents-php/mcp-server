@@ -4,9 +4,10 @@ declare(strict_types=1);
 
 namespace Mcp\Server;
 
-use Evenement\EventEmitterInterface;
 use Evenement\EventEmitterTrait;
 use Mcp\Server\Contracts\HandlerInterface;
+use Mcp\Server\Contracts\ReferenceProviderInterface;
+use Mcp\Server\Contracts\ReferenceRegistryInterface;
 use PhpMcp\Schema\Prompt;
 use PhpMcp\Schema\Resource;
 use PhpMcp\Schema\ResourceTemplate;
@@ -17,7 +18,7 @@ use Mcp\Server\Elements\RegisteredResourceTemplate;
 use Mcp\Server\Elements\RegisteredTool;
 use Psr\Log\LoggerInterface;
 
-class Registry implements EventEmitterInterface
+final class Registry implements ReferenceProviderInterface, ReferenceRegistryInterface
 {
     use EventEmitterTrait;
 
@@ -120,10 +121,7 @@ class Registry implements EventEmitterInterface
         $this->prompts[$promptName] = new RegisteredPrompt($prompt, $handler, $isManual, $completionProviders);
     }
 
-    /**
-     * Checks if any elements (manual or discovered) are currently registered.
-     */
-    public function hasElements(): bool
+    public function hasReferences(): bool
     {
         return !empty($this->tools)
             || !empty($this->resources)
@@ -170,33 +168,21 @@ class Registry implements EventEmitterInterface
         return $this->prompts[$name] ?? null;
     }
 
-    /**
-     * @return array<string, Tool>
-     */
     public function getTools(): array
     {
         return \array_map(static fn($tool) => $tool->schema, $this->tools);
     }
 
-    /**
-     * @return array<string, Resource>
-     */
     public function getResources(): array
     {
         return \array_map(static fn($resource) => $resource->schema, $this->resources);
     }
 
-    /**
-     * @return array<string, Prompt>
-     */
     public function getPrompts(): array
     {
         return \array_map(static fn($prompt) => $prompt->schema, $this->prompts);
     }
 
-    /**
-     * @return array<string, ResourceTemplate>
-     */
     public function getResourceTemplates(): array
     {
         return \array_map(static fn($template) => $template->schema, $this->resourceTemplates);

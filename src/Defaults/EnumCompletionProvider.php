@@ -9,8 +9,12 @@ use Mcp\Server\Contracts\SessionInterface;
 
 final readonly class EnumCompletionProvider implements CompletionProviderInterface
 {
+    /** @var string[] */
     private array $values;
 
+    /**
+     * @param class-string<\BackedEnum> $enumClass
+     */
     public function __construct(string $enumClass)
     {
         if (!\enum_exists($enumClass)) {

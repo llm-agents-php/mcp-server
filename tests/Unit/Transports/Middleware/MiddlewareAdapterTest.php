@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Mcp\Server\Tests\Transports\Middleware;
+namespace Mcp\Server\Tests\Unit\Transports\Middleware;
 
 use Mcp\Server\Tests\TestCase;
 use Mcp\Server\Transports\Middleware\MiddlewareAdapter;
@@ -35,8 +35,10 @@ final class MiddlewareAdapterTest extends TestCase
                 private ResponseInterface $response,
             ) {}
 
-            public function process(ServerRequestInterface $request, RequestHandlerInterface $handler): ResponseInterface
-            {
+            public function process(
+                ServerRequestInterface $request,
+                RequestHandlerInterface $handler,
+            ): ResponseInterface {
                 return $this->response;
             }
         };
@@ -62,8 +64,10 @@ final class MiddlewareAdapterTest extends TestCase
         $originalRequest = $originalRequest->withHeader('X-Test', 'value');
 
         $psr15Middleware = new class implements MiddlewareInterface {
-            public function process(ServerRequestInterface $request, RequestHandlerInterface $handler): ResponseInterface
-            {
+            public function process(
+                ServerRequestInterface $request,
+                RequestHandlerInterface $handler,
+            ): ResponseInterface {
                 // Verify the request is passed correctly
                 return new Response(200, [], \json_encode([
                     'method' => $request->getMethod(),
@@ -87,8 +91,10 @@ final class MiddlewareAdapterTest extends TestCase
     public function testMiddlewareAdapterWithChaining(): void
     {
         $psr15Middleware = new class implements MiddlewareInterface {
-            public function process(ServerRequestInterface $request, RequestHandlerInterface $handler): ResponseInterface
-            {
+            public function process(
+                ServerRequestInterface $request,
+                RequestHandlerInterface $handler,
+            ): ResponseInterface {
                 $response = $handler->handle($request->withAttribute('middleware', 'processed'));
                 return $response->withHeader('X-Middleware', 'applied');
             }
@@ -112,8 +118,10 @@ final class MiddlewareAdapterTest extends TestCase
     public function testMiddlewareAdapterWithExceptionInPsr15Middleware(): void
     {
         $psr15Middleware = new class implements MiddlewareInterface {
-            public function process(ServerRequestInterface $request, RequestHandlerInterface $handler): ResponseInterface
-            {
+            public function process(
+                ServerRequestInterface $request,
+                RequestHandlerInterface $handler,
+            ): ResponseInterface {
                 throw new \LogicException('PSR-15 middleware error');
             }
         };
@@ -139,8 +147,10 @@ final class MiddlewareAdapterTest extends TestCase
                 private array &$receivedRequests,
             ) {}
 
-            public function process(ServerRequestInterface $request, RequestHandlerInterface $handler): ResponseInterface
-            {
+            public function process(
+                ServerRequestInterface $request,
+                RequestHandlerInterface $handler,
+            ): ResponseInterface {
                 // Call handler multiple times to test closure behavior
                 $this->receivedRequests[] = $request;
                 $response1 = $handler->handle($request);
@@ -193,8 +203,10 @@ final class MiddlewareAdapterTest extends TestCase
     public function testMiddlewareAdapterHandlesComplexRequestModifications(): void
     {
         $psr15Middleware = new class implements MiddlewareInterface {
-            public function process(ServerRequestInterface $request, RequestHandlerInterface $handler): ResponseInterface
-            {
+            public function process(
+                ServerRequestInterface $request,
+                RequestHandlerInterface $handler,
+            ): ResponseInterface {
                 // Apply multiple request modifications
                 $modifiedRequest = $request
                     ->withAttribute('processed_by', 'psr15-middleware')

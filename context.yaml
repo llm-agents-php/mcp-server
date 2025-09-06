@@ -27,30 +27,37 @@ documents:
           - tests
           - vendor
 
-  - description: Source codes
-    outputPath: source-codes.md
-    sources:
-      - type: file
-        sourcePaths:
-          - src
-        notPath:
-          - Attributes
-          - Transports
-          - Session
-          - Defaults
-          - Utils/DocBlockParser.php
-          - Utils/SchemaGenerator.php
-
   - description: Dispatcher
     outputPath: src/dispatcher.md
     sources:
       - type: file
         sourcePaths:
           - src/Dispatcher.php
-          - src/DispatcherRoutesFactory.php
-          - src/Contracts/DispatcherRoutesFactoryInterface.php
-          - src/Routes
-          - src/Contracts/RouteInterface.php
+          - src/Dispatcher
+          - src/Contracts/DispatcherInterface.php
+
+  - description: CompletionProvider
+    outputPath: src/completion-provider.md
+    sources:
+      - type: file
+        sourcePaths:
+          - src/Defaults/EnumCompletionProvider.php
+          - src/Defaults/ListCompletionProvider.php
+          - src/Contracts/CompletionProviderInterface.php
+
+  - description: Tool executor
+    outputPath: src/tool-executor.md
+    sources:
+      - type: file
+        sourcePaths:
+          - src/Contracts/ToolExecutorInterface.php
+          - src/Defaults/ToolExecutor.php
+          - vendor/php-mcp/schema/src/Content/Content.php
+          - vendor/php-mcp/schema/src/Content/TextContent.php
+          - src/Exception/ToolNotFoundException.php
+          - src/Elements/RegisteredTool.php
+          - vendor/php-mcp/schema/src/Tool.php
+          - tests/Unit/Defaults/ToolExecutorTest.php
 
   - description: Resources
     outputPath: src/resources.md

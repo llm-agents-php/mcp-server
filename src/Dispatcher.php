@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Mcp\Server;
 
+use Mcp\Server\Contracts\DispatcherInterface;
 use Mcp\Server\Contracts\DispatcherRoutesFactoryInterface;
 use Mcp\Server\Contracts\RouteInterface;
 use Mcp\Server\Exception\McpServerException;
@@ -12,7 +13,7 @@ use PhpMcp\Schema\JsonRpc\Request;
 use PhpMcp\Schema\JsonRpc\Result;
 use Psr\Log\LoggerInterface;
 
-final readonly class Dispatcher
+final readonly class Dispatcher implements DispatcherInterface
 {
     /** @var array<string, RouteInterface> */
     private array $routes;
