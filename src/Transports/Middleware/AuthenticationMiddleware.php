@@ -69,7 +69,7 @@ final readonly class AuthenticationMiddleware implements MiddlewareInterface
                 'Content-Type' => 'application/json',
                 'WWW-Authenticate' => 'Bearer',
             ],
-            body: \json_encode(['error' => $message]),
+            body: (string) \json_encode(['error' => $message]),
         );
     }
 }

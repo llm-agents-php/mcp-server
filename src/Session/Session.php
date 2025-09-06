@@ -66,7 +66,7 @@ final class Session implements SessionInterface
 
     public function save(): void
     {
-        $this->handler->write($this->id, \json_encode($this->data));
+        $this->handler->write($this->id, (string) \json_encode($this->data));
     }
 
     public function get(string $key, mixed $default = null): mixed
@@ -88,6 +88,7 @@ final class Session implements SessionInterface
     public function set(string $key, mixed $value, bool $overwrite = true): void
     {
         $segments = \explode('.', $key);
+        /** @psalm-suppress UnsupportedPropertyReferenceUsage */
         $data = &$this->data;
 
         while (\count($segments) > 1) {
@@ -99,6 +100,10 @@ final class Session implements SessionInterface
         }
 
         $lastKey = \array_shift($segments);
+        if (!$lastKey) {
+            return;
+        }
+
         if ($overwrite || !isset($data[$lastKey])) {
             $data[$lastKey] = $value;
         }
@@ -125,6 +130,7 @@ final class Session implements SessionInterface
     public function forget(string $key): void
     {
         $segments = \explode('.', $key);
+        /** @psalm-suppress UnsupportedPropertyReferenceUsage */
         $data = &$this->data;
 
         while (\count($segments) > 1) {

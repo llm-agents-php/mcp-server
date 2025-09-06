@@ -14,10 +14,10 @@ use PhpMcp\Schema\JsonRpc\Error as JsonRpcError;
 class McpServerException extends \Exception
 {
     /**
-     * @param  string  $message  Error message.
-     * @param  int  $code  Error code (use constants or appropriate HTTP status codes if applicable).
-     * @param  mixed|null  $data  Additional data.
-     * @param  ?\Throwable  $previous  Previous exception.
+     * @param string $message Error message.
+     * @param int $code Error code (use constants or appropriate HTTP status codes if applicable).
+     * @param mixed|null $data Additional data.
+     * @param  ?\Throwable $previous Previous exception.
      */
     public function __construct(
         string $message = '',
@@ -36,18 +36,29 @@ class McpServerException extends \Exception
         return new ProtocolException('Parse error: ' . $details, Constants::PARSE_ERROR, null, $previous);
     }
 
-    public static function invalidRequest(?string $details = 'Invalid Request', ?\Throwable $previous = null): self
+    public static function invalidRequest(string $details = 'Invalid Request', ?\Throwable $previous = null): self
     {
         return new ProtocolException($details, Constants::INVALID_REQUEST, null, $previous);
     }
 
-    public static function methodNotFound(string $methodName, ?string $message = null, ?\Throwable $previous = null): self
-    {
-        return new ProtocolException($message ?? "Method not found: {$methodName}", Constants::METHOD_NOT_FOUND, null, $previous);
+    public static function methodNotFound(
+        string $methodName,
+        ?string $message = null,
+        ?\Throwable $previous = null,
+    ): self {
+        return new ProtocolException(
+            $message ?? "Method not found: {$methodName}",
+            Constants::METHOD_NOT_FOUND,
+            null,
+            $previous,
+        );
     }
 
-    public static function invalidParams(string $message = 'Invalid params', $data = null, ?\Throwable $previous = null): self
-    {
+    public static function invalidParams(
+        string $message = 'Invalid params',
+        $data = null,
+        ?\Throwable $previous = null,
+    ): self {
         // Pass data (e.g., validation errors) through
         return new ProtocolException($message, Constants::INVALID_PARAMS, $data, $previous);
     }
@@ -55,7 +66,7 @@ class McpServerException extends \Exception
     public static function internalError(?string $details = 'Internal server error', ?\Throwable $previous = null): self
     {
         $message = 'Internal error';
-        if ($details && \is_string($details)) {
+        if (\is_string($details)) {
             $message .= ': ' . $details;
         } elseif ($previous && $details === null) {
             $message .= ' (See server logs)';

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Mcp\Server\Exception;
 
+use PhpMcp\Schema\Constants;
 use PhpMcp\Schema\JsonRpc\Error as JsonRpcError;
 
 /**
@@ -15,7 +16,7 @@ class ProtocolException extends McpServerException
 {
     public function toJsonRpcError(string|int $id): JsonRpcError
     {
-        $code = ($this->code >= -32700 && $this->code <= -32600) ? $this->code : self::CODE_INVALID_REQUEST;
+        $code = ($this->code >= -32700 && $this->code <= -32600) ? $this->code : Constants::INVALID_REQUEST;
 
         return new JsonRpcError(
             jsonrpc: '2.0',

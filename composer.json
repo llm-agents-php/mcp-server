@@ -52,13 +52,17 @@
     }
   },
   "scripts": {
-    "cs:fix": "php-cs-fixer fix -v",
-    "psalm": "psalm",
-    "psalm:baseline": "psalm --set-baseline=psalm-baseline.xml",
+    "cs-check": "vendor/bin/php-cs-fixer fix --dry-run",
+    "cs-fix": "vendor/bin/php-cs-fixer fix",
+    "psalm": "vendor/bin/psalm --config=psalm.xml ./src",
+    "psalm:ci": "vendor/bin/psalm --config=psalm.xml ./src --output-format=github --shepherd --show-info=false --stats --threads=4 --no-cache",
     "refactor": "rector process --config=rector.php",
     "refactor:ci": "rector process --config=rector.php --dry-run --ansi",
-    "test": "phpunit",
-    "test-coverage": "phpunit --coverage"
+    "test": "vendor/bin/phpunit",
+    "test:cc": [
+      "@putenv XDEBUG_MODE=coverage",
+      "phpunit --coverage-clover=.build/phpunit/logs/clover.xml --color=always"
+    ]
   },
   "config": {
     "sort-packages": true

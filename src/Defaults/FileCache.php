@@ -213,19 +213,13 @@ final readonly class FileCache implements CacheInterface
 
             return $data;
         } finally {
-            if (\is_resource($handle)) {
-                \fclose($handle);
-            }
+            \fclose($handle);
         }
     }
 
     private function writeCacheFile(array $data): bool
     {
         $jsonData = \serialize($data);
-
-        if ($jsonData === false) {
-            return false;
-        }
 
         $handle = @\fopen($this->cacheFile, 'cb');
         if ($handle === false) {
@@ -252,9 +246,7 @@ final readonly class FileCache implements CacheInterface
 
             return false;
         } finally {
-            if (\is_resource($handle)) {
-                \fclose($handle);
-            }
+            \fclose($handle);
         }
     }
 
@@ -276,17 +268,16 @@ final readonly class FileCache implements CacheInterface
             return null;
         }
         $now = \time();
+
         if (\is_int($ttl)) {
             return $ttl <= 0 ? $now - 1 : $now + $ttl;
         }
-        if ($ttl instanceof \DateInterval) {
-            try {
-                return (new \DateTimeImmutable())->add($ttl)->getTimestamp();
-            } catch (\Throwable) {
-                return null;
-            }
+
+        try {
+            return (new \DateTimeImmutable())->add($ttl)->getTimestamp();
+        } catch (\Throwable) {
+            return null;
         }
-        throw new \InvalidArgumentException('Invalid TTL type provided. Must be null, int, or DateInterval.');
     }
 
     private function isExpired(?int $expiry): bool

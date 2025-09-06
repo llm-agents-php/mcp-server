@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Mcp\Server\Defaults;
 
 use Mcp\Server\Contracts\EventStoreInterface;
+use Random\RandomException;
 
 /**
  * Simple in-memory implementation of the EventStore interface for resumability
@@ -65,9 +66,12 @@ final class InMemoryEventStore implements EventStoreInterface
         }
     }
 
+    /**
+     * @throws RandomException
+     */
     private function generateEventId(string $streamId): string
     {
-        return $streamId . '_' . (int) (\microtime(true) * 1000) . '_' . \bin2hex(\random_bytes(4));
+        return $streamId . '_' . ((int) \microtime(true) * 1000) . '_' . \bin2hex(\random_bytes(4));
     }
 
     private function getStreamIdFromEventId(string $eventId): ?string

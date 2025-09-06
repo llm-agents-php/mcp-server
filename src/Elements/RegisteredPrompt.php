@@ -143,7 +143,7 @@ final class RegisteredPrompt extends RegisteredElement
 
         if ($hasPromptMessages) {
             $result = [];
-            foreach ($promptGenerationResult as $index => $item) {
+            foreach ($promptGenerationResult as $item) {
                 if ($item instanceof PromptMessage) {
                     $result[] = $item;
                 } else {

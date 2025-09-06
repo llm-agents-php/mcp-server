@@ -15,7 +15,6 @@ use PhpMcp\Schema\JsonRpc\Request;
 use PhpMcp\Schema\JsonRpc\Result;
 use PhpMcp\Schema\Notification\InitializedNotification;
 use PhpMcp\Schema\Request\InitializeRequest;
-use PhpMcp\Schema\Request\PingRequest;
 use PhpMcp\Schema\Result\EmptyResult;
 use PhpMcp\Schema\Result\InitializeResult;
 
@@ -41,7 +40,7 @@ final readonly class InitializeRoute implements RouteInterface
                 InitializeRequest::fromRequest($request),
                 $context->session,
             ),
-            RequestMethod::Ping->value => $this->handlePing(PingRequest::fromRequest($request)),
+            RequestMethod::Ping->value => $this->handlePing(),
         };
     }
 
@@ -73,7 +72,7 @@ final readonly class InitializeRoute implements RouteInterface
         return new InitializeResult($protocolVersion, $capabilities, $serverInfo, $instructions);
     }
 
-    private function handlePing(PingRequest $request): EmptyResult
+    private function handlePing(): EmptyResult
     {
         return new EmptyResult();
     }

@@ -30,6 +30,9 @@ use React\Stream\ThroughStream;
 use function React\Promise\reject;
 use function React\Promise\resolve;
 
+/**
+ * @psalm-suppress
+ */
 final class StreamableHttpServerTransport implements ServerTransportInterface
 {
     /**
@@ -382,7 +385,6 @@ final class StreamableHttpServerTransport implements ServerTransportInterface
         }
 
         $isInitializeRequest = ($message instanceof Request && $message->method === 'initialize');
-        $sessionId = null;
 
         if ($this->stateless) {
             $sessionId = $this->sessionId->generate();
