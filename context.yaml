@@ -1,5 +1,12 @@
 $schema: 'https://raw.githubusercontent.com/context-hub/generator/refs/heads/main/json-schema.json'
 
+tools:
+  - id: run-tests
+    description: 'Run tests'
+    type: run
+    commands:
+      - cmd: vendor/bin/phpunit
+
 documents:
   - description: 'Project structure overview'
     outputPath: project-structure.md
@@ -7,6 +14,7 @@ documents:
       - type: tree
         sourcePaths:
           - src
+          - tests
         showCharCount: true
 
   - description: Git changes
@@ -50,5 +58,13 @@ documents:
         sourcePaths:
           - src/Elements
 
-
-
+  - description: HTTP Server
+    outputPath: src/http-server.md
+    sources:
+      - type: file
+        sourcePaths:
+          - src/Transports/HttpServer.php
+          - vendor/react/http/src/HttpServer.php
+          - vendor/react/http/src/Io/MiddlewareRunner.php
+          - vendor/react/http/src/Middleware
+          - src/Transports/Middleware
