@@ -4,23 +4,23 @@ declare(strict_types=1);
 
 namespace Mcp\Server\Routes;
 
-use PhpMcp\Schema\JsonRpc\Request;
-use PhpMcp\Schema\JsonRpc\Notification;
-use PhpMcp\Schema\JsonRpc\Result;
-use PhpMcp\Schema\Request\CallToolRequest;
-use PhpMcp\Schema\Request\ListToolsRequest;
-use PhpMcp\Schema\Result\CallToolResult;
-use PhpMcp\Schema\Result\ListToolsResult;
-use PhpMcp\Schema\Content\TextContent;
 use Mcp\Server\Context;
 use Mcp\Server\Contracts\RouteInterface;
 use Mcp\Server\Contracts\ToolExecutorInterface;
 use Mcp\Server\Defaults\ToolExecutor;
 use Mcp\Server\Exception\McpServerException;
 use Mcp\Server\Exception\ValidationException;
-use Mcp\Server\Helpers\PaginationHelper;
+use Mcp\Server\Paginator;
 use Mcp\Server\Registry;
 use Mcp\Server\RequestMethod;
+use PhpMcp\Schema\Content\TextContent;
+use PhpMcp\Schema\JsonRpc\Notification;
+use PhpMcp\Schema\JsonRpc\Request;
+use PhpMcp\Schema\JsonRpc\Result;
+use PhpMcp\Schema\Request\CallToolRequest;
+use PhpMcp\Schema\Request\ListToolsRequest;
+use PhpMcp\Schema\Result\CallToolResult;
+use PhpMcp\Schema\Result\ListToolsResult;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
 
@@ -32,8 +32,7 @@ final readonly class ToolRoute implements RouteInterface
         private Registry $registry,
         ?ToolExecutorInterface $toolExecutor = null,
         private LoggerInterface $logger = new NullLogger(),
-        private PaginationHelper $paginationHelper = new PaginationHelper(),
-        private int $paginationLimit = 50,
+        private Paginator $paginationHelper = new Paginator(),
     ) {
         $this->toolExecutor = $toolExecutor ?: new ToolExecutor($this->logger);
     }
@@ -65,7 +64,6 @@ final readonly class ToolRoute implements RouteInterface
         $pagination = $this->paginationHelper->paginate(
             $allItems,
             $request->cursor,
-            $this->paginationLimit,
         );
 
         return new ListToolsResult($pagination['items'], $pagination['nextCursor']);

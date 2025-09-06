@@ -15,7 +15,6 @@ use Psr\Http\Server\RequestHandlerInterface;
 use React\Http\Io\MiddlewareRunner;
 use React\Http\Message\Response;
 use React\Http\Message\ServerRequest;
-use React\Promise\PromiseInterface;
 
 /**
  * Integration tests for React MiddlewareRunner with custom MiddlewareAdapter and RequestHandler

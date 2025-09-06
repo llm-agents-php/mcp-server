@@ -42,7 +42,10 @@ final class Protocol
 
     protected ?ServerTransportInterface $transport = null;
 
-    /** Stores listener references for proper removal */
+    /**
+     * Stores listener references for proper removal
+     * @var array<non-empty-string, callable>
+     */
     protected array $listeners = [];
 
     public function __construct(
@@ -160,7 +163,7 @@ final class Protocol
         } elseif ($message instanceof Request) {
             $response = $this->processRequest($message, $session, $context);
         } elseif ($message instanceof Notification) {
-            $this->processNotification($message, $session);
+            $this->processNotification($message, $session, $context);
         }
 
         $session->save();
@@ -289,12 +292,13 @@ final class Protocol
     {
         $context = ['error' => $error->getMessage(), 'exception_class' => $error::class];
 
-        if ($clientId) {
-            $context['clientId'] = $clientId;
-            $this->logger->error('Transport error for client', $context);
-        } else {
+        if (!$clientId) {
             $this->logger->error('General transport error', $context);
+            return;
         }
+
+        $context['clientId'] = $clientId;
+        $this->logger->error('Transport error for client', $context);
     }
 
     /**
@@ -308,21 +312,24 @@ final class Protocol
         $items = [];
 
         foreach ($batch->getNotifications() as $notification) {
-            $this->processNotification($notification, $session);
+            $this->processNotification($notification, $session, $context);
         }
 
         foreach ($batch->getRequests() as $request) {
             $items[] = $this->processRequest($request, $session, $context);
         }
 
-        return empty($items) ? null : new BatchResponse($items);
+        return $items === [] ? null : new BatchResponse($items);
     }
 
     /**
      * Process a request message
      */
-    private function processRequest(Request $request, SessionInterface $session, Context $context): Response|Error
-    {
+    private function processRequest(
+        Request $request,
+        SessionInterface $session,
+        Context $context,
+    ): Response|Error {
         try {
             if ($request->method !== 'initialize') {
                 $this->assertSessionInitialized($session);
@@ -365,13 +372,15 @@ final class Protocol
     /**
      * Process a notification message
      */
-    private function processNotification(Notification $notification, SessionInterface $session): void
-    {
+    private function processNotification(
+        Notification $notification,
+        SessionInterface $session,
+        Context $context,
+    ): void {
         $method = $notification->method;
-        $params = $notification->params;
 
         try {
-            $this->dispatcher->handleNotification($notification, $session);
+            $this->dispatcher->handleNotification($notification, $context);
         } catch (\Throwable $e) {
             $this->logger->error(
                 'Error while processing notification',

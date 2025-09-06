@@ -6,7 +6,6 @@ namespace Mcp\Server;
 
 use Mcp\Server\Contracts\DispatcherRoutesFactoryInterface;
 use Mcp\Server\Contracts\ToolExecutorInterface;
-use Mcp\Server\Helpers\PaginationHelper;
 use Mcp\Server\Routes\CompletionRoute;
 use Mcp\Server\Routes\InitializeRoute;
 use Mcp\Server\Routes\LoggingRoute;
@@ -24,14 +23,12 @@ final readonly class DispatcherRoutesFactory implements DispatcherRoutesFactoryI
         private Registry $registry,
         private SubscriptionManager $subscriptionManager,
         private ToolExecutorInterface $toolExecutor,
-        private int $paginationLimit = 50,
+        private Paginator $pagination = new Paginator(),
         private LoggerInterface $logger = new NullLogger(),
     ) {}
 
     public function create(): array
     {
-        $pagination = new PaginationHelper();
-
         return [
             new InitializeRoute(
                 configuration: $this->configuration,
@@ -40,21 +37,18 @@ final readonly class DispatcherRoutesFactory implements DispatcherRoutesFactoryI
                 registry: $this->registry,
                 toolExecutor: $this->toolExecutor,
                 logger: $this->logger,
-                paginationHelper: $pagination,
-                paginationLimit: $this->paginationLimit,
+                paginationHelper: $this->pagination,
             ),
             new ResourceRoute(
                 registry: $this->registry,
                 subscriptionManager: $this->subscriptionManager,
                 logger: $this->logger,
-                paginationHelper: $pagination,
-                paginationLimit: $this->paginationLimit,
+                paginationHelper: $this->pagination,
             ),
             new PromptRoute(
                 registry: $this->registry,
                 logger: $this->logger,
-                paginationHelper: $pagination,
-                paginationLimit: $this->paginationLimit,
+                paginationHelper: $this->pagination,
             ),
             new LoggingRoute(
                 logger: $this->logger,
