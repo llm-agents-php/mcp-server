@@ -33,7 +33,6 @@ final readonly class ToolRoute implements RouteInterface
         ?ToolExecutorInterface $toolExecutor = null,
         private LoggerInterface $logger = new NullLogger(),
         private PaginationHelper $paginationHelper = new PaginationHelper(),
-        private int $paginationLimit = 50,
     ) {
         $this->toolExecutor = $toolExecutor ?: new ToolExecutor($this->logger);
     }
@@ -65,7 +64,6 @@ final readonly class ToolRoute implements RouteInterface
         $pagination = $this->paginationHelper->paginate(
             $allItems,
             $request->cursor,
-            $this->paginationLimit,
         );
 
         return new ListToolsResult($pagination['items'], $pagination['nextCursor']);

@@ -10,6 +10,7 @@ use Psr\Log\NullLogger;
 final readonly class PaginationHelper
 {
     public function __construct(
+        private int $paginationLimit = 50,
         private LoggerInterface $logger = new NullLogger(),
     ) {}
 
@@ -39,7 +40,7 @@ final readonly class PaginationHelper
     /**
      * Create next page cursor based on pagination state
      */
-    public function encodeNextCursor(int $currentOffset, int $returnedCount, int $totalCount, int $limit): ?string
+    public function encodeNextCursor(int $currentOffset, int $returnedCount, int $totalCount): ?string
     {
         $nextOffset = $currentOffset + $returnedCount;
         if ($returnedCount > 0 && $nextOffset < $totalCount) {
@@ -57,11 +58,11 @@ final readonly class PaginationHelper
      * @param int $limit Maximum items per page
      * @return array{items: array, nextCursor: ?string}
      */
-    public function paginate(array $allItems, ?string $cursor, int $limit): array
+    public function paginate(array $allItems, ?string $cursor): array
     {
         $offset = $this->decodeCursor($cursor);
-        $pagedItems = \array_slice($allItems, $offset, $limit);
-        $nextCursor = $this->encodeNextCursor($offset, \count($pagedItems), \count($allItems), $limit);
+        $pagedItems = \array_slice($allItems, $offset, $this->paginationLimit);
+        $nextCursor = $this->encodeNextCursor($offset, \count($pagedItems), \count($allItems));
 
         return [
             'items' => \array_values($pagedItems),

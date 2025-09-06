@@ -33,7 +33,6 @@ final readonly class ResourceRoute implements RouteInterface
         private SubscriptionManager $subscriptionManager,
         private LoggerInterface $logger = new NullLogger(),
         private PaginationHelper $paginationHelper = new PaginationHelper(),
-        private int $paginationLimit = 50,
     ) {}
 
     public function getMethods(): array
@@ -82,7 +81,6 @@ final readonly class ResourceRoute implements RouteInterface
         $pagination = $this->paginationHelper->paginate(
             $allItems,
             $request->cursor,
-            $this->paginationLimit,
         );
 
         return new ListResourcesResult($pagination['items'], $pagination['nextCursor']);
@@ -94,7 +92,6 @@ final readonly class ResourceRoute implements RouteInterface
         $pagination = $this->paginationHelper->paginate(
             $allItems,
             $request->cursor,
-            $this->paginationLimit,
         );
 
         return new ListResourceTemplatesResult($pagination['items'], $pagination['nextCursor']);

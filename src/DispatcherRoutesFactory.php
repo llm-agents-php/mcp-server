@@ -24,14 +24,12 @@ final readonly class DispatcherRoutesFactory implements DispatcherRoutesFactoryI
         private Registry $registry,
         private SubscriptionManager $subscriptionManager,
         private ToolExecutorInterface $toolExecutor,
-        private int $paginationLimit = 50,
+        private PaginationHelper $pagination = new PaginationHelper(),
         private LoggerInterface $logger = new NullLogger(),
     ) {}
 
     public function create(): array
     {
-        $pagination = new PaginationHelper();
-
         return [
             new InitializeRoute(
                 configuration: $this->configuration,
@@ -40,21 +38,18 @@ final readonly class DispatcherRoutesFactory implements DispatcherRoutesFactoryI
                 registry: $this->registry,
                 toolExecutor: $this->toolExecutor,
                 logger: $this->logger,
-                paginationHelper: $pagination,
-                paginationLimit: $this->paginationLimit,
+                paginationHelper: $this->pagination,
             ),
             new ResourceRoute(
                 registry: $this->registry,
                 subscriptionManager: $this->subscriptionManager,
                 logger: $this->logger,
-                paginationHelper: $pagination,
-                paginationLimit: $this->paginationLimit,
+                paginationHelper: $this->pagination,
             ),
             new PromptRoute(
                 registry: $this->registry,
                 logger: $this->logger,
-                paginationHelper: $pagination,
-                paginationLimit: $this->paginationLimit,
+                paginationHelper: $this->pagination,
             ),
             new LoggingRoute(
                 logger: $this->logger,

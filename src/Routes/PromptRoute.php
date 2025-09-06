@@ -26,7 +26,6 @@ final readonly class PromptRoute implements RouteInterface
         private Registry $registry,
         private LoggerInterface $logger = new NullLogger(),
         private PaginationHelper $paginationHelper = new PaginationHelper(),
-        private int $paginationLimit = 50,
     ) {}
 
     public function getMethods(): array
@@ -59,7 +58,6 @@ final readonly class PromptRoute implements RouteInterface
         $pagination = $this->paginationHelper->paginate(
             $allItems,
             $request->cursor,
-            $this->paginationLimit,
         );
 
         return new ListPromptsResult($pagination['items'], $pagination['nextCursor']);
