@@ -965,15 +965,13 @@ composer test
 We follow PSR-12 coding standards:
 
 ```bash
-composer cs-fix  # Fix code style
-composer cs-check # Check code style
-composer refactor # Run rector 
+composer cs:fix
 ```
 
 ### Testing
 
 ```bash
-composer test        # Run all tests
+composer test
 ```
 
 ## License
