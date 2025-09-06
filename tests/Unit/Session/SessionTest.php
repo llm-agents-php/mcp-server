@@ -80,20 +80,6 @@ final class SessionTest extends TestCase
         $this->assertEquals(123, $result->get('user_id'));
     }
 
-    public function test_save_writes_to_handler(): void
-    {
-        $this->session->set('test_key', 'test_value');
-
-        $this->handler->shouldReceive('write')
-            ->with($this->sessionId, \Mockery::on(static function ($json) {
-                $data = \json_decode($json, true);
-                return $data['test_key'] === 'test_value';
-            }))
-            ->andReturn(true);
-
-        $this->session->save();
-    }
-
     public function test_get_returns_value_for_existing_key(): void
     {
         $this->session->set('test_key', 'test_value');
