@@ -10,8 +10,6 @@ use PhpMcp\Schema\ServerCapabilities;
 final readonly class Configuration
 {
     /**
-     * @param Implementation $serverInfo Info about this MCP server application.
-     * @param ServerCapabilities $capabilities Capabilities of this MCP server application.
      * @param string|null $instructions Instructions describing how to use the server and its features.
      */
     public function __construct(
