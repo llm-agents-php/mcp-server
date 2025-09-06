@@ -28,8 +28,13 @@ class DispatcherTest extends TestCase
     public function testConstructorRegistersRoutes(): void
     {
         $routes = [
-            'test/method' => $this->mockRoute,
+            $this->mockRoute,
         ];
+
+        $this->mockRoute
+            ->expects($this->once())
+            ->method('getMethods')
+            ->willReturn(['test/method']);
 
         $this->routesFactory
             ->expects($this->once())
@@ -59,7 +64,12 @@ class DispatcherTest extends TestCase
             ->with($request, $this->context)
             ->willReturn($expectedResult);
 
-        $routes = ['test/method' => $this->mockRoute];
+        $this->mockRoute
+            ->expects($this->once())
+            ->method('getMethods')
+            ->willReturn(['test/method']);
+
+        $routes = [$this->mockRoute];
         $this->routesFactory
             ->method('create')
             ->willReturn($routes);
@@ -84,7 +94,13 @@ class DispatcherTest extends TestCase
             params: [],
         );
 
-        $routes = ['test/method' => $this->mockRoute];
+        $routes = [$this->mockRoute];
+
+        $this->mockRoute
+            ->expects($this->once())
+            ->method('getMethods')
+            ->willReturn(['test/method']);
+
         $this->routesFactory
             ->method('create')
             ->willReturn($routes);
@@ -122,7 +138,12 @@ class DispatcherTest extends TestCase
             ->method('handleRequest')
             ->willReturn($expectedResult);
 
-        $routes = ['test/method' => $this->mockRoute];
+        $this->mockRoute
+            ->expects($this->once())
+            ->method('getMethods')
+            ->willReturn(['test/method']);
+
+        $routes = [$this->mockRoute];
         $this->routesFactory
             ->method('create')
             ->willReturn($routes);
@@ -149,7 +170,12 @@ class DispatcherTest extends TestCase
             ->method('handleNotification')
             ->with($notification, $this->context);
 
-        $routes = ['test/notification' => $this->mockRoute];
+        $this->mockRoute
+            ->expects($this->once())
+            ->method('getMethods')
+            ->willReturn(['test/notification']);
+
+        $routes = [$this->mockRoute];
         $this->routesFactory
             ->method('create')
             ->willReturn($routes);
@@ -171,7 +197,13 @@ class DispatcherTest extends TestCase
             params: [],
         );
 
-        $routes = ['test/notification' => $this->mockRoute];
+        $routes = [$this->mockRoute];
+
+        $this->mockRoute
+            ->expects($this->once())
+            ->method('getMethods')
+            ->willReturn(['test/notification']);
+
         $this->routesFactory
             ->method('create')
             ->willReturn($routes);
@@ -200,7 +232,12 @@ class DispatcherTest extends TestCase
             ->expects($this->never())
             ->method('handleNotification');
 
-        $routes = ['test/notification' => $this->mockRoute];
+        $this->mockRoute
+            ->expects($this->once())
+            ->method('getMethods')
+            ->willReturn(['test/notification']);
+
+        $routes = [$this->mockRoute];
         $this->routesFactory
             ->method('create')
             ->willReturn($routes);
@@ -220,7 +257,12 @@ class DispatcherTest extends TestCase
         $this->mockRoute
             ->method('handleNotification');
 
-        $routes = ['test/notification' => $this->mockRoute];
+        $this->mockRoute
+            ->expects($this->once())
+            ->method('getMethods')
+            ->willReturn(['test/notification']);
+
+        $routes = [$this->mockRoute];
         $this->routesFactory
             ->method('create')
             ->willReturn($routes);
@@ -238,16 +280,11 @@ class DispatcherTest extends TestCase
         $route1 = $this->createMock(RouteInterface::class);
         $route2 = $this->createMock(RouteInterface::class);
 
-        $routes = [
-            'method/one' => $route1,
-            'method/two' => $route2,
-        ];
+        $routes = [$route1, $route2];
 
         $this->routesFactory
             ->method('create')
             ->willReturn($routes);
-
-        $dispatcher = new Dispatcher($this->logger, $this->routesFactory);
 
         // Test first route
         $request1 = new Request('2.0', 1, 'method/one', []);
@@ -259,8 +296,10 @@ class DispatcherTest extends TestCase
             ->with($request1, $this->context)
             ->willReturn($result1);
 
-        $actualResult1 = $dispatcher->handleRequest($request1, $this->context);
-        $this->assertSame($result1, $actualResult1);
+        $route1
+            ->expects($this->once())
+            ->method('getMethods')
+            ->willReturn(['method/one']);
 
         // Test second route
         $request2 = new Request('2.0', 2, 'method/two', []);
@@ -271,6 +310,16 @@ class DispatcherTest extends TestCase
             ->method('handleRequest')
             ->with($request2, $this->context)
             ->willReturn($result2);
+
+        $route2
+            ->expects($this->once())
+            ->method('getMethods')
+            ->willReturn(['method/two']);
+
+        $dispatcher = new Dispatcher($this->logger, $this->routesFactory);
+
+        $actualResult1 = $dispatcher->handleRequest($request1, $this->context);
+        $this->assertSame($result1, $actualResult1);
 
         $actualResult2 = $dispatcher->handleRequest($request2, $this->context);
         $this->assertSame($result2, $actualResult2);
@@ -302,7 +351,12 @@ class DispatcherTest extends TestCase
             ->method('handleRequest')
             ->willThrowException($customException);
 
-        $routes = ['test/method' => $this->mockRoute];
+        $this->mockRoute
+            ->expects($this->once())
+            ->method('getMethods')
+            ->willReturn(['test/method']);
+
+        $routes = [$this->mockRoute];
         $this->routesFactory
             ->method('create')
             ->willReturn($routes);
@@ -325,7 +379,12 @@ class DispatcherTest extends TestCase
             ->method('handleNotification')
             ->willThrowException($customException);
 
-        $routes = ['test/notification' => $this->mockRoute];
+        $this->mockRoute
+            ->expects($this->once())
+            ->method('getMethods')
+            ->willReturn(['test/notification']);
+
+        $routes = [$this->mockRoute];
         $this->routesFactory
             ->method('create')
             ->willReturn($routes);
@@ -370,7 +429,12 @@ class DispatcherTest extends TestCase
             ->with($request, $this->context)
             ->willReturn($expectedResult);
 
-        $routes = ['test/method' => $this->mockRoute];
+        $this->mockRoute
+            ->expects($this->once())
+            ->method('getMethods')
+            ->willReturn(['test/method']);
+
+        $routes = [$this->mockRoute];
         $this->routesFactory
             ->method('create')
             ->willReturn($routes);
@@ -398,7 +462,12 @@ class DispatcherTest extends TestCase
             ->method('handleNotification')
             ->with($notification, $this->context);
 
-        $routes = ['test/notification' => $this->mockRoute];
+        $this->mockRoute
+            ->expects($this->once())
+            ->method('getMethods')
+            ->willReturn(['test/notification']);
+
+        $routes = [$this->mockRoute];
         $this->routesFactory
             ->method('create')
             ->willReturn($routes);
