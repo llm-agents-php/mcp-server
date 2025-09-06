@@ -9,6 +9,38 @@ A comprehensive PHP SDK for building [Model Context Protocol (MCP)](https://mode
 servers. Create production-ready MCP servers in PHP with modern architecture, flexible transport options, and
 comprehensive feature support.
 
+## Table of Contents
+- [Requirements](#requirements)
+- [Installation](#installation)
+    - [Framework Integration](#framework-integration)
+- [Quick Start](#quick-start)
+- [Core Concepts](#core-concepts)
+- [Transport Options](#transport-options)
+    - [STDIO Transport](#stdio-transport-recommended-for-cli)
+    - [HTTP Transport with SSE](#http-transport-with-sse)
+    - [Streamable HTTP Transport](#streamable-http-transport)
+- [Working with Tools](#working-with-tools)
+    - [Basic Tool Registration](#basic-tool-registration)
+    - [Advanced Tool with Multiple Content Types](#advanced-tool-with-multiple-content-types)
+    - [Error Handling in Tools](#error-handling-in-tools)
+- [Working with Resources](#working-with-resources)
+- [Working with Prompts](#working-with-prompts)
+- [HTTP Middleware](#http-middleware)
+    - [Built-in Middleware](#built-in-middleware)
+        - [CORS Middleware](#cors-middleware)
+        - [Authentication Middleware](#authentication-middleware)
+    - [Custom Middleware](#custom-middleware)
+- [Advanced Configuration](#advanced-configuration)
+    - [Complete Server Setup](#complete-server-setup)
+    - [Event Store for Resumability](#event-store-for-resumability)
+- [Common Patterns](#common-patterns)
+    - [Handler Factory Pattern](#handler-factory-pattern)
+    - [Decorator Pattern for Handlers](#decorator-pattern-for-handlers)
+- [Ecosystem & Extensions](#ecosystem--extensions)
+- [Contributing](#contributing)
+- [License](#license)
+- [Acknowledgments](#acknowledgments)
+
 > This SDK implements the **MCP 2025-03-26** specification with full backward compatibility support.
 
 ## Features
@@ -22,6 +54,22 @@ comprehensive feature support.
 - **Extensible Design**: Pluggable components with clear interfaces
 - **Production Ready**: Comprehensive logging, error handling, and testing support
 
+### What's NOT Included
+
+This SDK focuses on core MCP functionality and intentionally **does not include**:
+
+- **Resource Discovery**: Automatic scanning and registration of resources from filesystem or annotations
+- **Schema Generation**: Automatic generation of JSON schemas from PHP code or docblocks
+- **Request Validation**: Built-in validation of incoming requests against defined schemas
+- **Framework Integration**: Direct integration with web frameworks (Laravel, Symfony, etc.)
+
+**Why?** These features are better implemented as separate packages or framework-specific bridges that can:
+
+- Provide opinionated conventions for specific use cases
+- Integrate deeply with framework ecosystems
+- Offer different approaches to schema management
+- Maintain focused, single-responsibility packages
+
 ## Requirements
 
 - **PHP** >= 8.3 (required for advanced type features and performance)
@@ -32,6 +80,18 @@ comprehensive feature support.
 ```bash
 composer require llm/mcp-server
 ```
+
+### Framework Integration
+
+For enhanced developer experience with automatic discovery and validation:
+
+**Spiral Framework**: Use the [spiral/mcp-server](https://github.com/spiral-packages/mcp-server) bridge
+
+```bash
+composer require spiral/mcp-server
+```
+
+**Other Frameworks**: Framework-specific bridges are planned. Contributions welcome!
 
 ## Quick Start
 
@@ -781,6 +841,23 @@ composer test        # Run all tests
 ## License
 
 The MIT License (MIT). See [LICENSE](LICENSE) for details.
+
+## Ecosystem & Extensions
+
+### Framework Bridges
+
+**Spiral Framework**: [spiral/mcp-server](https://github.com/spiral-packages/mcp-server)
+
+- Automatic resource discovery via annotations
+- JSON schema generation from PHP classes
+- Built-in request/response validation
+- Dependency injection integration
+- Configuration management
+
+### Planned Extensions
+
+- **Laravel Bridge**: Integration with Laravel's service container and validation
+- **Symfony Bridge**: Symfony bundle with automatic service discovery
 
 ## Acknowledgments
 
