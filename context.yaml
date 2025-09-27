@@ -72,10 +72,15 @@ documents:
       - type: file
         sourcePaths:
           - src/Transports/HttpServer.php
-          - vendor/react/http/src/HttpServer.php
-          - vendor/react/http/src/Io/MiddlewareRunner.php
-          - vendor/react/http/src/Middleware
+          - src/Transports/HttpServerTransport.php
           - src/Transports/Middleware
+
+  - description: OAuth
+    outputPath: src/oauth.md
+    sources:
+      - type: file
+        sourcePaths:
+          - src/Authentication
 
   - description: Session
     outputPath: src/session.md
