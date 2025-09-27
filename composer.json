@@ -16,6 +16,7 @@
   ],
   "require": {
     "php": ">=8.3",
+    "ext-openssl": "*",
     "php-mcp/schema": "^1.0",
     "psr/clock": "^1.0",
     "psr/container": "^1.0 || ^2.0",
