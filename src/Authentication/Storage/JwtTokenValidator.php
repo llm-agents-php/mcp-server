@@ -57,7 +57,6 @@ final readonly class JwtTokenValidator implements OAuthTokenVerifierInterface
                 resource: $resource,
                 extra: $payload,
             );
-
         } catch (\Throwable $e) {
             throw new InvalidTokenError('Token verification failed: ' . $e->getMessage(), $e);
         }

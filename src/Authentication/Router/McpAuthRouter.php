@@ -4,8 +4,9 @@ declare(strict_types=1);
 
 namespace Mcp\Server\Authentication\Router;
 
-use Mcp\Server\Authentication\Dto\OAuthMetadata;
-use Mcp\Server\Authentication\Dto\OAuthProtectedResourceMetadata;
+use Mcp\Server\Authentication\Contract\OAuthTokenVerifierInterface;
+use Mcp\Server\Authentication\Error\InsufficientScopeError;
+use Mcp\Server\Authentication\Error\InvalidTokenError;
 use Mcp\Server\Authentication\Handler\AuthorizeHandler;
 use Mcp\Server\Authentication\Handler\MetadataHandler;
 use Mcp\Server\Authentication\Handler\RegisterHandler;
@@ -19,52 +20,22 @@ use Psr\Http\Server\MiddlewareInterface;
 use Psr\Http\Server\RequestHandlerInterface;
 
 /**
- * PSR-15 middleware that handles OAuth endpoints.
+ * PSR-15 middleware that handles OAuth endpoints with bearer token protection.
  */
 final readonly class McpAuthRouter implements MiddlewareInterface
 {
-    private OAuthMetadata $oauthMetadata;
-    private AuthorizeHandler $authorizeHandler;
-    private TokenHandler $tokenHandler;
-    private ?RegisterHandler $registerHandler;
-    private RevokeHandler $revokeHandler;
-    private MetadataHandler $metadataHandler;
-
     public function __construct(
-        AuthRouterOptions $options,
-        ResponseFactoryInterface $responseFactory,
-        StreamFactoryInterface $streamFactory,
-    ) {
-        $this->oauthMetadata = $this->createOAuthMetadata($options);
-
-        $this->authorizeHandler = new AuthorizeHandler($options->provider, $responseFactory, $streamFactory);
-        $this->tokenHandler = new TokenHandler($options->provider, $responseFactory, $streamFactory);
-        $this->registerHandler = new RegisterHandler(
-            $options->provider->getClientsStore(),
-            $responseFactory,
-            $streamFactory,
-        );
-        $this->revokeHandler = new RevokeHandler($options->provider, $responseFactory, $streamFactory);
-
-        // Create protected resource metadata
-        $protectedResourceMetadata = new OAuthProtectedResourceMetadata(
-            resource: $options->baseUrl ?? $this->oauthMetadata->getIssuer(),
-            authorizationServers: [$this->oauthMetadata->getIssuer()],
-            jwksUri: null,
-            scopesSupported: empty($options->scopesSupported) ? null : $options->scopesSupported,
-            bearerMethodsSupported: null,
-            resourceSigningAlgValuesSupported: null,
-            resourceName: $options->resourceName,
-            resourceDocumentation: $options->serviceDocumentationUrl,
-        );
-
-        $this->metadataHandler = new MetadataHandler(
-            $this->oauthMetadata,
-            $protectedResourceMetadata,
-            $responseFactory,
-            $streamFactory,
-        );
-    }
+        private AuthorizeHandler $authorizeHandler,
+        private RegisterHandler $registerHandler,
+        private TokenHandler $tokenHandler,
+        private RevokeHandler $revokeHandler,
+        private MetadataHandler $metadataHandler,
+        private ResponseFactoryInterface $responseFactory,
+        private StreamFactoryInterface $streamFactory,
+        private ?OAuthTokenVerifierInterface $tokenVerifier = null,
+        private array $requiredScopes = [],
+        private ?string $resourceMetadataUrl = null,
+    ) {}
 
     public function process(
         ServerRequestInterface $request,
@@ -73,9 +44,12 @@ final readonly class McpAuthRouter implements MiddlewareInterface
         $path = $request->getUri()->getPath();
         $method = $request->getMethod();
 
-        return match ([$path, $method]) {
+        trap(\sprintf('Processing request: %s %s', $method, $path), $request);
+
+        // Handle OAuth endpoints (no authentication required for these)
+        $oauthResponse = match ([$path, $method]) {
             ['/.well-known/mcp-oauth-metadata', 'GET'] => $this->metadataHandler->handleOAuthMetadata($request),
-            ['/.well-known/oauth-protected-resource', 'GET'] => $this->metadataHandler->handleProtectedResourceMetadata(
+            \str_starts_with($path, '/.well-known/oauth-protected-resource') && $method === 'GET' => $this->metadataHandler->handleProtectedResourceMetadata(
                 $request,
             ),
             ['/.well-known/oauth-authorization-server', 'GET'] => $this->metadataHandler->handleOAuthMetadata(
@@ -85,61 +59,98 @@ final readonly class McpAuthRouter implements MiddlewareInterface
             ['/oauth2/token', 'POST'] => $this->tokenHandler->handle($request),
             ['/oauth2/revoke', 'POST'] => $this->revokeHandler->handle($request),
             ['/oauth2/register', 'POST'] => $this->registerHandler->handle($request),
-            default => $handler->handle($request),
+            default => null,
         };
-    }
 
-    private function createOAuthMetadata(AuthRouterOptions $options): OAuthMetadata
-    {
-        $this->checkIssuerUrl($options->issuerUrl);
-
-        $baseUrl = $options->baseUrl ?? $options->issuerUrl;
-
-        return new OAuthMetadata(
-            issuer: $options->issuerUrl,
-            authorizationEndpoint: $this->buildUrl('/oauth2/authorize', $baseUrl),
-            tokenEndpoint: $this->buildUrl('/oauth2/token', $baseUrl),
-            responseTypesSupported: ['code'],
-            registrationEndpoint: $this->buildUrl('/oauth2/register', $baseUrl),
-            scopesSupported: empty($options->scopesSupported) ? null : $options->scopesSupported,
-            responseModesSupported: null,
-            grantTypesSupported: ['authorization_code', 'refresh_token'],
-            tokenEndpointAuthMethodsSupported: ['client_secret_post'],
-            tokenEndpointAuthSigningAlgValuesSupported: null,
-            serviceDocumentation: $options->serviceDocumentationUrl,
-            revocationEndpoint: $this->buildUrl('/oauth2/revoke', $baseUrl),
-            revocationEndpointAuthMethodsSupported: ['client_secret_post'],
-            revocationEndpointAuthSigningAlgValuesSupported: null,
-            introspectionEndpoint: null,
-            introspectionEndpointAuthMethodsSupported: null,
-            introspectionEndpointAuthSigningAlgValuesSupported: null,
-            codeChallengeMethodsSupported: ['S256'],
-        );
-    }
-
-    private function checkIssuerUrl(string $issuer): void
-    {
-        $parsed = \parse_url($issuer);
-
-        // Technically RFC 8414 does not permit a localhost HTTPS exemption, but this is necessary for testing
-        if (
-            $parsed['scheme'] !== 'https' &&
-            !\in_array($parsed['host'] ?? '', ['localhost', '127.0.0.1'], true)
-        ) {
-            throw new \InvalidArgumentException('Issuer URL must be HTTPS');
+        if ($oauthResponse !== null) {
+            return $oauthResponse;
         }
 
-        if (isset($parsed['fragment'])) {
-            throw new \InvalidArgumentException("Issuer URL must not have a fragment: {$issuer}");
+        // For all other requests, require authentication if token verifier is configured
+        if ($this->tokenVerifier !== null) {
+            try {
+                $authInfo = $this->extractAndVerifyToken($request);
+
+                trap($authInfo);
+
+                // Check required scopes
+                if (!empty($this->requiredScopes)) {
+                    $this->validateScopes($authInfo->getScopes(), $this->requiredScopes);
+                }
+
+                // Add authenticated user to request attributes
+                $request = $request->withAttribute('auth_info', $authInfo);
+            } catch (InvalidTokenError) {
+                return $this->createAuthErrorResponse(401, 'invalid_token', 'Authentication required');
+            } catch (InsufficientScopeError $e) {
+                return $this->createAuthErrorResponse(403, 'insufficient_scope', $e->getMessage());
+            }
         }
 
-        if (isset($parsed['query'])) {
-            throw new \InvalidArgumentException("Issuer URL must not have a query string: {$issuer}");
+        return $handler->handle($request);
+    }
+
+    private function extractAndVerifyToken(ServerRequestInterface $request)
+    {
+        // Extract Bearer token from Authorization header
+        $authHeader = $request->getHeaderLine('Authorization');
+        if (!$authHeader || !\str_starts_with(\strtolower($authHeader), 'bearer ')) {
+            throw new InvalidTokenError('Missing or invalid Authorization header');
+        }
+
+        $token = \substr($authHeader, 7); // Remove "Bearer " prefix
+
+        if (empty($token)) {
+            throw new InvalidTokenError('Empty bearer token');
+        }
+
+        // Verify token
+        $authInfo = $this->tokenVerifier->verifyAccessToken($token);
+
+        // Check if token is expired
+        if ($authInfo->getExpiresAt() !== null && $authInfo->getExpiresAt() < \time()) {
+            throw new InvalidTokenError('Token has expired');
+        }
+
+        return $authInfo;
+    }
+
+    private function validateScopes(array $tokenScopes, array $requiredScopes): void
+    {
+        foreach ($requiredScopes as $requiredScope) {
+            if (!\in_array($requiredScope, $tokenScopes, true)) {
+                throw new InsufficientScopeError("Required scope: {$requiredScope}");
+            }
         }
     }
 
-    private function buildUrl(string $path, string $baseUrl): string
+    private function createAuthErrorResponse(int $statusCode, string $error, string $description): ResponseInterface
     {
-        return \rtrim($baseUrl, '/') . $path;
+        // Build WWW-Authenticate header value
+        $wwwAuthParts = [
+            "error=\"{$error}\"",
+            "error_description=\"{$description}\"",
+        ];
+
+        if ($this->resourceMetadataUrl !== null) {
+            $wwwAuthParts[] = "resource_metadata=\"{$this->resourceMetadataUrl}\"";
+        }
+
+        $wwwAuthenticate = 'Bearer ' . \implode(', ', $wwwAuthParts);
+
+        // Create error response body
+        $errorBody = [
+            'error' => $error,
+            'error_description' => $description,
+        ];
+
+        $json = \json_encode($errorBody, JSON_THROW_ON_ERROR);
+        $body = $this->streamFactory->createStream($json);
+
+        return $this->responseFactory
+            ->createResponse($statusCode)
+            ->withHeader('Content-Type', 'application/json')
+            ->withHeader('WWW-Authenticate', $wwwAuthenticate)
+            ->withBody($body);
     }
 }

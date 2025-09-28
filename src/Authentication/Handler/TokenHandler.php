@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Mcp\Server\Authentication\Handler;
 
 use Mcp\Server\Authentication\Contract\OAuthServerProviderInterface;
+use Mcp\Server\Authentication\Dto\OAuthClientInformation;
 use Mcp\Server\Authentication\Error\InvalidClientError;
 use Mcp\Server\Authentication\Error\InvalidGrantError;
 use Mcp\Server\Authentication\Error\InvalidRequestError;
@@ -54,7 +55,9 @@ final readonly class TokenHandler
             return match ($params['grant_type']) {
                 'authorization_code' => $this->handleAuthorizationCodeGrant($client, $params, $response),
                 'refresh_token' => $this->handleRefreshTokenGrant($client, $params, $response),
-                default => throw new UnsupportedGrantTypeError('The grant type is not supported by this authorization server'),
+                default => throw new UnsupportedGrantTypeError(
+                    'The grant type is not supported by this authorization server',
+                ),
             };
         } catch (OAuthError $e) {
             return $this->createErrorResponse($e);
@@ -66,7 +69,7 @@ final readonly class TokenHandler
     }
 
     private function handleAuthorizationCodeGrant(
-        $client,
+        OAuthClientInformation $client,
         array $params,
         ResponseInterface $response,
     ): ResponseInterface {
@@ -111,8 +114,11 @@ final readonly class TokenHandler
             ->withBody($body);
     }
 
-    private function handleRefreshTokenGrant($client, array $params, ResponseInterface $response): ResponseInterface
-    {
+    private function handleRefreshTokenGrant(
+        OAuthClientInformation $client,
+        array $params,
+        ResponseInterface $response,
+    ): ResponseInterface {
         if (empty($params['refresh_token'])) {
             throw new InvalidRequestError('Missing refresh_token parameter');
         }
