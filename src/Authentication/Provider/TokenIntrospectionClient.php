@@ -43,7 +43,7 @@ final readonly class TokenIntrospectionClient implements TokenIntrospectionClien
             throw new InvalidTokenError("Token introspection failed: HTTP {$response->getStatusCode()}");
         }
 
-        $body = (string)$response->getBody();
+        $body = (string) $response->getBody();
         $data = \json_decode($body, true);
 
         if (\json_last_error() !== JSON_ERROR_NONE) {
@@ -79,7 +79,7 @@ final readonly class TokenIntrospectionClient implements TokenIntrospectionClien
             throw new InvalidTokenError("User info request failed: HTTP {$response->getStatusCode()}");
         }
 
-        $body = (string)$response->getBody();
+        $body = (string) $response->getBody();
         $data = \json_decode($body, true);
 
         if (\json_last_error() !== JSON_ERROR_NONE) {

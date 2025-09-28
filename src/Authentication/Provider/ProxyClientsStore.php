@@ -50,7 +50,7 @@ final readonly class ProxyClientsStore implements OAuthRegisteredClientsStoreInt
             throw new ServerError("Client registration failed: {$response->getStatusCode()}");
         }
 
-        $data = \json_decode((string)$response->getBody(), true);
+        $data = \json_decode((string) $response->getBody(), true);
         if (\json_last_error() !== JSON_ERROR_NONE) {
             throw new ServerError('Invalid JSON response from registration endpoint');
         }

@@ -105,7 +105,7 @@ final readonly class GenericTokenVerifier implements OAuthTokenVerifierInterface
         $mappedData = $this->mapFields($data, $this->config->userFieldMapping);
 
         return new UserProfile(
-            sub: $mappedData['sub'] ?? $data['id'] ?? (string)($data['user_id'] ?? 'unknown'),
+            sub: $mappedData['sub'] ?? $data['id'] ?? (string) ($data['user_id'] ?? 'unknown'),
             preferredUsername: $mappedData['preferred_username'] ?? $data['login'] ?? $data['username'] ?? null,
             name: $mappedData['name'] ?? $data['name'] ?? null,
             email: $mappedData['email'] ?? $data['email'] ?? null,
@@ -145,7 +145,7 @@ final readonly class GenericTokenVerifier implements OAuthTokenVerifierInterface
         if (isset($tokenData['scope'])) {
             $scopes = \is_array($tokenData['scope'])
                 ? $tokenData['scope']
-                : \explode(' ', (string)$tokenData['scope']);
+                : \explode(' ', (string) $tokenData['scope']);
         } elseif (isset($tokenData['scopes'])) {
             $scopes = \is_array($tokenData['scopes']) ? $tokenData['scopes'] : [$tokenData['scopes']];
         }
@@ -153,7 +153,7 @@ final readonly class GenericTokenVerifier implements OAuthTokenVerifierInterface
         // Extract expiration
         $expiresAt = $tokenData['exp'] ?? null;
         if ($expiresAt !== null && !\is_int($expiresAt)) {
-            $expiresAt = (int)$expiresAt;
+            $expiresAt = (int) $expiresAt;
         }
 
         // Extract resource/audience
@@ -161,7 +161,7 @@ final readonly class GenericTokenVerifier implements OAuthTokenVerifierInterface
 
         return new DefaultAuthInfo(
             token: $token,
-            clientId: (string)$clientId,
+            clientId: (string) $clientId,
             scopes: $scopes,
             profile: $userProfile,
             expiresAt: $expiresAt,
