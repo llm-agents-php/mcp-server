@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Mcp\Server\Authentication;
 
+use Mcp\Server\Authentication\Dto\UserProfile;
+
 /**
  * Default implementation of AuthInfo.
  */
@@ -11,15 +13,14 @@ final readonly class DefaultAuthInfo implements AuthInfo
 {
     /**
      * @param string[] $scopes
-     * @param array<string, mixed> $extra
      */
     public function __construct(
         private string $token,
         private string $clientId,
         private array $scopes,
+        private ?UserProfile $profile = null,
         private ?int $expiresAt = null,
         private ?string $resource = null,
-        private array $extra = [],
     ) {}
 
     public function getToken(): string
@@ -47,8 +48,8 @@ final readonly class DefaultAuthInfo implements AuthInfo
         return $this->resource;
     }
 
-    public function getExtra(): array
+    public function getUserProfile(): ?UserProfile
     {
-        return $this->extra;
+        return $this->profile;
     }
 }

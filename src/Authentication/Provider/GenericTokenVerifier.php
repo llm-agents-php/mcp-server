@@ -159,19 +159,13 @@ final readonly class GenericTokenVerifier implements OAuthTokenVerifierInterface
         // Extract resource/audience
         $resource = $tokenData['aud'] ?? $tokenData['resource'] ?? null;
 
-        // Combine all extra data
-        $extra = \array_merge(
-            ['user_profile' => $userProfile->jsonSerialize()],
-            $tokenData,
-        );
-
         return new DefaultAuthInfo(
             token: $token,
             clientId: (string)$clientId,
             scopes: $scopes,
+            profile: $userProfile,
             expiresAt: $expiresAt,
             resource: $resource,
-            extra: $extra,
         );
     }
 }

@@ -76,7 +76,7 @@ final readonly class PromptRoute implements RouteInterface
             throw McpServerException::invalidParams("Prompt '{$promptName}' not found.");
         }
 
-        $arguments = (array) $arguments;
+        $arguments = (array)$arguments;
 
         foreach ($registeredPrompt->schema->arguments as $argDef) {
             if ($argDef->required && !\array_key_exists($argDef->name, $arguments)) {
@@ -86,15 +86,8 @@ final readonly class PromptRoute implements RouteInterface
             }
         }
 
-        try {
-            $result = $registeredPrompt->get($arguments, $context);
+        $result = $registeredPrompt->get($arguments, $context);
 
-            return new GetPromptResult($result, $registeredPrompt->schema->description);
-        } catch (McpServerException $e) {
-            throw $e;
-        } catch (\Throwable $e) {
-            $this->logger->error('Prompt generation failed.', ['promptName' => $promptName, 'exception' => $e]);
-            throw McpServerException::promptGenerationFailed($promptName, $e);
-        }
+        return new GetPromptResult($result, $registeredPrompt->schema->description);
     }
 }

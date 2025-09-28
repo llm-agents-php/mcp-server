@@ -4,8 +4,11 @@ declare(strict_types=1);
 
 namespace Mcp\Server;
 
+use Mcp\Server\Authentication\Error\OAuthError;
 use Mcp\Server\Contracts\DispatcherInterface;
 use Mcp\Server\Contracts\ReferenceRegistryInterface;
+use Mcp\Server\Exception\ExceptionReporterInterface;
+use Mcp\Server\Exception\NullExceptionReporter;
 use PhpMcp\Schema\Constants;
 use Mcp\Server\Contracts\ServerTransportInterface;
 use Mcp\Server\Contracts\SessionInterface;
@@ -42,21 +45,22 @@ final class Protocol
     public const string LATEST_PROTOCOL_VERSION = '2025-03-26';
     public const array SUPPORTED_PROTOCOL_VERSIONS = [self::LATEST_PROTOCOL_VERSION, '2024-11-05'];
 
-    protected ?ServerTransportInterface $transport = null;
+    private ?ServerTransportInterface $transport = null;
 
     /**
      * Stores listener references for proper removal
      * @var array<non-empty-string, callable>
      */
-    protected array $listeners = [];
+    private array $listeners = [];
 
     public function __construct(
-        protected Configuration $configuration,
-        protected ReferenceRegistryInterface $registry,
-        protected SessionManager $sessionManager,
-        protected DispatcherInterface $dispatcher,
-        protected SubscriptionManager $subscriptionManager,
-        protected LoggerInterface $logger = new NullLogger(),
+        private readonly Configuration $configuration,
+        private readonly ReferenceRegistryInterface $registry,
+        private readonly SessionManager $sessionManager,
+        private readonly DispatcherInterface $dispatcher,
+        private readonly SubscriptionManager $subscriptionManager,
+        private readonly LoggerInterface $logger = new NullLogger(),
+        private readonly ExceptionReporterInterface $reporter = new NullExceptionReporter(),
     ) {
         $this->sessionManager->on('session_deleted', function (string $sessionId): void {
             $this->subscriptionManager->cleanupSession($sessionId);
@@ -131,7 +135,7 @@ final class Protocol
         if ($session === null) {
             $error = Error::forInvalidRequest(
                 'Invalid or expired session. Please re-initialize the session.',
-                (string) $message->getId(),
+                (string)$message->getId(),
             );
             $messageContext['status_code'] = 404;
 
@@ -210,7 +214,8 @@ final class Protocol
             ->sendMessage($notification, $sessionId, [])
             ->then(static fn() => resolve(null))
             ->catch(
-                static fn(\Throwable $e) => reject(
+                static fn(\Throwable $e)
+                    => reject(
                     new McpServerException('Failed to send notification: ' . $e->getMessage(), previous: $e),
                 ),
             );
@@ -360,12 +365,22 @@ final class Protocol
             );
 
             return $e->toJsonRpcError($request->id);
+        } catch (OAuthError $e) {
+            return new Error(
+                jsonrpc: '2.0',
+                id: $request->id,
+                code: Constants::INVALID_REQUEST,
+                message: 'OAuth error: ' . $e->getErrorCode(),
+                data: $e->getMessage(),
+            );
         } catch (\Throwable $e) {
             $this->logger->error('MCP Processor caught unexpected error', [
                 'method' => $request->method,
                 'exception' => $e->getMessage(),
                 'trace' => $e->getTraceAsString(),
             ]);
+
+            $this->reporter->report($e);
 
             return new Error(
                 jsonrpc: '2.0',

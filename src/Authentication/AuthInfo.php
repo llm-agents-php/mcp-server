@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Mcp\Server\Authentication;
 
+use Mcp\Server\Authentication\Dto\UserProfile;
+
 /**
  * Information about a validated access token, provided to request handlers.
  */
@@ -38,10 +40,7 @@ interface AuthInfo
     public function getResource(): ?string;
 
     /**
-     * Additional data associated with the token.
-     * This field should be used for any additional data that needs to be attached to the auth info.
-     *
-     * @return array<string, mixed>
+     * The user profile associated with this token, if available.
      */
-    public function getExtra(): array;
+    public function getUserProfile(): ?UserProfile;
 }

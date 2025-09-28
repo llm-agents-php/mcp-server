@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Mcp\Server\Authentication\Handler;
 
-use JsonException;
 use Mcp\Server\Authentication\Dto\OAuthMetadata;
 use Mcp\Server\Authentication\Dto\OAuthProtectedResourceMetadata;
 use Psr\Http\Message\ResponseFactoryInterface;
@@ -25,7 +24,7 @@ final readonly class MetadataHandler
     ) {}
 
     /**
-     * @throws JsonException
+     * @throws \JsonException
      */
     public function handleOAuthMetadata(ServerRequestInterface $request): ResponseInterface
     {
@@ -40,7 +39,7 @@ final readonly class MetadataHandler
     }
 
     /**
-     * @throws JsonException
+     * @throws \JsonException
      */
     public function handleProtectedResourceMetadata(ServerRequestInterface $request): ResponseInterface
     {

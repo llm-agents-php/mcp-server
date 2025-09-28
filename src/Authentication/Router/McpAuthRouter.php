@@ -46,21 +46,27 @@ final readonly class McpAuthRouter implements MiddlewareInterface
         $method = $request->getMethod();
 
         // Handle OAuth endpoints (no authentication required for these)
-        $oauthResponse = match ([$path, $method]) {
-            ['/.well-known/mcp-oauth-metadata', 'GET'] => $this->metadataHandler->handleOAuthMetadata($request),
+        $oauthResponse = match (true) {
+            [$path, $method] === [
+                '/.well-known/mcp-oauth-metadata',
+                'GET',
+            ] => $this->metadataHandler->handleOAuthMetadata($request),
             \str_starts_with(
                 $path,
                 '/.well-known/oauth-protected-resource',
             ) && $method === 'GET' => $this->metadataHandler->handleProtectedResourceMetadata(
                 $request,
             ),
-            ['/.well-known/oauth-authorization-server', 'GET'] => $this->metadataHandler->handleOAuthMetadata(
+            \str_starts_with(
+                $path,
+                '/.well-known/oauth-authorization-server',
+            ) && $method === 'GET' => $this->metadataHandler->handleOAuthMetadata(
                 $request,
             ),
-            ['/oauth2/authorize', 'GET'] => $this->authorizeHandler->handle($request),
-            ['/oauth2/token', 'POST'] => $this->tokenHandler->handle($request),
-            ['/oauth2/revoke', 'POST'] => $this->revokeHandler->handle($request),
-            ['/oauth2/register', 'POST'] => $this->registerHandler->handle($request),
+            [$path, $method] == ['/oauth2/authorize', 'GET'] => $this->authorizeHandler->handle($request),
+            [$path, $method] == ['/oauth2/token', 'POST'] => $this->tokenHandler->handle($request),
+            [$path, $method] == ['/oauth2/revoke', 'POST'] => $this->revokeHandler->handle($request),
+            [$path, $method] == ['/oauth2/register', 'POST'] => $this->registerHandler->handle($request),
             default => null,
         };
 
@@ -68,40 +74,42 @@ final readonly class McpAuthRouter implements MiddlewareInterface
             return $oauthResponse;
         }
 
-        // For all other requests, require authentication if token verifier is configured
-        if ($this->tokenVerifier !== null) {
-            try {
+        try {
+            // For all other requests, require authentication if token verifier is configured
+            if ($this->tokenVerifier !== null) {
                 $authInfo = $this->extractAndVerifyToken($request);
 
                 // Check required scopes
-                if (!empty($this->requiredScopes)) {
-                    $this->validateScopes($authInfo->getScopes(), $this->requiredScopes);
+                if ($authInfo !== null) {
+                    if (!empty($this->requiredScopes)) {
+                        $this->validateScopes($authInfo->getScopes(), $this->requiredScopes);
+                    }
+
+                    // Add authenticated user to request attributes
+                    $request = $request->withAttribute('auth', $authInfo);
                 }
-
-                // Add authenticated user to request attributes
-                $request = $request->withAttribute('auth', $authInfo);
-            } catch (InvalidTokenError) {
-                return $this->createAuthErrorResponse(401, 'invalid_token', 'Authentication required');
-            } catch (InsufficientScopeError $e) {
-                return $this->createAuthErrorResponse(403, 'insufficient_scope', $e->getMessage());
             }
-        }
 
-        return $handler->handle($request);
+            return $handler->handle($request);
+        } catch (InvalidTokenError $e) {
+            return $this->createAuthErrorResponse(401, 'invalid_token', 'Authentication required');
+        } catch (InsufficientScopeError $e) {
+            return $this->createAuthErrorResponse(403, 'insufficient_scope', $e->getMessage());
+        }
     }
 
-    private function extractAndVerifyToken(ServerRequestInterface $request): AuthInfo
+    private function extractAndVerifyToken(ServerRequestInterface $request): ?AuthInfo
     {
         // Extract Bearer token from Authorization header
         $authHeader = $request->getHeaderLine('Authorization');
         if (!$authHeader || !\str_starts_with(\strtolower($authHeader), 'bearer ')) {
-            throw new InvalidTokenError('Missing or invalid Authorization header');
+            return null;
         }
 
         $token = \substr($authHeader, 7); // Remove "Bearer " prefix
 
         if (empty($token)) {
-            throw new InvalidTokenError('Empty bearer token');
+            return null;
         }
 
         // Verify token

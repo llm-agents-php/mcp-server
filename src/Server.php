@@ -21,9 +21,9 @@ final class Server
     protected bool $isListening = false;
 
     public function __construct(
-        protected readonly Protocol $protocol,
-        protected readonly SessionManager $sessionManager,
-        protected readonly LoggerInterface $logger = new NullLogger(),
+        private readonly Protocol $protocol,
+        private readonly SessionManager $sessionManager,
+        private readonly LoggerInterface $logger = new NullLogger(),
     ) {}
 
     /**

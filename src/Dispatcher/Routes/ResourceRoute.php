@@ -110,19 +110,9 @@ final readonly class ResourceRoute implements RouteInterface
             throw McpServerException::invalidParams("Resource URI '{$uri}' not found.");
         }
 
-        try {
-            $result = $registeredResource->read($uri, $context);
+        $result = $registeredResource->read($uri, $context);
 
-            return new ReadResourceResult($result);
-        } catch (\JsonException $e) {
-            $this->logger->warning('Failed to JSON encode resource content.', ['exception' => $e, 'uri' => $uri]);
-            throw McpServerException::internalError("Failed to serialize resource content for '{$uri}'.", $e);
-        } catch (McpServerException $e) {
-            throw $e;
-        } catch (\Throwable $e) {
-            $this->logger->error('Resource read failed.', ['uri' => $uri, 'exception' => $e]);
-            throw McpServerException::resourceReadFailed($uri, $e);
-        }
+        return new ReadResourceResult($result);
     }
 
     private function handleResourceSubscribe(ResourceSubscribeRequest $request, Context $context): EmptyResult

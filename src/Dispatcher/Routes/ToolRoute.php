@@ -12,8 +12,6 @@ use Mcp\Server\Defaults\ToolExecutor;
 use Mcp\Server\Dispatcher\Paginator;
 use Mcp\Server\Dispatcher\RequestMethod;
 use Mcp\Server\Exception\McpServerException;
-use Mcp\Server\Exception\ValidationException;
-use PhpMcp\Schema\Content\TextContent;
 use PhpMcp\Schema\JsonRpc\Notification;
 use PhpMcp\Schema\JsonRpc\Request;
 use PhpMcp\Schema\JsonRpc\Result;
@@ -77,20 +75,8 @@ final readonly class ToolRoute implements RouteInterface
         $toolName = $request->name;
         $arguments = $request->arguments;
 
-        try {
-            $result = $this->toolExecutor->call($toolName, $arguments, $context);
+        $result = $this->toolExecutor->call($toolName, $arguments, $context);
 
-            return new CallToolResult($result, false);
-        } catch (ValidationException $e) {
-            throw McpServerException::invalidParams(
-                $e->buildMessage($toolName),
-                data: ['validation_errors' => $e->errors],
-            );
-        } catch (\Throwable $toolError) {
-            $this->logger->error('Tool execution failed.', ['tool' => $toolName, 'exception' => $toolError]);
-            $errorMessage = "Tool execution failed: {$toolError->getMessage()}";
-
-            return new CallToolResult([new TextContent($errorMessage)], true);
-        }
+        return new CallToolResult($result, false);
     }
 }

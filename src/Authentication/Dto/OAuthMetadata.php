@@ -25,16 +25,16 @@ final readonly class OAuthMetadata implements \JsonSerializable
     public function __construct(
         public string $issuer,
         public string $authorizationEndpoint,
+        public string $registrationEndpoint,
+        public string $revocationEndpoint,
         public string $tokenEndpoint,
         public array $responseTypesSupported,
-        public ?string $registrationEndpoint = null,
         public ?array $scopesSupported = null,
         public ?array $responseModesSupported = null,
         public ?array $grantTypesSupported = null,
         public ?array $tokenEndpointAuthMethodsSupported = null,
         public ?array $tokenEndpointAuthSigningAlgValuesSupported = null,
         public ?string $serviceDocumentation = null,
-        public ?string $revocationEndpoint = null,
         public ?array $revocationEndpointAuthMethodsSupported = null,
         public ?array $revocationEndpointAuthSigningAlgValuesSupported = null,
         public ?string $introspectionEndpoint = null,
@@ -43,9 +43,35 @@ final readonly class OAuthMetadata implements \JsonSerializable
         public ?array $codeChallengeMethodsSupported = null,
     ) {}
 
-    public function getIssuer(): string
+    public static function forProxy(string $issuer): self
     {
-        return $this->issuer;
+        return new self(
+            tokenEndpoint: \rtrim($issuer, '/') . '/oauth2/token',
+            authorizationEndpoint: \rtrim($issuer, '/') . '/oauth2/authorize',
+            registrationEndpoint: \rtrim($issuer, '/') . '/oauth2/register',
+            revocationEndpoint: \rtrim($issuer, '/') . '/oauth2/revoke',
+            responseTypesSupported: ['code'],
+            scopesSupported: ['read', 'write'],
+            grantTypesSupported: ['authorization_code', 'refresh_token'],
+            tokenEndpointAuthMethodsSupported: ['client_secret_post', 'client_secret_basic'],
+            codeChallengeMethodsSupported: ['S256'],
+        );
+    }
+
+    public static function forGithub(string $issuer): self
+    {
+        return new self(
+            issuer: $issuer,
+            authorizationEndpoint: 'https://github.com/login/oauth/authorize',
+            tokenEndpoint: 'https://github.com/login/oauth/access_token',
+            revocationEndpoint: 'https://github.com/login/oauth/revoke',
+            registrationEndpoint: 'https://github.com/login/oauth/register',
+            responseTypesSupported: ['code'],
+            scopesSupported: ['read', 'write'],
+            grantTypesSupported: ['authorization_code', 'refresh_token'],
+            tokenEndpointAuthMethodsSupported: ['client_secret_post', 'client_secret_basic'],
+            codeChallengeMethodsSupported: ['S256'],
+        );
     }
 
     public function jsonSerialize(): array
