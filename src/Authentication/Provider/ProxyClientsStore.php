@@ -16,6 +16,10 @@ use Psr\Http\Message\StreamFactoryInterface;
  */
 final readonly class ProxyClientsStore implements OAuthRegisteredClientsStoreInterface
 {
+    /**
+     * @param callable(string $clientId):OAuthClientInformation|null $getClient
+     * @param non-empty-string|null $registrationUrl
+     */
     public function __construct(
         private \Closure $getClient,
         private ?string $registrationUrl,
@@ -46,7 +50,7 @@ final readonly class ProxyClientsStore implements OAuthRegisteredClientsStoreInt
             throw new ServerError("Client registration failed: {$response->getStatusCode()}");
         }
 
-        $data = \json_decode((string) $response->getBody(), true);
+        $data = \json_decode((string)$response->getBody(), true);
         if (\json_last_error() !== JSON_ERROR_NONE) {
             throw new ServerError('Invalid JSON response from registration endpoint');
         }

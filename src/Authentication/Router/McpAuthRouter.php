@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Mcp\Server\Authentication\Router;
 
+use Mcp\Server\Authentication\AuthInfo;
 use Mcp\Server\Authentication\Contract\OAuthTokenVerifierInterface;
 use Mcp\Server\Authentication\Error\InsufficientScopeError;
 use Mcp\Server\Authentication\Error\InvalidTokenError;
@@ -44,17 +45,18 @@ final readonly class McpAuthRouter implements MiddlewareInterface
         $path = $request->getUri()->getPath();
         $method = $request->getMethod();
 
-        trap(\sprintf('Processing request: %s %s', $method, $path), $request);
-
         // Handle OAuth endpoints (no authentication required for these)
         $oauthResponse = match ([$path, $method]) {
             ['/.well-known/mcp-oauth-metadata', 'GET'] => $this->metadataHandler->handleOAuthMetadata($request),
-            \str_starts_with($path, '/.well-known/oauth-protected-resource') && $method === 'GET' => $this->metadataHandler->handleProtectedResourceMetadata(
+            \str_starts_with(
+                $path,
+                '/.well-known/oauth-protected-resource',
+            ) && $method === 'GET' => $this->metadataHandler->handleProtectedResourceMetadata(
                 $request,
             ),
             ['/.well-known/oauth-authorization-server', 'GET'] => $this->metadataHandler->handleOAuthMetadata(
                 $request,
-            ), // Backwards compatibility
+            ),
             ['/oauth2/authorize', 'GET'] => $this->authorizeHandler->handle($request),
             ['/oauth2/token', 'POST'] => $this->tokenHandler->handle($request),
             ['/oauth2/revoke', 'POST'] => $this->revokeHandler->handle($request),
@@ -71,15 +73,13 @@ final readonly class McpAuthRouter implements MiddlewareInterface
             try {
                 $authInfo = $this->extractAndVerifyToken($request);
 
-                trap($authInfo);
-
                 // Check required scopes
                 if (!empty($this->requiredScopes)) {
                     $this->validateScopes($authInfo->getScopes(), $this->requiredScopes);
                 }
 
                 // Add authenticated user to request attributes
-                $request = $request->withAttribute('auth_info', $authInfo);
+                $request = $request->withAttribute('auth', $authInfo);
             } catch (InvalidTokenError) {
                 return $this->createAuthErrorResponse(401, 'invalid_token', 'Authentication required');
             } catch (InsufficientScopeError $e) {
@@ -90,7 +90,7 @@ final readonly class McpAuthRouter implements MiddlewareInterface
         return $handler->handle($request);
     }
 
-    private function extractAndVerifyToken(ServerRequestInterface $request)
+    private function extractAndVerifyToken(ServerRequestInterface $request): AuthInfo
     {
         // Extract Bearer token from Authorization header
         $authHeader = $request->getHeaderLine('Authorization');
