@@ -135,7 +135,7 @@ final class Protocol
         if ($session === null) {
             $error = Error::forInvalidRequest(
                 'Invalid or expired session. Please re-initialize the session.',
-                (string)$message->getId(),
+                (string) $message->getId(),
             );
             $messageContext['status_code'] = 404;
 
@@ -216,8 +216,8 @@ final class Protocol
             ->catch(
                 static fn(\Throwable $e)
                     => reject(
-                    new McpServerException('Failed to send notification: ' . $e->getMessage(), previous: $e),
-                ),
+                        new McpServerException('Failed to send notification: ' . $e->getMessage(), previous: $e),
+                    ),
             );
     }
 

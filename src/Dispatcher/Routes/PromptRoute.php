@@ -76,7 +76,7 @@ final readonly class PromptRoute implements RouteInterface
             throw McpServerException::invalidParams("Prompt '{$promptName}' not found.");
         }
 
-        $arguments = (array)$arguments;
+        $arguments = (array) $arguments;
 
         foreach ($registeredPrompt->schema->arguments as $argDef) {
             if ($argDef->required && !\array_key_exists($argDef->name, $arguments)) {
