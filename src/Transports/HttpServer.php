@@ -91,6 +91,8 @@ final class HttpServer extends EventEmitter implements HttpServerInterface
                 $this->close($onClose);
             });
 
+            $this->logger->info("Server is up and listening on {$this->protocol}://{$this->listenAddress} 🚀");
+
             $this->listening = true;
             $this->closing = false;
             $this->emit('ready');

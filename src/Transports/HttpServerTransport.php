@@ -20,11 +20,12 @@ use Psr\Log\NullLogger;
 use React\Http\Message\Response;
 use React\Promise\Deferred;
 use React\Promise\PromiseInterface;
-use React\Stream\ThroughStream;
-use React\Stream\WritableStreamInterface;
 
 use function React\Promise\reject;
 use function React\Promise\resolve;
+
+use React\Stream\ThroughStream;
+use React\Stream\WritableStreamInterface;
 
 final class HttpServerTransport implements ServerTransportInterface
 {
@@ -63,6 +64,8 @@ final class HttpServerTransport implements ServerTransportInterface
                 new TransportException("Cannot send message: SSE stream for client '{$sessionId}' is not writable."),
             );
         }
+
+        $this->logger->debug('Sending message to client', ['sessionId' => $sessionId, 'message' => $message]);
 
         $json = \json_encode($message, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
 
@@ -129,6 +132,14 @@ final class HttpServerTransport implements ServerTransportInterface
 
     private function createRequestHandler(ServerRequestInterface $request): ResponseInterface
     {
+        $this->logger->debug('Incoming HTTP request', [
+            'method' => $request->getMethod(),
+            'path' => $request->getUri()->getPath(),
+            'query' => $request->getQueryParams(),
+            'headers' => $request->getHeaders(),
+            'body' => $request->getBody()->getContents(),
+        ]);
+
         $path = $request->getUri()->getPath();
         $method = $request->getMethod();
 
@@ -146,17 +157,17 @@ final class HttpServerTransport implements ServerTransportInterface
     }
 
     /**
-     * Handles a new SSE connection request
+     * Handles a new SSE connectionf request
      */
     private function handleSseRequest(ServerRequestInterface $request): Response
     {
         $sessionId = $this->sessionId->generate();
-        $this->logger->info('New SSE connection', ['sessionId' => $sessionId]);
+        $this->logger->debug('New SSE connection', ['sessionId' => $sessionId]);
 
         $sseStream = new ThroughStream();
 
         $sseStream->on('close', function () use ($sessionId): void {
-            $this->logger->info('SSE stream closed', ['sessionId' => $sessionId]);
+            $this->logger->debug('SSE stream closed', ['sessionId' => $sessionId]);
             unset($this->activeSseStreams[$sessionId]);
             $this->httpServer->emit('client_disconnected', [$sessionId, 'SSE stream closed']);
         });
@@ -186,7 +197,7 @@ final class HttpServerTransport implements ServerTransportInterface
 
                 try {
                     $baseUri = $request->getUri()->withPath($this->messagePath)->withQuery('')->withFragment('');
-                    $postEndpointWithId = (string) $baseUri->withQuery("clientId={$sessionId}");
+                    $postEndpointWithId = (string)$baseUri->withQuery("clientId={$sessionId}");
                     $this->sendSseEvent($sseStream, 'endpoint', $postEndpointWithId, "init-{$sessionId}");
 
                     $events->emit('client_connected', [$sessionId]);
