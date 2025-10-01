@@ -20,12 +20,11 @@ use Psr\Log\NullLogger;
 use React\Http\Message\Response;
 use React\Promise\Deferred;
 use React\Promise\PromiseInterface;
+use React\Stream\ThroughStream;
+use React\Stream\WritableStreamInterface;
 
 use function React\Promise\reject;
 use function React\Promise\resolve;
-
-use React\Stream\ThroughStream;
-use React\Stream\WritableStreamInterface;
 
 final class HttpServerTransport implements ServerTransportInterface
 {
@@ -197,7 +196,7 @@ final class HttpServerTransport implements ServerTransportInterface
 
                 try {
                     $baseUri = $request->getUri()->withPath($this->messagePath)->withQuery('')->withFragment('');
-                    $postEndpointWithId = (string)$baseUri->withQuery("clientId={$sessionId}");
+                    $postEndpointWithId = (string) $baseUri->withQuery("clientId={$sessionId}");
                     $this->sendSseEvent($sseStream, 'endpoint', $postEndpointWithId, "init-{$sessionId}");
 
                     $events->emit('client_connected', [$sessionId]);
